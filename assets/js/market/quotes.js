@@ -17,6 +17,7 @@ import { fetchJSON } from '../net/proxy.js';
 import { pool } from '../core/pool.js';
 import { emit } from '../core/bus.js';
 import { nameOf, currencyOf } from './symbols.js';
+import * as store from '../core/store.js';
 
 const BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 
@@ -59,17 +60,101 @@ export async function fetchOne(symbol, opts = {}) {
   }
 
   const url = `${BASE}${encodeURIComponent(symbol)}?range=${range}&interval=${interval}&includePrePost=false`;
-  const { data } = await fetchJSON(url, { timeout: 12_000 });
 
-  const res = data?.chart?.result?.[0];
-  if (!res) {
-    const why = data?.chart?.error?.description || '시세가 오지 않았습니다';
-    throw new Error(why);
+  let out = null;
+  try {
+    const { data } = await fetchJSON(url, { timeout: 12_000 });
+    const res = data?.chart?.result?.[0];
+    if (!res) throw new Error(data?.chart?.error?.description || '시세가 오지 않았습니다');
+    out = shape(res, symbol);
+  } catch (err) {
+    // 야후가 안 되면 뒷길로. 없으면 원래 탈을 그대로 올린다.
+    out = await backup(symbol, interval, err);
   }
 
-  const out = shape(res, symbol);
   cache.set(key, { at: Date.now(), data: out });
   return out;
+}
+
+/* ═══════════════════ 뒷길 ═══════════════════
+
+   이 사이트는 야후 하나에 목을 매고 있고, 그것도 비공식 문이다.
+   닫히는 날 화면은 뜨는데 숫자가 통째로 빈다. 프록시는 여럿 두면서
+   자료는 하나만 둔 것은 앞뒤가 안 맞는다.
+
+   ── Stooq 를 쓰려다 그만둔 이야기 ──
+   처음에는 열쇠 없는 Stooq 를 두려 했다. 헤더만 보면 200 이 와서
+   열려 있는 줄 알았는데, 본문은 자바스크립트로 푸는 문제였다.
+   사람이 아닌 것을 거르려고 세운 문이라 넘지 않기로 했다.
+
+   그래서 Alpha Vantage 로 두었다. 열쇠가 있어야 하지만 공짜다.
+   하루 스물다섯 번이라 평소에 쓸 수는 없고, 야후가 넘어진 날에만
+   쓰는 예비 바퀴로는 넉넉하다.
+
+   열쇠를 안 넣었으면 아무 일도 하지 않고 원래 탈을 그대로 올린다.
+   없는 기능 때문에 있는 탈이 가려지면 안 된다. */
+
+const ALPHA = 'https://www.alphavantage.co/query';
+
+async function backup(symbol, interval, cause) {
+  const key = String(store.get('keyAlpha') || '').trim();
+  if (!key) throw cause;
+  if (interval !== '1d' && interval !== '1wk') throw cause;   // 일·주봉만 준다
+
+  const fn = interval === '1wk' ? 'TIME_SERIES_WEEKLY' : 'TIME_SERIES_DAILY';
+  const url = `${ALPHA}?function=${fn}&symbol=${encodeURIComponent(symbol)}`
+            + `&outputsize=full&apikey=${encodeURIComponent(key)}`;
+
+  // 여기는 CORS 가 열려 있어 프록시를 안 거친다
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw cause;
+  const data = await res.json();
+
+  // 한도에 걸리면 200 으로 오면서 Note 나 Information 만 들어 있다
+  if (data.Note || data.Information || data['Error Message']) {
+    throw new Error(
+      '야후가 막혀 뒷길로 갔으나 거기도 막혔습니다 — '
+      + (data.Note || data.Information || data['Error Message']),
+    );
+  }
+
+  const seriesKey = Object.keys(data).find((k) => k.includes('Time Series'));
+  const rows = seriesKey ? data[seriesKey] : null;
+  if (!rows) throw cause;
+
+  const bars = Object.entries(rows)
+    .map(([day, r]) => ({
+      t: Date.parse(day + 'T00:00:00Z'),
+      o: Number(r['1. open']), h: Number(r['2. high']),
+      l: Number(r['3. low']), c: Number(r['4. close']),
+      v: Number(r['5. volume']) || 0,
+    }))
+    .filter((b) => Number.isFinite(b.t) && Number.isFinite(b.c))
+    .sort((a, b) => a.t - b.t);
+
+  if (bars.length < 2) throw cause;
+
+  const price = bars[bars.length - 1].c;
+  const prev = bars[bars.length - 2].c;
+
+  return {
+    symbol,
+    ko: nameOf(symbol),
+    name: symbol,
+    currency: currencyOf(symbol),
+    exchange: '', tz: '',
+    price, prev,
+    change: price - prev,
+    changePct: prev ? ((price - prev) / prev) * 100 : null,
+    dayHigh: bars[bars.length - 1].h,
+    dayLow: bars[bars.length - 1].l,
+    volume: bars[bars.length - 1].v,
+    yearHigh: null, yearLow: null,
+    state: '',
+    at: Date.now(),
+    bars,
+    via: 'alpha',            // 어디서 왔는지 — 화면에서 밝혀 준다
+  };
 }
 
 function shape(res, symbol) {

@@ -55,9 +55,17 @@
       다리를 놓고 다닙니다. 그 다리가 막히면 화면은 뜨는데 숫자가 안 옵니다.
     </p>
   </section>
-  <section><h2>3. 배경 영상 파일</h2><div id="files"></div></section>
   <section>
-    <h2>4. 영상이 실제로 그려지나</h2>
+    <h2>3. 바깥 열쇠</h2>
+    <div id="keys"></div>
+    <p class="detail" style="margin-top:10px">
+      셋 다 공짜입니다. 안 넣어도 사이트는 그대로 돌아가고 그 기능만 비어 있습니다.
+      넣은 열쇠는 이 브라우저에만 남습니다.
+    </p>
+  </section>
+  <section><h2>4. 배경 영상 파일</h2><div id="files"></div></section>
+  <section>
+    <h2>5. 영상이 실제로 그려지나</h2>
     <div id="video"></div>
     <div class="stage" style="margin-top:12px">
       <video id="probe" muted playsinline preload="auto"></video>
@@ -80,10 +88,10 @@
 /* 검사들이 저마다 다른 속도로 끝나므로, 끝난 순서대로 적으면
    결과가 엉뚱한 제목 아래로 들어간다. 항목별로 담아 두었다가
    마지막에 순서대로 펴 낸다. */
-const GROUPS = { env: '환경', net: '바깥 연결', files: '영상 파일', video: '영상 재생' };
-const bucket = { env: [], net: [], files: [], video: [] };
+const GROUPS = { env: '환경', net: '바깥 연결', keys: '바깥 열쇠', files: '영상 파일', video: '영상 재생' };
+const bucket = { env: [], net: [], keys: [], files: [], video: [] };
 let done = 0;
-const TOTAL = 4;
+const TOTAL = 5;
 
 function step() { document.getElementById('bar').style.width = (++done / TOTAL * 100) + '%'; }
 
@@ -141,7 +149,86 @@ function render() {
   step();
 })();
 
-/* ── 3. 파일 ── */
+/* ── 3. 바깥 열쇠 ──
+   넣어져 있는지만 보는 것이 아니라 실제로 통하는지까지 두드려 본다.
+   틀린 열쇠를 넣어 두고 "왜 안 되지" 하는 일이 가장 흔하다. */
+(async function () {
+  let cfg = {};
+  try { cfg = JSON.parse(localStorage.getItem('ktema.v1') || '{}'); } catch (e) { /* 무시 */ }
+
+  const enc = encodeURIComponent;
+  const WHERE = {
+    keyFred:  ['FRED (경제 지표)',  'https://fredaccount.stlouisfed.org/apikeys'],
+    keyDart:  ['DART (한국 공시)',  'https://opendart.fss.or.kr'],
+    keyAlpha: ['Alpha Vantage (시세 뒷길)', 'https://www.alphavantage.co/support/#api-key'],
+  };
+
+  // 이 사이트와 같은 길로 두드린다 (5장의 ROUTES 와 같은 목록)
+  const via = async (url) => {
+    const routes = [
+      (u) => 'api/proxy.php?url=' + enc(u),
+      (u) => u,
+      (u) => 'https://proxy.cors.sh/' + u,
+      (u) => 'https://proxy.corsfix.com/?' + u,
+      (u) => 'https://cors.eu.org/' + u,
+      (u) => 'https://api.allorigins.win/raw?url=' + enc(u),
+    ];
+    for (const make of routes) {
+      try {
+        const c = new AbortController();
+        const timer = setTimeout(() => c.abort(), 10000);
+        const r = await fetch(make(url), { signal: c.signal, cache: 'no-store' });
+        const t = await r.text();
+        clearTimeout(timer);
+        if (r.ok && t.length > 40) return t;
+      } catch (e) { /* 다음 길 */ }
+    }
+    return null;
+  };
+
+  for (const [key, [label, url]] of Object.entries(WHERE)) {
+    const val = String(cfg[key] || '').trim();
+    if (!val) {
+      put('keys', 'dim', label + ' — 아직 안 넣었습니다',
+          '그 기능만 비어 있고 나머지는 그대로입니다. 받으려면: ' + url);
+      continue;
+    }
+
+    if (key === 'keyFred') {
+      const t = await via('https://api.stlouisfed.org/fred/series/observations'
+        + '?series_id=T10Y2Y&api_key=' + enc(val) + '&file_type=json&limit=1&sort_order=desc');
+      if (t && t.includes('observations')) put('keys', 'ok', label + ' — 통합니다');
+      else put('keys', 'bad', label + ' — 넣었는데 통하지 않습니다',
+               '열쇠가 틀렸거나 길이 막혔습니다. ' + url + ' 에서 다시 확인해 보십시오.');
+    } else if (key === 'keyDart') {
+      const t = await via('https://opendart.fss.or.kr/api/list.json?crtfc_key=' + enc(val)
+        + '&bgn_de=20200101&end_de=20200102&page_count=1');
+      // 000 성공, 013 은 "찾은 것 없음" 이라 열쇠는 맞다
+      if (t && (t.includes('"000"') || t.includes('"013"'))) put('keys', 'ok', label + ' — 통합니다');
+      else if (t && t.includes('"010"')) put('keys', 'bad', label + ' — 등록되지 않은 열쇠입니다');
+      else if (t && t.includes('"011"')) put('keys', 'bad', label + ' — 사용할 수 없는 열쇠입니다');
+      else put('keys', 'bad', label + ' — 넣었는데 통하지 않습니다', url);
+    } else {
+      // Alpha Vantage 는 CORS 가 열려 있어 곧바로 두드린다
+      try {
+        const r = await fetch('https://www.alphavantage.co/query?function=GLOBAL_QUOTE'
+          + '&symbol=IBM&apikey=' + enc(val), { cache: 'no-store' });
+        const j = await r.json();
+        if (j['Global Quote']) put('keys', 'ok', label + ' — 통합니다');
+        else if (j.Note || j.Information) {
+          put('keys', 'warn', label + ' — 오늘 한도를 다 썼습니다',
+              String(j.Note || j.Information).slice(0, 120));
+        } else put('keys', 'bad', label + ' — 넣었는데 통하지 않습니다', url);
+      } catch (e) {
+        put('keys', 'bad', label + ' — 두드리지 못했습니다', e.message);
+      }
+    }
+  }
+
+  step();
+})();
+
+/* ── 4. 파일 ── */
 (async function () {
   // 전신 하나 + 잔잔한 것 열둘(바탕) + 격한 것 열둘(관문)
   const want = ['full'];

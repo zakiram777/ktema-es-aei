@@ -36,6 +36,8 @@ import { Settings } from './ui/settings.js';
 import { Nav } from './ui/nav.js';
 import { Picker, looksLikeSymbol } from './ui/picker.js';
 import { WatchList } from './ui/watch.js';
+import { MacroPanel, FinPanel, FxSwitch, ScoreCard } from './ui/extras.js';
+import * as filings from './market/filings.js';
 
 import { JournalView } from './journal/view.js';
 import { BacktestView } from './backtest/view.js';
@@ -64,10 +66,15 @@ async function loadNews({ quiet = false, force = false } = {}) {
     const { items, at } = await feed.load(app.news.cat, { force });
     app.news.set(items, at);
 
+    // 공시를 같은 목록에 섞는다. 기사는 남이 회사에 대해 쓴 글이고
+    // 공시는 회사가 스스로 낸 글인데, 읽는 사람에게는 둘 다 소식이다.
+    const withFilings = await mixFilings(items);
+    if (withFilings !== items) app.news.set(withFilings, at);
+
     if (!quiet) {
-      const fresh = items.filter((x) => x.isNew).length;
+      const fresh = withFilings.filter((x) => x.isNew).length;
       app.breaking.notice(
-        fresh > 0 ? `새 소식 ${fresh}건을 포함해 ${items.length}건.` : `${items.length}건. 새 것은 없습니다.`,
+        fresh > 0 ? `새 소식 ${fresh}건을 포함해 ${withFilings.length}건.` : `${withFilings.length}건. 새 것은 없습니다.`,
         { kind: '갱신', ms: 5000 },
       );
     }
@@ -78,6 +85,37 @@ async function loadNews({ quiet = false, force = false } = {}) {
   } finally {
     btn.classList.remove('is-busy');
     scheduleRefresh();
+  }
+}
+
+/* ── 공시 ──
+
+   관심종목 가운데 한국 종목의 최근 공시를 받아 소식 목록에 섞는다.
+   유상증자·최대주주 변경·감사의견 거절 같은 것은 기사보다 공시가
+   먼저이고, 기사를 기다리면 이미 값이 움직인 뒤다.
+
+   열쇠가 없으면 아무 일도 하지 않고 조용히 지나간다. 이것 하나 없다고
+   소식 화면이 반쪽이 되어서는 안 된다. */
+async function mixFilings(items) {
+  if (!filings.hasDartKey()) return items;
+
+  const watch = store.get('watch') || DEFAULT_WATCH;
+  const codes = watch.map((w) => filings.codeOf(w.symbol)).filter(Boolean);
+  if (!codes.length) return items;
+
+  try {
+    const list = await filings.recent({ codes, days: 3, max: 30 });
+    if (!list.length) return items;
+
+    // 급한 것은 속보로도 외친다
+    for (const f of list) {
+      if (f.score >= 7 && f.isNew) app.breaking.push(f);
+    }
+
+    return [...list, ...items].sort((a, b) => (b.time || 0) - (a.time || 0));
+  } catch (err) {
+    console.warn('[dart]', err);
+    return items;
   }
 }
 
@@ -182,6 +220,9 @@ function goSymbol(sym, meta) {
   store.set('symbol', sym);
   app.market.setSymbol(sym);
   app.market.clearCompare();
+  // 원화 환산과 재무는 그 종목의 것이다. 종목이 갈리면 같이 갈린다.
+  if (app.fx?.on) { app.fx.on = false; $('#btnFx')?.classList.remove('is-on'); }
+  if (app.fin && !$('#fin').hidden) app.fin.load(sym);
   app.watch.mark(sym);
   app.pick.show(sym, meta?.ko || nameOf(sym));
   loadChart(sym, app.market.range);
@@ -205,6 +246,8 @@ async function loadAnalysis({ force = false } = {}) {
     const series = await quotes.fetchSeries(watch, { range: '2y', interval: '1d', fresh: force });
     app.anaAt = Date.now();
     app.ana.set(series, app.anaAt);
+    // 성적표는 이 두 해치를 그대로 쓴다. 일지 화면에 있을 때만 다시 그린다.
+    if (app.nav?.current === 'journal') app.score?.paint();
   } catch (err) {
     console.warn('[analysis]', err);
     app.ana.failed(err.message);
@@ -261,6 +304,19 @@ function build() {
 
   app.ana = new AnalysisView({ onSymbol: (sym) => goSymbol(sym) });
 
+  /* ── 바깥 길로 받아 오는 판들 ── */
+  app.macro = new MacroPanel({ openSettings: (g) => app.settings.open(g) });
+  app.fin = new FinPanel();
+  app.score = new ScoreCard({ series: () => app.ana?.series || [] });
+
+  /* 원화 환산 — 차트의 봉만 갈아 끼우고 나머지는 그대로 둔다.
+     되돌릴 때를 위해 원래 봉은 chartQ 가 들고 있다. */
+  app.fx = new FxSwitch({
+    chartQ: () => app.chartQ,
+    redraw: (bars) => app.market.swapBars(bars, bars ? ' (원)' : ''),
+    note: (text) => app.breaking.notice(text, { kind: '원화', ms: 12_000 }),
+  });
+
   /* ── 머리띠의 고르개 ── */
   app.pick = new Picker({ onPick: (sym, meta) => goSymbol(sym, meta) });
   app.pick.show(app.market.symbol, nameOf(app.market.symbol));
@@ -299,9 +355,9 @@ function build() {
   app.nav = new Nav({
     onShow: (id) => {
       if (id === 'chart') app.market.refresh();
-      if (id === 'analysis') loadAnalysis();
+      if (id === 'analysis') { loadAnalysis(); app.macro?.load(); }
       if (id === 'backtest') app.backtest?.refresh();
-      if (id === 'journal') app.journal?.paint();
+      if (id === 'journal') { app.journal?.paint(); app.score?.paint(); }
     },
   });
 
@@ -388,6 +444,8 @@ function wireButtons() {
   $('#btnCompare').addEventListener('click', () => drawer('#cmp', '#inds'));
   $('#btnProfile').addEventListener('click', () => app.market.toggleProfile());
   $('#btnRatio').addEventListener('click', () => app.market.toggleRatio());
+  $('#btnFin').addEventListener('click', () => app.fin.toggle(app.market.symbol));
+  $('#btnFx').addEventListener('click', () => app.fx.toggle());
 
   /* 관심종목에 더하기 — 머리띠의 고르개를 그대로 쓴다.
      찾는 자리를 두 곳에 두면 둘 다 반쯤만 좋아진다. */

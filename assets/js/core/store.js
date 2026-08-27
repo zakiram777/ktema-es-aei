@@ -47,6 +47,7 @@ export const DEFAULTS = {
      전부 공짜로 발급되지만 이 브라우저에만 남는다. 내보내지 않는다. */
   keyFred:      '',
   keyDart:      '',
+  keyAlpha:     '',      // 야후가 막힌 날의 뒷길
 
   /* ── 전략 시험 ── */
   strategy:     null,    // null 이면 보기 전략(골든크로스)

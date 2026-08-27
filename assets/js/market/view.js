@@ -251,6 +251,29 @@ export class MarketView {
     btn.classList.toggle('is-on', this.chart.ratioMode);
   }
 
+  /* 봉만 갈아 끼운다 (원화 환산 같은 것).
+
+     차트만 다시 그리고 끝내면 범례와 요약 숫자가 옛 값으로 남는다.
+     달러 314 짜리 차트 아래에 원화 434,239 가 뜨고 이동평균은 309 로
+     적혀 있는 꼴이 된다. 봉을 갈면 그 봉에서 나온 것도 다 갈아야 한다. */
+  swapBars(bars, suffix = '') {
+    const q = this.q;
+    if (!q) return;
+
+    const use = bars || q.bars;
+    this.chart.set(use, {
+      intraday: this.range === '5d',
+      indicators: this.indicators,
+      name: (q.ko || q.symbol) + suffix,
+    });
+
+    this.#paintLower();
+    this.#paintLegend();
+    // 요약 숫자도 갈아 끼운 봉으로 다시 낸다. 52주 고저처럼 봉이 아니라
+    // 야후가 준 값은 환산이 안 되므로 이때는 뺀다.
+    this.#renderStats(bars ? { ...q, bars, yearHigh: null, yearLow: null, volume: null } : q);
+  }
+
   /** 지금 며칠치를 보고 있는지 — 전부를 보고 있으면 아무 말도 하지 않는다 */
   #paintZoom() {
     if (!this.zoomEl) return;

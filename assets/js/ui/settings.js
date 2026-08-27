@@ -14,6 +14,7 @@ import { $, el, clear, ico, openPane, closePane } from '../core/dom.js';
 import * as store from '../core/store.js';
 import { SOURCES } from '../news/sources.js';
 import { RANGES } from '../market/symbols.js';
+import { KEY_HOWTO } from '../market/macro.js';
 import { routeReport, forgetRoutes } from '../net/proxy.js';
 
 export class Settings {
@@ -46,6 +47,7 @@ export class Settings {
   async build() {
     clear(this.body);
     this.body.appendChild(this.#marketGroup());
+    this.body.appendChild(this.#keyGroup());
     this.body.appendChild(this.#lookGroup());
     this.body.appendChild(this.#newsGroup());
     this.body.appendChild(this.#alertGroup());
@@ -153,6 +155,59 @@ export class Settings {
         el('p.row__note', {
           text: '오른쪽 목록에서 ×를 눌러 빼고, + 를 눌러 더할 수 있습니다. '
               + '하나도 남지 않으면 다음에 켜질 때 처음 목록이 되살아납니다.',
+        }),
+      ]);
+  }
+
+  /* ─────────────── 바깥 열쇠 ───────────────
+
+     셋 다 공짜다. 그런데 이 사이트에는 열쇠를 숨길 서버가 없어서,
+     넣은 열쇠는 이 브라우저에 그대로 남는다. 그 사실을 감추지 않고
+     그대로 적어 둔다 — 감추면 사람이 여럿 쓰는 기기에 넣는다. */
+
+  #keyGroup() {
+    const row = (key, how, extra) => {
+      const input = el('input.keyin', {
+        type: 'password',
+        placeholder: '아직 없음',
+        autocomplete: 'off',
+        spellcheck: 'false',
+      });
+      input.value = store.get(key) || '';
+      input.addEventListener('input', () => {
+        store.set(key, input.value.trim());
+        this.hooks.onKeys?.(key);
+      });
+
+      const eye = el('button.iconbtn.iconbtn--sm', {
+        type: 'button',
+        title: '보이기',
+        onclick: () => { input.type = input.type === 'password' ? 'text' : 'password'; },
+      }, [ico('eye')]);
+
+      return el('div.row', [
+        el('div.row__top', [
+          el('span.row__label', { text: how.ko }),
+          el('a.row__get', {
+            href: how.url, target: '_blank', rel: 'noopener noreferrer',
+          }, '열쇠 받기 ↗'),
+        ]),
+        el('div.keyrow', [input, eye]),
+        el('p.row__note', { text: how.note + (extra ? ' ' + extra : '') }),
+      ]);
+    };
+
+    return this.#group('Κλεῖδες', '바깥 열쇠',
+      '셋 다 공짜입니다. 안 넣어도 사이트는 그대로 돌아가고, 그 기능만 '
+      + '비어 있습니다.',
+      [
+        row('keyFred', KEY_HOWTO.fred, '분석 화면 아래 “밑에 깔린 것”을 채웁니다.'),
+        row('keyDart', KEY_HOWTO.dart, '관심종목의 한국 종목 공시를 소식에 섞습니다.'),
+        row('keyAlpha', KEY_HOWTO.alpha, '평소에는 쓰지 않습니다.'),
+        el('p.row__note.row__note--warn', {
+          text: '넣은 열쇠는 이 브라우저에만 남습니다 — 우리에게도 오지 않고, '
+              + '설정을 내보낼 때 파일에도 담기지 않습니다. 다만 이 기기를 쓰는 '
+              + '사람은 꺼내 볼 수 있습니다. 혼자 쓰는 기기에서 쓰십시오.',
         }),
       ]);
   }

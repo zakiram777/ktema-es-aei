@@ -162,6 +162,14 @@
                       title="견주는 것과 나눈 한 줄로 본다">
                 <span class="ico" data-ico="sigma"></span><span class="btn__label">비율</span>
               </button>
+              <button class="btn btn--ghost btn--tiny" id="btnFin" type="button"
+                      title="회사가 제출한 재무제표 원본 (미국 상장사)">
+                <span class="ico" data-ico="book"></span><span class="btn__label">재무</span>
+              </button>
+              <button class="btn btn--ghost btn--tiny" id="btnFx" type="button"
+                      title="원화로 환산해 본다">
+                <span class="btn__label">원화</span>
+              </button>
             </div>
           </div>
 
@@ -210,6 +218,19 @@
           <div class="cmp__list" id="cmpList"></div>
           <div class="cmp__add" id="cmpAdd"></div>
         </div>
+
+        <!-- 재무 — 회사가 제출한 원본 (SEC XBRL) -->
+        <div class="fin" id="fin" hidden>
+          <div class="inds__head">
+            <h3><span class="panel__gr">Λογισμός</span><span class="panel__ko">재무</span></h3>
+            <p class="inds__note">
+              회사가 제출한 재무제표 원본입니다. 남이 가공한 것이 아니라
+              <b>원본</b>이라 숫자를 의심할 필요가 없습니다. 다만 미국 상장사만
+              있습니다 — 한국 종목은 DART 쪽이고, 그것은 아직 공시까지만 봅니다.
+            </p>
+          </div>
+          <div class="fin__body" id="finBody"></div>
+        </div>
       </section>
 
       <!-- ═══ 시세 ═══ -->
@@ -243,6 +264,17 @@
           얼마나 흔들리는지, 꼭대기에서 얼마나 내려와 있는지.
         </p>
         <div class="ana" id="ana"></div>
+
+        <!-- 시세 밑에 깔린 것 — 수익률곡선·실질금리·신용스프레드 -->
+        <section class="ana__block" id="macroBlock">
+          <div class="ana__h">
+            <span>밑에 깔린 것</span>
+            <small>수익률곡선 · 실질금리 · 신용스프레드 · 공포</small>
+            <span class="ana__spacer"></span>
+            <span class="stamp" id="macroStamp"></span>
+          </div>
+          <div class="macro" id="macro"></div>
+        </section>
       </section>
 
       <!-- ═══ 소식 ═══ -->
@@ -299,6 +331,9 @@
           사람의 기억은 결과에 맞추어 고쳐집니다. 오른 뒤에는 “그럴 줄 알았다”가 되고,
           내린 뒤에는 “불안했다”가 됩니다. 그날 적어 둔 글만이 그 고침을 막습니다.
         </p>
+
+        <!-- 고쳐지지 않은 기록으로 나를 채점한다 -->
+        <div class="jscore" id="jscore"></div>
 
         <div class="jr__form" id="journalForm"></div>
         <div class="jr__filter" id="journalFilter"></div>
