@@ -10,7 +10,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { px, num, big, dayStamp } from '../core/fmt.js';
-import { maLine } from './quotes.js';
+import { computeAll, colorVar } from './indicators.js';
 
 const PAD = { top: 16, right: 64, bottom: 28, left: 10 };
 
@@ -26,8 +26,7 @@ export class Chart {
     this.onPick = opts.onPick || (() => {});
 
     this.bars = [];
-    this.ma20 = [];
-    this.ma60 = [];
+    this.inds = [];          // 겹쳐 그릴 지표들 (셈은 indicators.js 가 한다)
     this.hover = -1;
     this.intraday = false;
 
@@ -37,13 +36,37 @@ export class Chart {
 
   /* ─────────────── 자료 ─────────────── */
 
-  set(bars, { intraday = false } = {}) {
+  set(bars, { intraday = false, indicators = null } = {}) {
     this.bars = bars || [];
     this.intraday = intraday;
-    this.ma20 = maLine(this.bars, 20);
-    this.ma60 = maLine(this.bars, 60);
+    if (indicators) this.list = indicators;
+    this.recompute();
     this.hover = -1;
     this.draw();
+  }
+
+  /** 지표 목록이 바뀌었을 때 — 봉은 그대로 두고 줄만 다시 셈한다 */
+  setIndicators(list) {
+    this.list = list;
+    this.recompute();
+    this.draw();
+  }
+
+  recompute() {
+    this.inds = computeAll(this.list || [], this.bars);
+    // 가격 칸에 겹칠 것과 아래 칸에 따로 그릴 것을 가른다
+    this.overlay = this.inds.filter((i) => i.pane === 'price');
+    this.lower = this.inds.filter((i) => i.pane === 'lower');
+  }
+
+  /** 지금 그려진 것들 — 범례를 만들 때 쓴다 */
+  legend() {
+    return this.inds.map((i) => ({
+      name: i.name,
+      color: this.#css(colorVar(i.ind.color), '#d0ab63'),
+      pane: i.pane,
+      last: lastOf(i.out.lines[0]?.values),
+    }));
   }
 
   /* ─────────────── 크기 ─────────────── */
@@ -139,8 +162,16 @@ export class Chart {
   #scale() {
     let lo = Infinity, hi = -Infinity;
     for (const b of this.bars) { if (b.l < lo) lo = b.l; if (b.h > hi) hi = b.h; }
-    for (const line of [this.ma20, this.ma60]) {
-      for (const v of line) { if (v == null) continue; if (v < lo) lo = v; if (v > hi) hi = v; }
+    // 겹쳐 그릴 지표도 눈금 안에 들어와야 한다. 볼린저 상단이 값의
+    // 꼭대기를 넘는 일이 흔한데, 넣지 않으면 그 줄만 잘려 나간다.
+    for (const ind of this.overlay || []) {
+      for (const ln of ind.out.lines) {
+        for (const v of ln.values) {
+          if (v == null) continue;
+          if (v < lo) lo = v;
+          if (v > hi) hi = v;
+        }
+      }
     }
     if (!Number.isFinite(lo) || !Number.isFinite(hi)) return null;
     const pad = (hi - lo) * 0.08 || Math.abs(hi) * 0.02 || 1;
@@ -209,9 +240,20 @@ export class Chart {
     if (bw >= 2.4 && !this.intraday) this.#candles(g, s, x0, step, bw, cUp, cDown);
     else this.#area(g, s, x0, step, cUp, cDown);
 
-    /* ── 이동평균 ── */
-    this.#line(g, s, x0, step, this.ma20, cGold, 1.3);
-    this.#line(g, s, x0, step, this.ma60, cJade, 1.3);
+    /* ── 겹쳐 그릴 지표들 ──
+       예전에는 이동평균 두 줄이 여기 박혀 있었다. 이제는 사람이 만든
+       것을 그대로 그린다 (market/indicators.js). 볼린저처럼 두 줄
+       사이를 물들여야 하는 것은 띠부터 깔고 줄을 얹는다. */
+    for (const ind of this.overlay || []) {
+      const color = this.#css(colorVar(ind.ind.color), cGold);
+
+      if (ind.out.band) {
+        this.#band(g, s, x0, step, ind.out.band, color);
+      }
+      for (const ln of ind.out.lines) {
+        this.#line(g, s, x0, step, ln.values, color, ln.dash ? 1 : 1.35, ln.dash);
+      }
+    }
 
     /* ── 십자선 ── */
     if (this.hover >= 0 && this.bars[this.hover]) {
@@ -302,13 +344,41 @@ export class Chart {
     g.stroke();
   }
 
-  #line(g, s, x0, step, values, color, width) {
+  /** 두 줄 사이를 아주 옅게 물들인다 — 볼린저 밴드 같은 것 */
+  #band(g, s, x0, step, band, color) {
+    const { upper, lower } = band;
+    if (!upper?.length || !lower?.length) return;
+
+    g.save();
+    g.fillStyle = color;
+    g.globalAlpha = 0.06;
+    g.beginPath();
+
+    let started = false;
+    for (let i = 0; i < upper.length; i++) {
+      const v = upper[i];
+      if (v == null) continue;
+      const x = x0 + i * step, y = s.y(v);
+      if (!started) { g.moveTo(x, y); started = true; } else g.lineTo(x, y);
+    }
+    for (let i = lower.length - 1; i >= 0; i--) {
+      const v = lower[i];
+      if (v == null) continue;
+      g.lineTo(x0 + i * step, s.y(v));
+    }
+    g.closePath();
+    g.fill();
+    g.restore();
+  }
+
+  #line(g, s, x0, step, values, color, width, dash) {
     if (!values?.length) return;
     g.save();
     g.strokeStyle = color;
-    g.globalAlpha = 0.62;
+    g.globalAlpha = dash ? 0.44 : 0.62;
     g.lineWidth = width;
     g.lineJoin = 'round';
+    if (dash) g.setLineDash(dash);
     g.beginPath();
     let started = false;
     values.forEach((v, i) => {
@@ -365,3 +435,162 @@ export function sparkline(canvas, bars, color) {
   g.lineJoin = 'round';
   g.stroke();
 }
+
+/* ═══════════════════ 아래 칸 ═══════════════════
+
+   상대강도나 MACD 를 봉과 같은 자리에 겹쳐 그리면 둘 다 못 읽는다.
+   값의 단위가 아예 다르기 때문이다 (코스피는 6900, RSI 는 38).
+   그래서 따로 칸을 내어 그린다. 가로 자리는 위 차트와 똑같이 맞춘다 —
+   같은 날이 위아래로 나란해야 눈이 잇는다. */
+
+export class LowerChart {
+  constructor(canvas) {
+    this.cv = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.inds = [];
+    this.bars = [];
+    this.#bindSize();
+  }
+
+  #bindSize() {
+    const fit = () => {
+      const r = this.cv.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      this.w = r.width; this.h = r.height;
+      this.cv.width = Math.round(r.width * dpr);
+      this.cv.height = Math.round(r.height * dpr);
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.draw();
+    };
+    if ('ResizeObserver' in window) new ResizeObserver(fit).observe(this.cv);
+    else window.addEventListener('resize', fit);
+    requestAnimationFrame(fit);
+    this.fit = fit;
+  }
+
+  set(bars, inds) {
+    this.bars = bars || [];
+    this.inds = inds || [];
+    this.draw();
+  }
+
+  /** 그릴 것이 있나 — 없으면 칸 자체를 접는다 */
+  get empty() { return !this.inds.length || !this.bars.length; }
+
+  draw() {
+    const g = this.ctx;
+    if (!g || !this.w) return;
+    g.clearRect(0, 0, this.w, this.h);
+    if (this.empty) return;
+
+    // 여럿이면 칸을 나누어 쓴다
+    const each = this.h / this.inds.length;
+    this.inds.forEach((ind, n) => this.#one(g, ind, n * each, each));
+  }
+
+  #one(g, ind, top, height) {
+    const pad = { left: PAD.left, right: PAD.right, top: 8, bottom: 8 };
+    const iw = this.w - pad.left - pad.right;
+    const ih = height - pad.top - pad.bottom;
+    if (ih <= 4) return;
+
+    const lines = ind.out.lines || [];
+    const hist = ind.out.histogram;
+
+    let lo = Infinity, hi = -Infinity;
+    const eat = (vals) => {
+      for (const v of vals) {
+        if (v == null || !Number.isFinite(v)) continue;
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+      }
+    };
+    for (const ln of lines) eat(ln.values);
+    if (hist) eat(hist.values);
+    for (const lv of ind.out.levels || []) { if (lv < lo) lo = lv; if (lv > hi) hi = lv; }
+
+    if (ind.out.range) { lo = ind.out.range[0]; hi = ind.out.range[1]; }
+    if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi === lo) return;
+
+    const padv = (hi - lo) * 0.08;
+    lo -= padv; hi += padv;
+
+    const y = (v) => top + pad.top + (1 - (v - lo) / (hi - lo)) * ih;
+    const step = iw / Math.max(1, this.bars.length - 1);
+    const x = (i) => pad.left + i * step;
+
+    const css = (n, f) => (getComputedStyle(document.documentElement).getPropertyValue(n).trim() || f);
+    const color = css(colorVar(ind.ind.color), '#d0ab63');
+    const faint = css('--line-soft', 'rgba(224,196,137,.07)');
+    const dim = css('--tx-600', '#4c4763');
+
+    /* 눈금선 — 상대강도의 30·70 처럼 뜻이 있는 자리 */
+    g.save();
+    g.strokeStyle = faint;
+    g.lineWidth = 1;
+    g.font = '10px "IBM Plex Mono", monospace';
+    g.textBaseline = 'middle';
+    for (const lv of ind.out.levels || []) {
+      if (lv < lo || lv > hi) continue;
+      const yy = Math.round(y(lv)) + 0.5;
+      g.beginPath(); g.moveTo(pad.left, yy); g.lineTo(pad.left + iw, yy); g.stroke();
+      g.fillStyle = dim;
+      g.textAlign = 'left';
+      g.fillText(String(lv), this.w - pad.right + 6, yy);
+    }
+    g.restore();
+
+    /* 막대 — 거래량, MACD 의 차이 */
+    if (hist) {
+      const bw = Math.max(1, Math.min(7, step * 0.62));
+      const zero = hist.positive ? y(Math.max(0, lo)) : y(0);
+      const up = css('--up', '#e2564a');
+      const down = css('--down', '#4f92e6');
+      g.save();
+      g.globalAlpha = 0.42;
+      hist.values.forEach((v, i) => {
+        if (v == null) return;
+        const yy = y(v);
+        g.fillStyle = hist.positive ? color : (v >= 0 ? up : down);
+        g.fillRect(x(i) - bw / 2, Math.min(yy, zero), bw, Math.max(1, Math.abs(zero - yy)));
+      });
+      g.restore();
+    }
+
+    /* 줄 */
+    for (const ln of lines) {
+      g.save();
+      g.strokeStyle = color;
+      g.globalAlpha = ln.dash ? 0.5 : 0.85;
+      g.lineWidth = 1.3;
+      g.lineJoin = 'round';
+      if (ln.dash) g.setLineDash(ln.dash);
+      g.beginPath();
+      let started = false;
+      ln.values.forEach((v, i) => {
+        if (v == null) { started = false; return; }
+        const xx = x(i), yy = y(v);
+        if (!started) { g.moveTo(xx, yy); started = true; } else g.lineTo(xx, yy);
+      });
+      g.stroke();
+      g.restore();
+    }
+
+    /* 이름표 */
+    g.save();
+    g.fillStyle = color;
+    g.globalAlpha = 0.8;
+    g.font = '10px "IBM Plex Mono", monospace';
+    g.textAlign = 'left';
+    g.textBaseline = 'top';
+    g.fillText(ind.name, pad.left + 3, top + 3);
+    g.restore();
+  }
+}
+
+const lastOf = (vals) => {
+  if (!vals) return null;
+  for (let i = vals.length - 1; i >= 0; i--) if (vals[i] != null) return vals[i];
+  return null;
+};

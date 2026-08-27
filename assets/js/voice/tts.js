@@ -174,7 +174,10 @@ function next(me) {
     me.opts.onchunk?.(chunk.line ?? idx, line);
     // 입 모양을 만드는 쪽(zakiram/mouth.js)이 이것을 듣는다.
     // 무엇을, 어느 말로, 얼마나 빠르게 읽는지가 있어야 음소를 풀 수 있다.
-    emit('speak:chunk', { index: idx, text: line, lang: chunk.lang, rate: u.rate });
+    emit('speak:chunk', {
+      index: idx, text: line, lang: chunk.lang, rate: u.rate,
+      voice: v ? v.name : '',
+    });
     // boundary 를 안 주는 목소리를 위한 어림 — 글자 수와 속도로 훑는다
     const perChar = 62 / u.rate;
     guess = setInterval(() => {
@@ -198,6 +201,9 @@ function next(me) {
   u.onend = () => {
     clearInterval(guess);
     if (!me.alive || job !== me) return;
+    // 이 마디를 읽는 데 실제로 걸린 시간. 입 쪽(zakiram/mouth.js)이
+    // 이것으로 이 목소리의 참 속도를 배운다.
+    emit('speak:chunkend', { index: idx, ms: Date.now() - t0, lang: chunk.lang });
     me.at += 1;
     // 문장과 문장 사이의 숨
     setTimeout(() => next(me), 130);

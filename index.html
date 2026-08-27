@@ -25,6 +25,8 @@
 <link rel="stylesheet" href="assets/css/zakiram.css">
 <link rel="stylesheet" href="assets/css/news.css">
 <link rel="stylesheet" href="assets/css/market.css">
+<link rel="stylesheet" href="assets/css/views.css">
+<link rel="stylesheet" href="assets/css/chat.css">
 <link rel="stylesheet" href="assets/css/sheets.css">
 </head>
 
@@ -39,6 +41,14 @@
 </div>
 
 <!-- ═══════════════════ 관문 ═══════════════════ -->
+<!--
+  숫자를 넣어야 열린다. 오늘 날짜의 월일 넉 자다 (12월 12일 → 1212).
+
+  이것은 자물쇠가 아니다. 답이 달력에 적혀 있으니 막을 마음이 있는
+  자를 막지 못한다. 다만 들어오는 이가 오늘을 알고 왔다는 표시이고,
+  브라우저가 소리를 내려면 사람의 첫 누름이 필요하기에 그 누름을
+  받는 자리이기도 하다. 문지기가 아니라 문이다.
+-->
 <section class="gate" id="gate">
   <div class="gate__inner">
 
@@ -66,17 +76,28 @@
       <span class="wordmark__lat">KTEMA ES AEI</span>
     </h1>
 
-    <p class="gate__epigraph">
-      <span>κτῆμα ἐς αἰεὶ μᾶλλον ἢ ἀγώνισμα ἐς τὸ παραχρῆμα ἀκούειν</span>
-      <em>Θουκυδίδης &middot; I.22</em>
-    </p>
+    <form class="gate__form" id="gateForm" autocomplete="off">
+      <label class="gate__label" for="gateCode">오늘의 넉 자</label>
 
-    <button class="enter" id="enter" type="button">
-      <span class="enter__gr">ΕΙΣΟΔΟΣ</span>
-      <span class="enter__sub">자키람을 깨운다</span>
-    </button>
+      <div class="gate__code" id="gateCode" role="group" aria-label="네 자리 숫자">
+        <input class="gate__digit" id="gateD0" type="text" inputmode="numeric"
+               maxlength="1" pattern="[0-9]" aria-label="첫째 자리" autocomplete="off">
+        <input class="gate__digit" id="gateD1" type="text" inputmode="numeric"
+               maxlength="1" pattern="[0-9]" aria-label="둘째 자리" autocomplete="off">
+        <span class="gate__sep" aria-hidden="true">·</span>
+        <input class="gate__digit" id="gateD2" type="text" inputmode="numeric"
+               maxlength="1" pattern="[0-9]" aria-label="셋째 자리" autocomplete="off">
+        <input class="gate__digit" id="gateD3" type="text" inputmode="numeric"
+               maxlength="1" pattern="[0-9]" aria-label="넷째 자리" autocomplete="off">
+      </div>
 
-    <p class="gate__hint">들어가면 자키람이 소리로 응답합니다. 소리는 언제든 끌 수 있습니다.</p>
+      <p class="gate__hint" id="gateHint">오늘이 며칠인지 아는 이에게 열립니다 — 월과 일, 넉 자.</p>
+
+      <button class="enter" id="enter" type="submit">
+        <span class="enter__gr">ΕΙΣΟΔΟΣ</span>
+        <span class="enter__sub">들어간다</span>
+      </button>
+    </form>
   </div>
 </section>
 
@@ -103,11 +124,16 @@
 
   <div class="tape" id="tape"><div class="tape__track" id="tapeTrack"></div></div>
 
+  <!-- ─────── 메뉴 ───────
+       화면을 갈아 끼우는 자리. 한 쪽에 다 쌓아 놓으면 아래로 끝없이
+       길어져 무엇이 어디 있는지 알 수 없게 된다. -->
+  <nav class="nav" id="nav" role="tablist" aria-label="화면"></nav>
+
   <main class="shell">
     <div class="shell__flow">
 
       <!-- ─────── 소식 ─────── -->
-      <section class="panel" id="news" aria-labelledby="newsTitle">
+      <section class="panel view" id="news" data-view="news" aria-labelledby="newsTitle">
         <div class="panel__head">
           <h2 class="panel__title" id="newsTitle">
             <span class="panel__gr">Ἀγγελίαι</span><span class="panel__ko">소식</span>
@@ -141,7 +167,7 @@
       </section>
 
       <!-- ─────── 시장 ─────── -->
-      <section class="panel" id="market" aria-labelledby="marketTitle">
+      <section class="panel view" id="market" data-view="market" aria-labelledby="marketTitle" hidden>
         <div class="panel__head">
           <h2 class="panel__title" id="marketTitle">
             <span class="panel__gr">Ἀγορά</span><span class="panel__ko">시장</span>
@@ -157,6 +183,23 @@
         <p class="hint hint--speak">숫자를 누르면 자키람이 읽어 줍니다.</p>
 
         <div class="board" id="board"></div>
+      </section>
+
+      <!-- ─────── 차트 ─────── -->
+      <section class="panel view" id="chartView" data-view="chart" aria-labelledby="chartTitle" hidden>
+        <div class="panel__head">
+          <h2 class="panel__title" id="chartTitle">
+            <span class="panel__gr">Γραφή</span><span class="panel__ko">차트</span>
+          </h2>
+          <div class="panel__tools">
+            <button class="btn btn--quiet" id="btnIndicators" type="button">
+              <span class="ico" data-ico="plus"></span><span class="btn__label">지표</span>
+            </button>
+            <button class="btn btn--quiet" id="btnReadChart" type="button">
+              <span class="ico" data-ico="voice"></span><span class="btn__label">차트 읽어 줘</span>
+            </button>
+          </div>
+        </div>
 
         <div class="chart">
           <div class="chart__head">
@@ -167,17 +210,120 @@
             <div class="chart__price" id="chartPrice"></div>
             <div class="chart__ranges" id="chartRanges"></div>
           </div>
+
           <div class="chart__stage" id="chartStage">
             <canvas id="chartCanvas"></canvas>
             <div class="chart__tip" id="chartTip" hidden></div>
             <div class="chart__veil" id="chartVeil">시세를 부르는 중…</div>
           </div>
+
+          <!-- 아래 칸 — 상대강도·MACD·거래량처럼 가격과 단위가 다른 것들 -->
+          <div class="chart__lower" id="chartLower" hidden>
+            <canvas id="chartLowerCanvas"></canvas>
+          </div>
+
+          <div class="chart__legend" id="chartLegend"></div>
           <div class="chart__stats" id="chartStats"></div>
+
           <div class="chart__foot">
             <div class="chart__picker" id="chartPicker"></div>
-            <button class="btn btn--quiet" id="btnReadChart" type="button">
-              <span class="ico" data-ico="voice"></span><span class="btn__label">차트 읽어 줘</span>
+          </div>
+        </div>
+
+        <!-- 지표를 만드는 자리 — 단추를 누르면 펴진다 -->
+        <div class="inds" id="inds" hidden>
+          <div class="inds__head">
+            <h3><span class="panel__gr">Δεῖκται</span><span class="panel__ko">지표</span></h3>
+            <p class="inds__note">
+              틀을 고르고 기간만 정하면 새 지표가 됩니다. 같은 틀로 여럿 만들 수
+              있습니다 — 이동평균 20일과 112일은 다른 지표입니다. 만든 것은 이
+              브라우저에 남습니다.
+            </p>
+          </div>
+          <div class="inds__list" id="indsList"></div>
+          <div class="inds__add" id="indsAdd"></div>
+        </div>
+      </section>
+
+      <!-- ─────── 투자일지 ─────── -->
+      <section class="panel view" id="journal" data-view="journal" aria-labelledby="journalTitle" hidden>
+        <div class="panel__head">
+          <h2 class="panel__title" id="journalTitle">
+            <span class="panel__gr">Ἡμερολόγιον</span><span class="panel__ko">투자일지</span>
+          </h2>
+          <div class="panel__tools">
+            <span class="stamp" id="journalCount"></span>
+            <button class="btn btn--quiet" id="btnJournalOut" type="button">
+              <span class="btn__label">내보내기</span>
             </button>
+            <button class="btn btn--quiet" id="btnJournalIn" type="button">
+              <span class="btn__label">가져오기</span>
+            </button>
+          </div>
+        </div>
+
+        <p class="hint">
+          사람의 기억은 결과에 맞추어 고쳐집니다. 오른 뒤에는 “그럴 줄 알았다”가 되고,
+          내린 뒤에는 “불안했다”가 됩니다. 그날 적어 둔 글만이 그 고침을 막습니다.
+        </p>
+
+        <div class="jr__form" id="journalForm"></div>
+        <div class="jr__filter" id="journalFilter"></div>
+        <div class="jr__list" id="journalList"></div>
+      </section>
+
+      <!-- ─────── 전략 시험 ─────── -->
+      <section class="panel view" id="backtest" data-view="backtest" aria-labelledby="btTitle" hidden>
+        <div class="panel__head">
+          <h2 class="panel__title" id="btTitle">
+            <span class="panel__gr">Δοκιμή</span><span class="panel__ko">전략 시험</span>
+          </h2>
+          <div class="panel__tools">
+            <button class="btn btn--quiet" id="btSample" type="button">
+              <span class="btn__label">보기 전략</span>
+            </button>
+            <button class="btn btn--gold" id="btRun" type="button">
+              <span class="ico" data-ico="flask"></span><span class="btn__label">시험한다</span>
+            </button>
+          </div>
+        </div>
+
+        <p class="hint hint--warn">
+          지난 시세에서 잘 들었다는 것은 앞으로도 그러리라는 뜻이 아닙니다.
+          숫자가 좋아질 때까지 규칙을 고치면, 그것은 시장을 배운 것이 아니라
+          지나간 우연을 외운 것입니다. 그래서 성적에는 늘
+          <b>“그냥 사서 들고 있었다면”</b>이 나란히 붙습니다.
+        </p>
+
+        <div class="bt__grid">
+          <div class="bt__build">
+            <div class="bt__block">
+              <h3 class="bt__h">무엇을</h3>
+              <div class="bt__what" id="btWhat"></div>
+            </div>
+            <div class="bt__block">
+              <h3 class="bt__h">쓸 지표</h3>
+              <div id="btIndicators"></div>
+            </div>
+            <div class="bt__block">
+              <h3 class="bt__h">언제 사나</h3>
+              <div id="btEntry"></div>
+            </div>
+            <div class="bt__block">
+              <h3 class="bt__h">언제 파나</h3>
+              <div id="btExit"></div>
+            </div>
+            <div class="bt__block">
+              <h3 class="bt__h">지킴이</h3>
+              <div class="bt__guards" id="btGuards"></div>
+            </div>
+          </div>
+
+          <div class="bt__result">
+            <p class="bt__note" id="btNote">규칙을 짜고 “시험한다”를 누르십시오.</p>
+            <div class="bt__stats" id="btStats"></div>
+            <div class="bt__chart"><canvas id="btCanvas"></canvas></div>
+            <div class="bt__trades" id="btTrades"></div>
           </div>
         </div>
       </section>
@@ -212,10 +358,14 @@
           </figcaption>
         </figure>
 
-        <!-- 자키람이 지금 하는 말.
-             화면에는 내지 않는다 — 얼굴 옆에 글자가 흐르면 눈이 그리로
-             가서 정작 자키람을 보지 않게 된다. 다만 화면 낭독기에게는
-             남겨 두어야 하므로 보이지 않는 자리에 적는다. -->
+        <!-- 말풍선 — 속보와 대화의 '요지'가 여기 뜬다.
+             전문은 넣지 않는다. 속보 말풍선은 누르면 그 기사로 간다. -->
+        <div class="zak__bubble" id="zakBubble" hidden></div>
+
+        <!-- 자키람이 지금 하는 말(전문).
+             화면에는 내지 않는다 — 얼굴 옆에 글자가 길게 흐르면 눈이
+             그리로 가서 정작 자키람을 보지 않게 된다. 다만 화면
+             낭독기에게는 남겨 두어야 하므로 보이지 않는 자리에 적는다. -->
         <p class="sr-only" id="sayText" aria-live="polite"></p>
 
         <div class="rail__controls">
@@ -226,6 +376,32 @@
             <span class="ico" data-ico="voice"></span><span class="btn__label">지금 시장 브리핑</span>
           </button>
         </div>
+
+        <!-- ─────── 대화 ───────
+             얼굴 바로 아래에 둔다. 묻는 사람은 얼굴을 보면서 묻고,
+             자키람은 답하면서 입이 움직인다. 창을 따로 띄우면 그
+             이어짐이 끊긴다. -->
+        <section class="chat" id="chat" aria-labelledby="chatTitle">
+          <header class="chat__head">
+            <h3 class="chat__title" id="chatTitle">
+              <span class="panel__gr">Διάλογος</span><span class="panel__ko">대화</span>
+            </h3>
+            <button class="iconbtn iconbtn--sm" id="chatClear" type="button"
+                    title="주고받은 말 지우기" aria-label="주고받은 말 지우기">×</button>
+          </header>
+
+          <div class="chat__log" id="chatLog" aria-live="polite"></div>
+
+          <form class="chat__form" id="chatForm">
+            <textarea class="chat__input" id="chatInput" rows="1"
+                      placeholder="자키람에게 묻습니다"></textarea>
+            <button class="btn btn--gold chat__send" id="chatSend" type="submit"
+                    aria-label="묻는다">
+              <span class="ico" data-ico="send"></span>
+            </button>
+          </form>
+          <p class="chat__hint" id="chatHint"></p>
+        </section>
 
         <div class="rail__meta">
           <div class="meter">

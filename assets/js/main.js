@@ -34,12 +34,24 @@ import * as mood from './zakiram/mood.js';
 
 import { Ambience, drawSealTicks } from './ui/ambience.js';
 import { Settings } from './ui/settings.js';
+import { Nav } from './ui/nav.js';
+import { Bubble } from './ui/bubble.js';
+import { summarize, forItem } from './core/summary.js';
+
+import { Chat } from './chat/chat.js';
+import { JournalView } from './journal/view.js';
+import { BacktestView } from './backtest/view.js';
 
 /* ═══════════════════ 상태 ═══════════════════ */
 
 const app = {
   stage: null,
   mouth: null,
+  bubble: null,
+  nav: null,
+  chat: null,
+  journal: null,
+  backtest: null,
   ambience: null,
   news: null,
   reader: null,
@@ -228,6 +240,41 @@ function paintMood(m, score) {
   }
 }
 
+/* ═══════════════════ 지금 화면에 있는 것 ═══════════════════
+
+   대화가 바깥 모형에게 물을 때 함께 보내는 사실들이다. 이것이 없으면
+   모형은 오늘 시장을 모른 채 그럴듯한 말을 지어낸다. 지어낸 값은
+   시장의 말로는 가장 나쁜 것이다. 그래서 지금 받아 둔 값만 보낸다. */
+
+function marketFacts() {
+  const live = app.quotes.filter((q) => q.ok && Number.isFinite(q.changePct));
+  const items = (app.news?.items || []).slice(0, 6);
+
+  const quotesLine = live.length
+    ? live.slice(0, 8).map((q) =>
+      `${q.ko || q.name} ${Math.round(q.price * 100) / 100} (${q.changePct > 0 ? '+' : ''}${q.changePct.toFixed(2)}%)`,
+    ).join(', ')
+    : '';
+
+  const newsLine = items.length
+    ? items.map((i, n) => `${n + 1}. ${i.title}`).join(' / ')
+    : '';
+
+  const m = mood.mood();
+  const moodLine = Number.isFinite(mood.moodScore())
+    ? `시장의 기분은 ${mood.moodScore().toFixed(2)}% 쪽입니다.`
+    : '';
+
+  const brief = [
+    quotesLine ? '[시세] ' + quotesLine : '',
+    newsLine ? '[소식] ' + newsLine : '',
+    m ? '[낯빛] ' + m : '',
+    '[지금] ' + new Date().toLocaleString('ko-KR'),
+  ].filter(Boolean).join('\n');
+
+  return { quotesLine, newsLine, moodLine, brief };
+}
+
 /* ═══════════════════ 짓기 ═══════════════════ */
 
 function build() {
@@ -275,10 +322,29 @@ function build() {
     },
   });
 
+  app.bubble = new Bubble($('#zakBubble'));
+
   app.breaking = new Breaking({
     stage: app.stage,
     onOpen: (item) => { if (item?.id && item.title) app.reader.open(item); },
     onSpeak: (lines) => showSaying(lines.join(' ')),
+
+    /* 속보가 오면 얼굴 곁에 말풍선을 띄운다. 전문이 아니라 요지다 —
+       얼굴을 가리지 않아야 하고, 길면 읽지 않는다. 누르면 그 기사로
+       간다. 말로 하는 것은 흘러가 버리지만 이것은 남아서 눌린다. */
+    onBubble: (item) => {
+      app.bubble?.show(forItem(item, 130), {
+        kind: item.flag || '속보',
+        tone: 'urgent',
+        hint: '눌러서 기사 보기',
+        onClick: () => {
+          app.bubble.hide();
+          app.nav?.show('news');
+          app.reader.open(item);
+        },
+      });
+      app.nav?.mark('news', true);
+    },
   });
 
   /* ── 시장 ── */
@@ -287,7 +353,7 @@ function build() {
       store.set('symbol', sym);
       app.market.setSymbol(sym);
       loadChart(sym, app.market.range);
-      $('#market').scrollIntoView({ block: 'start', behavior: 'smooth' });
+      app.nav?.show('chart');
     },
     onRange: (r) => loadChart(app.market.symbol, r),
 
@@ -331,6 +397,8 @@ function build() {
       }
     },
     onTint: () => { app.market.chart.draw(); app.market.setQuotes(app.quotes); },
+    // 대화를 어디에 이었는지 바뀌면 입력칸 아래의 말도 바뀐다
+    onChat: () => app.chat?.paintHint(),
     // 다른 PC 에서 가져온 설정을 화면에 반영한다
     onImported: () => {
       document.documentElement.dataset.tint = store.get('tint') || 'kr';
@@ -340,6 +408,60 @@ function build() {
       scheduleRefresh();
       loadNews({ quiet: true, force: true });
     },
+  });
+
+  /* ── 화면 나누기 ──
+     소식·시장·차트·일지·시험이 한 자리를 나누어 쓴다. 숨어 있던
+     화면은 제 크기를 몰랐으므로, 보일 때 다시 그리라고 알린다. */
+  app.nav = new Nav({
+    onShow: (id) => {
+      if (id === 'chart') app.market.refresh();
+      if (id === 'backtest') app.backtest?.refresh();
+      if (id === 'journal') app.journal?.paint();
+    },
+  });
+
+  /* ── 투자일지 ── */
+  app.journal = new JournalView({
+    quotes: () => app.quotes,
+    onSaved: () => app.breaking.notice('일지에 적어 두었습니다.', { kind: '일지', ms: 4000 }),
+  });
+  $('#btnJournalOut').addEventListener('click', () => app.journal.exportFile());
+  $('#btnJournalIn').addEventListener('click', () => app.journal.importFile());
+
+  /* ── 전략 시험 ──
+     시세를 부르는 일만 넘겨준다. 시험하는 셈은 backtest/engine.js 가
+     혼자 하고, 이쪽 화면은 그것을 그리기만 한다. */
+  app.backtest = new BacktestView({
+    fetchBars: (symbol, range) => {
+      const r = RANGES.find((x) => x.id === range) || RANGES[4];
+      return quotes.fetchOne(symbol, { range: r.id, interval: r.interval });
+    },
+  });
+
+  /* ── 대화 ──
+     답은 세 곳으로 나간다 — 대화창(전문), 말풍선(요지), 목소리(소리). */
+  app.chat = new Chat({
+    facts: () => marketFacts(),
+    onSpeak: (text) => speak([text], { lang: isKorean(text) ? 'ko' : 'en' }),
+    onBubble: (brief) => {
+      app.bubble?.show(brief, {
+        kind: 'Ζακιράμ',
+        hint: '전문은 대화창에',
+        onClick: () => {
+          app.bubble.hide();
+          $('#chat')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        },
+      });
+    },
+  });
+
+  /* ── 차트의 지표 서랍 ── */
+  app.market.buildIndicatorPanel();
+  $('#btnIndicators').addEventListener('click', () => {
+    const box = $('#inds');
+    box.hidden = !box.hidden;
+    if (!box.hidden) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
 
   wireButtons();
@@ -466,7 +588,107 @@ async function seedSettings() {
 
    브라우저는 사람이 한 번 눌러 주기 전에는 소리를 내지 못하게
    막는다. 그래서 첫 누름이 필요하다. 그 필요를 사이트의 첫 장면으로
-   삼았다 — 관문을 지나야 자키람이 깨어난다. */
+   삼았다.
+
+   ── 넉 자 ──
+   오늘 날짜의 월일이 열쇠다. 8월 27일이면 0827, 12월 12일이면 1212.
+
+   이것은 자물쇠가 아니다. 답이 달력에 적혀 있으니 들어오려는 자를
+   막지 못한다. 막을 셈이었다면 서버가 있어야 하고, 이 사이트에는
+   서버가 없다. 이것은 문턱이다 — 오늘을 알고 온 이에게 열리는.
+   진짜로 막아야 할 것이 생기면 그때는 서버 뒤에 두어야 한다.
+
+   날짜는 보는 사람의 기기 시각으로 셈한다. 시차가 있는 곳에서는
+   그 기기의 오늘이 답이다. */
+
+/** 오늘의 넉 자 — MMDD */
+function todayCode(now = new Date()) {
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return mm + dd;
+}
+
+/**
+ * 관문의 숫자 칸을 짓는다.
+ * 한 자 넣으면 다음 칸으로 옮겨 가고, 넉 자가 차면 스스로 열어 본다.
+ */
+function wireGate() {
+  const form = $('#gateForm');
+  const hint = $('#gateHint');
+  const code = $('#gateCode');
+  const digits = [0, 1, 2, 3].map((i) => $('#gateD' + i));
+
+  const value = () => digits.map((d) => d.value).join('');
+
+  const paint = () => {
+    for (const d of digits) d.classList.toggle('is-filled', !!d.value);
+  };
+
+  digits.forEach((d, i) => {
+    d.addEventListener('input', () => {
+      // 숫자가 아닌 것은 받지 않는다
+      d.value = d.value.replace(/\D/g, '').slice(0, 1);
+      paint();
+      if (d.value && i < 3) digits[i + 1].focus();
+      if (i === 3 && value().length === 4) form.requestSubmit();
+    });
+
+    d.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !d.value && i > 0) {
+        digits[i - 1].focus();
+        digits[i - 1].value = '';
+        paint();
+        e.preventDefault();
+      }
+      if (e.key === 'ArrowLeft' && i > 0) digits[i - 1].focus();
+      if (e.key === 'ArrowRight' && i < 3) digits[i + 1].focus();
+    });
+
+    // 붙여넣기 — 0827 을 통째로 넣는 사람이 있다
+    d.addEventListener('paste', (e) => {
+      const text = (e.clipboardData?.getData('text') || '').replace(/\D/g, '');
+      if (!text) return;
+      e.preventDefault();
+      text.slice(0, 4).split('').forEach((ch, n) => {
+        if (digits[n]) digits[n].value = ch;
+      });
+      paint();
+      digits[Math.min(3, text.length - 1)].focus();
+      if (value().length === 4) form.requestSubmit();
+    });
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const got = value();
+
+    if (got.length < 4) {
+      hint.textContent = '넉 자를 다 넣어 주십시오.';
+      hint.className = 'gate__hint is-wrong';
+      digits.find((d) => !d.value)?.focus();
+      return;
+    }
+
+    if (got !== todayCode()) {
+      code.classList.add('is-wrong');
+      hint.textContent = '오늘이 아닙니다. 월과 일, 넉 자입니다.';
+      hint.className = 'gate__hint is-wrong';
+      setTimeout(() => {
+        code.classList.remove('is-wrong');
+        for (const d of digits) d.value = '';
+        paint();
+        digits[0].focus();
+      }, 420);
+      return;
+    }
+
+    hint.textContent = '열립니다.';
+    hint.className = 'gate__hint is-open';
+    enter();
+  });
+
+  digits[0].focus();
+}
 
 /**
  * 관문을 연다.
@@ -545,26 +767,15 @@ function fail(err) {
 /* ═══════════════════ 켜기 ═══════════════════ */
 
 (async function boot() {
-  // 관문을 지나기 전에 미리 시작해 둔다. 사람이 단추를 누를 때쯤이면
+  // 관문을 지나기 전에 미리 시작해 둔다. 사람이 넉 자를 넣을 때쯤이면
   // 대개 끝나 있어서 기다리는 느낌이 없다.
   app.seeding = seedSettings();
   checkSelfProxy();
 
-  const btn = $('#enter');
-  btn.addEventListener('click', enter, { once: true });
-
-  // 자판으로도 들어갈 수 있게
-  document.addEventListener('keydown', function first(e) {
-    if (document.body.dataset.phase !== 'gate') return;
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      document.removeEventListener('keydown', first);
-      btn.click();
-    }
-  });
+  wireGate();
 
   if (!tts.supported) {
-    $('.gate__hint').textContent =
+    $('#gateHint').textContent =
       '이 브라우저는 음성 합성을 지원하지 않습니다. 소식과 차트는 그대로 볼 수 있습니다.';
   }
 })();

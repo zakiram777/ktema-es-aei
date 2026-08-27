@@ -100,11 +100,25 @@ export class Breaking {
     while (this.queue.length) {
       // 사람이 무언가를 읽고 있으면 끝날 때까지 기다린다
       if (tts.speaking()) { await wait(900); continue; }
-      if (store.get('muted')) break;
+
+      // 소리를 꺼 두었으면 입은 다물되 말풍선은 띄운다
+      if (store.get('muted')) {
+        for (const item of this.queue.splice(0)) {
+          mood.startle();
+          this.hooks.stage?.flash('alert');
+          this.hooks.onBubble?.(item);
+          await wait(GAP_MS);
+        }
+        break;
+      }
 
       const item = this.queue.shift();
       mood.startle();
       this.hooks.stage?.flash('alert');
+
+      // 얼굴 곁의 말풍선. 소리를 꺼 두었어도 이것은 뜬다 —
+      // 무엇 때문에 낯빛이 바뀌었는지는 보여야 한다.
+      this.hooks.onBubble?.(item);
 
       if (store.get('chime')) chime();
 

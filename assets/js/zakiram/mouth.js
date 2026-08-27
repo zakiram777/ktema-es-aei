@@ -26,6 +26,7 @@ import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { calmly } from '../core/dom.js';
 import { toVisemes, visemeAt, timeAt, VISEME } from '../voice/phoneme.js';
+import { Pacer } from '../voice/pace.js';
 
 /* 입 모양마다의 값 — 모두 입 상자 크기에 대한 비율이다.
      w  좌우로 벌린 너비(반쪽)
@@ -59,7 +60,7 @@ export class Mouth {
     this.frame = zak.querySelector('.zak__frame');
 
     this.tl = null;          // 지금 읽는 조각의 입 모양 줄
-    this.t0 = 0;             // 그 조각이 시작한 시각
+    this.pacer = null;       // 그 조각을 실제 속도에 맞춰 따라가는 자
     this.speaking = false;
     this.raf = 0;
     this.last = 0;
@@ -148,22 +149,28 @@ export class Mouth {
   /* ─────────────── 말을 듣는다 ─────────────── */
 
   #wireBus() {
-    on('speak:chunk', ({ text, lang, rate }) => {
+    on('speak:chunk', ({ text, lang, rate, voice }) => {
       if (!this.#enabled()) return;
       this.tl = toVisemes(text, lang, { rate });
-      this.t0 = performance.now();
+      // 이 목소리가 실제로 얼마나 빠른지는 pace.js 가 안다.
+      // 배운 것이 있으면 첫 마디부터 맞은 속도로 시작한다.
+      this.pacer = new Pacer(this.tl, { voice, lang, at: performance.now() });
       this.#start();
     });
 
-    // 합성기가 "여기를 읽는 중" 이라고 알려 주면 어긋난 시간을 끌어당긴다.
-    // 목소리마다 실제 빠르기가 달라서 이것이 없으면 뒤로 갈수록 밀린다.
+    /* 합성기가 "여기를 읽는 중" 이라고 알려 줄 때.
+
+       예전에는 시작 시각만 뒤로 당겼다. 그것은 어긋난 자리를 옮길 뿐
+       어긋나는 속도는 그대로 두는 일이라, 당겨 놓아도 곧 다시 벌어지고
+       당길 때마다 입이 튀었다. 이제는 줄 자체를 늘이고 줄인다. */
     on('speak:word', ({ index }) => {
-      if (!this.tl || !this.speaking) return;
-      const should = timeAt(this.tl, index ?? 0);
-      const now = performance.now() - this.t0;
-      const off = should - now;
-      // 한 번에 다 당기면 입이 튄다. 어긋난 만큼의 삼분의 일씩 좁힌다.
-      if (Math.abs(off) > 60) this.t0 -= off / 3;
+      if (!this.tl || !this.pacer || !this.speaking) return;
+      this.pacer.mark(index ?? 0, timeAt(this.tl, index ?? 0));
+    });
+
+    // 한 마디가 끝나면 실제로 걸린 시간으로 이 목소리의 속도를 배운다
+    on('speak:chunkend', ({ ms }) => {
+      this.pacer?.finish(ms);
     });
 
     on('speak:end', () => this.#stop());
@@ -193,6 +200,7 @@ export class Mouth {
 
   #stop() {
     this.tl = null;
+    this.pacer = null;
     if (!this.speaking) return;
     this.speaking = false;
     this.zak.classList.remove('is-mouthing');
@@ -227,7 +235,7 @@ export class Mouth {
     this.last = now;
 
     const v = forceViseme
-      || (this.tl ? visemeAt(this.tl, now - this.t0) : VISEME.REST);
+      || (this.tl && this.pacer ? visemeAt(this.tl, this.pacer.at(now)) : VISEME.REST);
     const want = SHAPE[v] || SHAPE[VISEME.REST];
 
     // '동작 줄이기' 를 켜 둔 사람에게는 덜 움직이고 더 느긋하게.

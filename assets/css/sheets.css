@@ -245,3 +245,10 @@ select option { background: var(--ink-800); color: var(--tx-200); }
   .sheet__body { width: 100%; border-left: 0; }
   .sheet__scroll { padding: var(--s-4); }
 }
+
+/* 조심해서 읽어야 할 말 — 열쇠를 브라우저에 두는 일 같은 것 */
+.row__note--warn {
+  border-left: 2px solid var(--coral-700);
+  padding-left: 10px;
+  color: var(--tx-400);
+}

@@ -141,6 +141,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .ico[data-ico="stop"]    { -webkit-mask-image: var(--i-stop);    mask-image: var(--i-stop); }
 .ico[data-ico="out"]     { -webkit-mask-image: var(--i-out);     mask-image: var(--i-out); }
 .ico[data-ico="bolt"]    { -webkit-mask-image: var(--i-bolt);    mask-image: var(--i-bolt); }
+.ico[data-ico="plus"]    { -webkit-mask-image: var(--i-plus);    mask-image: var(--i-plus); }
+.ico[data-ico="book"]    { -webkit-mask-image: var(--i-book);    mask-image: var(--i-book); }
+.ico[data-ico="flask"]   { -webkit-mask-image: var(--i-flask);   mask-image: var(--i-flask); }
+.ico[data-ico="chart"]   { -webkit-mask-image: var(--i-chart);   mask-image: var(--i-chart); }
+.ico[data-ico="send"]    { -webkit-mask-image: var(--i-send);    mask-image: var(--i-send); }
 
 :root {
   --i-refresh: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 12a9 9 0 1 1-2.64-6.36'/><path d='M21 3v6h-6'/></svg>");
@@ -152,6 +157,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
   --i-stop:    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><rect x='6' y='6' width='12' height='12' rx='2'/></svg>");
   --i-out:     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/><path d='M15 3h6v6M10 14 21 3'/></svg>");
   --i-bolt:    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M13 2 4 14h6l-1 8 9-12h-6z'/></svg>");
+  --i-plus:    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z'/></svg>");
+  --i-book:    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M5 3h11a3 3 0 0 1 3 3v15H8a3 3 0 0 1-3-3zm2 2v12.2A3 3 0 0 1 8 17h9V6a1 1 0 0 0-1-1z'/></svg>");
+  --i-flask:   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M9 2h6v2h-1v5.2l5.3 9.3A2 2 0 0 1 17.6 21H6.4a2 2 0 0 1-1.7-2.5L10 9.2V4H9zm3 4v3.7L8.2 16h7.6L12 9.7z'/></svg>");
+  --i-chart:   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M4 20V4h2v14h14v2zm4-3V9h3v8zm5 0V5h3v12zm5 0v-6h3v6z'/></svg>");
+  --i-send:    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M3 20.5 21 12 3 3.5 3 10l12 2-12 2z'/></svg>");
 }
 
 /* ─────────────────── 작은 조각 ─────────────────── */

@@ -12,6 +12,8 @@ import * as tts from '../voice/tts.js';
 import { catalogue, forLang, PRESETS, presetById, SAMPLE, reload } from '../voice/voices.js';
 import { SOURCES } from '../news/sources.js';
 import { routeReport, forgetRoutes } from '../net/proxy.js';
+import { PROVIDERS, byId as providerById } from '../chat/providers.js';
+import { report as paceReport, forget as forgetPace } from '../voice/pace.js';
 
 export class Settings {
   constructor(hooks = {}) {
@@ -44,6 +46,7 @@ export class Settings {
     clear(this.body);
     this.body.appendChild(await this.#voiceGroup());
     this.body.appendChild(this.#mouthGroup());
+    this.body.appendChild(this.#chatGroup());
     this.body.appendChild(this.#readingGroup());
     this.body.appendChild(this.#newsGroup());
     this.body.appendChild(this.#alertGroup());
@@ -278,6 +281,25 @@ export class Settings {
               + '누른 자리로 옮겨 갑니다. 한 번 맞추면 그대로 남습니다.',
         }),
         alignBtn,
+
+        /* 배운 말 속도 —
+           합성기의 실제 빠르기는 목소리마다 다르다. 어림만으로 입을
+           움직이면 문장 뒤로 갈수록 밀리므로, 목소리마다 그 배수를
+           재어 두고 다음 마디부터 맞춘다. 여기 그 값이 보인다. */
+        el('div.row', [
+          el('div.row__top', [el('span.row__label', { text: '배운 말 속도' })]),
+          el('p.row__note', {
+            text: paceLines(),
+            style: { whiteSpace: 'pre-line' },
+          }),
+          el('button.btn.btn--quiet.btn--tiny', {
+            type: 'button',
+            onclick: (e) => {
+              forgetPace();
+              e.target.closest('.row').querySelector('.row__note').textContent = paceLines();
+            },
+          }, el('span.btn__label', { text: '다시 배우게 하기' })),
+        ]),
       ],
     );
   }
@@ -290,6 +312,104 @@ export class Settings {
       input.value = String(store.get(key));
       input.dispatchEvent(new Event('input'));
     }
+  }
+
+  /* ─────────────── 대화 ─────────────── */
+
+  #chatGroup() {
+    const cur = () => providerById(store.get('chatProvider'));
+    const body = el('div.row');
+
+    /* 어느 길로 이을지 */
+    const pickRow = el('div.presets');
+    const paintPick = () => {
+      for (const b of pickRow.children) {
+        b.classList.toggle('is-on', b.dataset.id === store.get('chatProvider'));
+      }
+    };
+    for (const p of PROVIDERS) {
+      pickRow.appendChild(el('button.preset', {
+        type: 'button',
+        data: { id: p.id },
+        title: p.note,
+        onclick: () => {
+          store.set({ chatProvider: p.id, chatModel: p.def || '' });
+          paintPick();
+          paintBody();
+          this.hooks.onChat?.();
+        },
+      }, [
+        el('span.preset__gr', { text: p.gr }),
+        el('span.preset__ko', { text: p.ko }),
+      ]));
+    }
+    paintPick();
+
+    /* 고른 길에 따라 필요한 것만 보여 준다 */
+    const paintBody = () => {
+      clear(body);
+      const p = cur();
+
+      body.appendChild(el('p.row__note', { text: p.note }));
+
+      if (p.models?.length) {
+        const sel = el('select.sel', {
+          onchange: () => { store.set('chatModel', sel.value); this.hooks.onChat?.(); },
+        }, p.models.map((m) => el('option', {
+          value: m.id, text: m.ko, selected: m.id === (store.get('chatModel') || p.def),
+        })));
+        body.appendChild(el('div.row__top', [el('span.row__label', { text: '모형' })]));
+        body.appendChild(sel);
+      }
+
+      if (p.needsKey) {
+        const key = el('input.jr__title', {
+          type: 'password',
+          placeholder: p.keyHint || '열쇠',
+          value: store.get('chatKey' + p.id) || '',
+          oninput: () => {
+            store.set('chatKey' + p.id, key.value.trim());
+            this.hooks.onChat?.();
+          },
+        });
+        body.appendChild(el('div.row__top', [el('span.row__label', { text: '열쇠 (API key)' })]));
+        body.appendChild(key);
+        body.appendChild(el('p.row__note.row__note--warn', {
+          text: '열쇠는 이 브라우저에만 남습니다. 우리에게도, 어디에도 보내지 않습니다. '
+              + '다만 브라우저에 둔 열쇠는 이 기기를 쓰는 사람이면 꺼내 볼 수 있습니다. '
+              + '혼자 쓰는 기기에서, 한도를 걸어 둔 열쇠로 쓰십시오. 설정 내보내기에는 '
+              + '열쇠가 담기지 않습니다 — 옮길 때는 새 기기에서 다시 넣으십시오.',
+        }));
+      }
+
+      if (p.needsUrl) {
+        const url = el('input.jr__title', {
+          type: 'url',
+          placeholder: 'https://내서버/ask',
+          value: store.get('chatUrl') || '',
+          oninput: () => { store.set('chatUrl', url.value.trim()); this.hooks.onChat?.(); },
+        });
+        body.appendChild(el('div.row__top', [el('span.row__label', { text: '내 서버 주소' })]));
+        body.appendChild(url);
+        body.appendChild(el('p.row__note', {
+          text: '그 서버는 { system, messages } 를 받아 { text } 를 돌려주면 됩니다. '
+              + '열쇠는 그 서버가 들고 있으므로 브라우저에는 없습니다. 여럿이 보는 '
+              + '사이트라면 이 길이 맞습니다.',
+        }));
+      }
+    };
+    paintBody();
+
+    return this.#group(
+      'Διάλογος', '대화',
+      '자키람은 지금 스스로 생각하지 않습니다 — 시세와 소식을 보고 정해진 말을 할 뿐입니다. '
+      + '그 뒤에 큰 모형을 이어 붙이면 진짜로 묻고 답할 수 있습니다. 답은 대화창에 전문으로, '
+      + '얼굴 곁 말풍선에는 요지만, 그리고 자키람의 목소리로 나갑니다.',
+      [
+        el('div.row', [el('div.row__top', [el('span.row__label', { text: '어디에 잇나' })]), pickRow]),
+        body,
+      ],
+    );
   }
 
   /* ─────────────── 읽기 ─────────────── */
@@ -531,4 +651,22 @@ export class Settings {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+/** 목소리마다 배운 말 속도를 사람이 읽는 줄로 */
+function paceLines() {
+  const rows = paceReport();
+  if (!rows.length) {
+    return '아직 배운 것이 없습니다. 자키람이 몇 마디 하고 나면 이 목소리가 어림보다 '
+         + '얼마나 빠른지 재어 둡니다. 그 뒤로는 첫 마디부터 입이 맞습니다.';
+  }
+  return rows
+    .map((r) => {
+      const pct = Math.round((r.scale - 1) * 100);
+      const how = pct === 0 ? '어림과 같음'
+        : pct > 0 ? '어림보다 ' + pct + '% 느림'
+        : '어림보다 ' + Math.abs(pct) + '% 빠름';
+      return r.voice + ' (' + r.lang + ') — ' + how + ' · ' + r.n + '번 재어 봄';
+    })
+    .join('\n');
 }

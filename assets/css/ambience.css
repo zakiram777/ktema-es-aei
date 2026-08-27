@@ -173,24 +173,70 @@
   text-transform: uppercase;
 }
 
-.gate__epigraph {
+/* ── 숫자를 넣는 자리 ──
+   넉 자를 따로 세워 둔다. 한 칸씩 채워지는 것이 보여야 몇 자를
+   넣어야 하는지 말하지 않아도 안다. */
+
+.gate__form {
   display: grid;
-  gap: 6px;
-  max-width: 34em;
-  font-family: var(--f-greek);
-  font-size: clamp(.8rem, 2.1vw, .96rem);
-  line-height: 1.75;
-  color: var(--tx-400);
-}
-.gate__epigraph em {
-  font-family: var(--f-disp);
-  font-style: normal;
-  font-size: var(--t-xs);
-  letter-spacing: .3em;
-  color: var(--tx-600);
+  justify-items: center;
+  gap: var(--s-4);
+  width: 100%;
 }
 
-/* ── 입장 ── */
+.gate__label {
+  font-family: var(--f-greek);
+  font-size: var(--t-sm);
+  letter-spacing: .22em;
+  color: var(--gold-500);
+  text-transform: uppercase;
+}
+
+.gate__code {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gate__digit {
+  width: 52px;
+  height: 64px;
+  padding: 0;
+  border: 1px solid var(--gold-700);
+  border-radius: var(--r-sm);
+  background: rgba(6, 4, 16, .62);
+  color: var(--gold-100);
+  font-family: var(--f-num);
+  font-size: 1.7rem;
+  text-align: center;
+  caret-color: var(--gold-400);
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.gate__digit:focus {
+  outline: none;
+  border-color: var(--gold-300);
+  box-shadow: 0 0 0 3px rgba(208, 171, 99, .16), 0 0 26px -8px rgba(224, 196, 137, .5);
+}
+.gate__digit.is-filled { border-color: var(--gold-500); background: rgba(24, 20, 52, .7); }
+
+.gate__sep {
+  font-family: var(--f-greek);
+  font-size: 1.3rem;
+  color: var(--gold-700);
+}
+
+/* 틀렸을 때 — 한 번 흔들고 비운다 */
+.gate__code.is-wrong .gate__digit {
+  border-color: var(--coral-700);
+  animation: shake .34s var(--ease);
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  45%      { transform: translateX(5px); }
+  70%      { transform: translateX(-3px); }
+}
+
 .enter {
   position: relative;
   display: grid;
@@ -239,6 +285,8 @@
 
 @media (prefers-reduced-motion: reduce) { .enter::after { animation: none; } }
 
+.gate__hint.is-wrong { color: var(--coral-300); }
+.gate__hint.is-open { color: var(--jade-300); }
 .gate__hint {
   font-size: var(--t-xs);
   color: var(--tx-600);

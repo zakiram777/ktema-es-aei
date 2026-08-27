@@ -11,7 +11,11 @@
 import { $, el, clear, ico } from '../core/dom.js';
 import { px, num, pct, big, dir, arrow, stamp, sayNum } from '../core/fmt.js';
 import { DEFAULT_WATCH, QUICK, RANGES, nameOf, MARKETS, isOpen, unitFor } from './symbols.js';
-import { Chart, sparkline } from './chart.js';
+import { Chart, LowerChart, sparkline } from './chart.js';
+import {
+  KINDS, kindById, blank, sane, nameOf as indName, COLORS, colorVar,
+  DEFAULT_INDICATORS,
+} from './indicators.js';
 import { ma, extremes } from './quotes.js';
 import * as store from '../core/store.js';
 import { clock } from '../core/fmt.js';
@@ -38,6 +42,11 @@ export class MarketView {
     this.quotes = [];
     this.symbol = store.get('symbol') || '^KS11';
     this.range = store.get('range') || '6mo';
+
+    this.indicators = loadIndicators();
+    this.lowerHost = $('#chartLower');
+    this.lower = new LowerChart($('#chartLowerCanvas'));
+    this.legendEl = $('#chartLegend');
 
     this.chart = new Chart($('#chartCanvas'), {
       tip: $('#chartTip'),
@@ -279,9 +288,146 @@ export class MarketView {
     ]));
 
     const intraday = range === '5d';
-    this.chart.set(q.bars, { intraday });
+    this.chart.set(q.bars, { intraday, indicators: this.indicators });
+    this.#paintLower();
+    this.#paintLegend();
 
     this.#renderStats(q);
+  }
+
+  /* ─────────────── 지표 ─────────────── */
+
+  /** 아래 칸 — 그릴 것이 없으면 칸 자체를 접는다 */
+  #paintLower() {
+    const list = this.chart.lower || [];
+    this.lowerHost.hidden = !list.length;
+    if (!list.length) return;
+    // 여럿이면 칸을 늘린다. 셋을 132px 에 우겨 넣으면 아무것도 안 보인다.
+    this.lowerHost.style.height = Math.min(360, 96 + list.length * 46) + 'px';
+    requestAnimationFrame(() => {
+      this.lower.fit?.();
+      this.lower.set(this.chart.bars, list);
+    });
+  }
+
+  #paintLegend() {
+    clear(this.legendEl);
+    for (const l of this.chart.legend()) {
+      this.legendEl.appendChild(el('b', [
+        el('i', { style: { background: l.color } }),
+        document.createTextNode(l.name),
+        l.last != null ? el('span.num', { text: ' ' + px(l.last) }) : null,
+      ]));
+    }
+  }
+
+  /** 지표 만드는 서랍을 짓는다 (차트 화면의 '지표' 단추가 편다) */
+  buildIndicatorPanel() {
+    const list = $('#indsList');
+    const add = $('#indsAdd');
+    clear(list);
+    clear(add);
+
+    for (const ind of this.indicators) {
+      list.appendChild(this.#indRow(ind));
+    }
+
+    if (!this.indicators.length) {
+      list.appendChild(el('p.inds__note', { text: '지표가 하나도 없습니다. 아래에서 더해 보십시오.' }));
+    }
+
+    for (const k of KINDS) {
+      add.appendChild(el('button.btn.btn--quiet.btn--tiny', {
+        type: 'button',
+        title: k.note,
+        onclick: () => {
+          this.indicators.push(blank(k.id));
+          this.#saveIndicators();
+          this.buildIndicatorPanel();
+          this.#refreshIndicators();
+        },
+      }, [ico('plus'), el('span.btn__label', { text: k.ko })]));
+    }
+  }
+
+  #indRow(ind) {
+    const k = kindById(ind.kind) || KINDS[0];
+
+    const swatch = el('span.ind__swatch', {
+      style: { background: 'var(' + colorVar(ind.color) + ')' },
+    });
+
+    const fields = k.fields.map((f) => el('label.bt__num', [
+      el('span', { text: f.label }),
+      el('input', {
+        type: 'number', min: f.min, max: f.max, step: f.step || 1,
+        value: String(ind.cfg[f.key] ?? f.def),
+        oninput: (e) => {
+          ind.cfg[f.key] = Number(e.target.value);
+          this.#saveIndicators();
+          this.#refreshIndicators();
+          row.querySelector('.ind__name').textContent = indName(sane(ind) || ind);
+        },
+      }),
+    ]));
+
+    const colorSel = el('select.sel.sel--sm', {
+      onchange: () => {
+        ind.color = colorSel.value;
+        swatch.style.background = 'var(' + colorVar(ind.color) + ')';
+        this.#saveIndicators();
+        this.#refreshIndicators();
+      },
+    }, COLORS.map((c) => el('option', { value: c.id, text: c.ko, selected: c.id === ind.color })));
+
+    const onBox = el('input', { type: 'checkbox' });
+    onBox.checked = ind.on !== false;
+    onBox.addEventListener('change', () => {
+      ind.on = onBox.checked;
+      row.classList.toggle('is-off', !ind.on);
+      this.#saveIndicators();
+      this.#refreshIndicators();
+    });
+
+    const row = el('div.ind', { class: ind.on === false ? 'is-off' : '' }, [
+      el('label.switch.switch--bare', [
+        onBox,
+        el('span.switch__track', [el('span.switch__dot')]),
+      ]),
+      swatch,
+      el('span.ind__name', { text: indName(sane(ind) || ind) }),
+      ...fields,
+      colorSel,
+      el('span.ind__spacer'),
+      el('button.iconbtn.iconbtn--sm', {
+        type: 'button', 'aria-label': '지우기',
+        onclick: () => {
+          this.indicators = this.indicators.filter((x) => x !== ind);
+          this.#saveIndicators();
+          this.buildIndicatorPanel();
+          this.#refreshIndicators();
+        },
+      }, '×'),
+      el('span.ind__note', { text: k.note }),
+    ]);
+    return row;
+  }
+
+  #saveIndicators() {
+    store.set('indicators', JSON.parse(JSON.stringify(this.indicators)));
+  }
+
+  #refreshIndicators() {
+    this.chart.setIndicators(this.indicators);
+    this.#paintLower();
+    this.#paintLegend();
+  }
+
+  /** 차트 화면이 다시 보일 때 — 숨어 있는 동안에는 크기를 잴 수 없었다 */
+  refresh() {
+    this.chart.fit?.();
+    this.chart.draw();
+    this.#paintLower();
   }
 
   #renderStats(q) {
@@ -353,3 +499,12 @@ export class MarketView {
 }
 
 export { DEFAULT_WATCH };
+
+/* 설정에 남겨 둔 지표를 되살린다. 낡거나 깨진 것은 조용히 버린다 —
+   설정 파일이 예전 것일 수 있고, 그것 때문에 차트가 통째로 멎으면 안 된다. */
+function loadIndicators() {
+  const saved = store.get('indicators');
+  if (!Array.isArray(saved)) return JSON.parse(JSON.stringify(DEFAULT_INDICATORS));
+  const clean = saved.map(sane).filter(Boolean);
+  return clean.length ? clean : JSON.parse(JSON.stringify(DEFAULT_INDICATORS));
+}
