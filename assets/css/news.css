@@ -86,7 +86,7 @@
   animation: itemIn .5s var(--ease) both;
 }
 @keyframes itemIn { from { opacity: 0; transform: translateY(7px); } }
-.item:hover { background: rgba(26, 24, 23, .045); }
+.item:hover { background: rgba(255, 255, 255, .045); }
 .item:hover .item__title { color: var(--gold-100); }
 .item::before {
   content: "";
@@ -246,8 +246,8 @@
   overscroll-behavior: contain;
   padding: var(--s-5) var(--s-6) var(--s-8);
   border-left: 1px solid var(--line);
-  background: linear-gradient(to bottom, rgba(19, 16, 40, .98), rgba(255, 255, 255, .99));
-  box-shadow: -30px 0 80px -20px rgba(26, 24, 23, .8);
+  background: linear-gradient(to bottom, rgba(11, 14, 20, .98), rgba(11, 14, 20, .99));
+  box-shadow: -30px 0 80px -20px rgba(0, 0, 0, .8);
   animation: slideIn .42s var(--ease) both;
 }
 @keyframes slideIn { from { transform: translateX(34px); opacity: 0; } }
@@ -298,16 +298,11 @@
   color: var(--tx-300);
 }
 .reader__text p + p { margin-top: 1.15em; }
-.reader__text p.is-said { color: var(--tx-100); }
-.reader__text p.is-now {
-  color: var(--gold-100);
-  text-shadow: 0 0 22px rgba(26, 24, 23, .22);
-}
 .reader__text .lead {
   font-size: 1.1rem;
-  color: var(--tx-200);
+  color: var(--tx-100);
   padding-left: var(--s-4);
-  border-left: 2px solid var(--gold-700);
+  border-left: 2px solid var(--key-500);
 }
 
 .reader__note {

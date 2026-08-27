@@ -6,7 +6,10 @@
    색은 CSS 변수에서 읽어 오므로, 설정에서 오름·내림 색을 뒤집으면
    차트도 따라 바뀐다.
 
-   봉 하나를 누르면 onPick(bar) 이 불린다 — 유리아가 그 날을 읽는다.
+   ── 견주어 보기 ──
+   비교할 것을 걸면 눈금이 값에서 백분율로 바뀐다. 코스피 3천과 애플
+   230은 같은 눈금에 못 올리지만, "이 구간에서 몇 퍼센트 움직였나" 는
+   올릴 수 있다. 견줄 수 있는 것은 값이 아니라 움직인 정도다.
    ═══════════════════════════════════════════════════════════════ */
 
 import { px, num, big, dayStamp } from '../core/fmt.js';
@@ -29,6 +32,7 @@ export class Chart {
     this.shown = [];         // 그중 지금 보이는 것
     this.view = null;        // { from, to } — null 이면 전부
     this.inds = [];          // 겹쳐 그릴 지표들 (셈은 indicators.js 가 한다)
+    this.cmp = [];           // 견주어 그릴 것들 — 있으면 눈금이 백분율로 바뀐다
     this.hover = -1;
     this.intraday = false;
 
@@ -38,9 +42,12 @@ export class Chart {
 
   /* ─────────────── 자료 ─────────────── */
 
-  set(bars, { intraday = false, indicators = null, keepView = false } = {}) {
+  set(bars, { intraday = false, indicators = null, keepView = false, name = '' } = {}) {
     this.bars = bars || [];
+    if (name) this.name = name;
     this.intraday = intraday;
+    // 봉이 갈렸으면 견주는 줄도 새 날짜에 맞춰 다시 짝짓는다
+    for (const c of this.cmp) c.values = alignTo(this.bars, c.bars);
     if (indicators) this.list = indicators;
     if (!keepView) this.view = null;      // 새 종목이면 처음부터 다시 본다
     this.recompute();
@@ -102,6 +109,31 @@ export class Chart {
     this.onView?.(this.range());
   }
 
+  /* ═══════════════ 견주어 보기 ═══════════════
+
+     날짜를 맞춰 짝짓는다. 그냥 나란히 늘어놓으면 안 된다 — 서울과
+     뉴욕은 장이 서는 날이 다르므로, 개수만 맞춰 붙이면 하루씩 밀린
+     채로 겹쳐진다. 밀린 그림은 틀린 그림보다 나쁘다. 틀린 줄은
+     알아보지만 하루 밀린 줄은 알아보지 못하기 때문이다.
+
+     짝이 없는 날은 null 로 둔다. 선은 그 자리에서 끊긴다. */
+
+  /** @param {Array<{symbol,ko,bars,color}>} list */
+  setCompare(list) {
+    this.cmp = (list || []).map((c) => ({
+      symbol: c.symbol,
+      name: c.ko || c.symbol,
+      color: c.color,
+      bars: c.bars,
+      values: alignTo(this.bars, c.bars),
+    }));
+    this.recompute();
+    this.draw();
+  }
+
+  /** 지금 백분율 눈금인가 */
+  get pctMode() { return this.cmp.length > 0; }
+
   /** 지표 목록이 바뀌었을 때 — 봉은 그대로 두고 줄만 다시 셈한다 */
   setIndicators(list) {
     this.list = list;
@@ -136,6 +168,8 @@ export class Chart {
 
     this.overlay = this.inds.filter((i) => i.pane === 'price');
     this.lower = this.inds.filter((i) => i.pane === 'lower');
+
+    this.cmpShown = this.cmp.map((c) => ({ ...c, shown: c.values.slice(from, to + 1) }));
   }
 
   /** 지금 그려진 것들 — 범례를 만들 때 쓴다 */
@@ -281,7 +315,7 @@ export class Chart {
         ${ch != null ? `<dt>전일</dt><dd class="${ch > 0 ? 'up' : ch < 0 ? 'down' : ''}">${ch > 0 ? '+' : ''}${num(ch, 2)}%</dd>` : ''}
         ${b.v ? `<dt>양</dt><dd>${big(b.v)}</dd>` : ''}
       </dl>
-      <span class="hint">눌러서 듣기</span>`;
+      <span class="hint">굴려서 확대 · 끌어서 이동</span>`;
 
     const r = this.cv.getBoundingClientRect();
     const x = e.clientX - r.left;
@@ -343,8 +377,10 @@ export class Chart {
     const cDown = this.#css('--down', '#4f92e6');
     const cLine = this.#css('--line-soft', 'rgba(26,24,23,.08)');
     const cText = this.#css('--tx-600', '#4c4763');
-    const cGold = this.#css('--gold-500', '#b98f45');
-    const cJade = this.#css('--jade-500', '#5f9481');
+    const cGold = this.#css('--key-500', '#2962ff');
+    const cJade = this.#css('--ok', '#26a69a');
+
+    if (this.pctMode) { this.#drawPct(g, x0, step, cUp, cDown, cLine, cText); return; }
 
     /* ── 가로 눈금과 오른쪽 값 ── */
     g.font = '11px "IBM Plex Mono", monospace';
@@ -362,20 +398,7 @@ export class Chart {
     }
 
     /* ── 아래 날짜 ── */
-    g.textAlign = 'center';
-    g.textBaseline = 'top';
-    const marks = Math.min(6, this.shown.length);
-    for (let i = 0; i < marks; i++) {
-      const idx = Math.round((this.shown.length - 1) * (i / (marks - 1 || 1)));
-      const b = this.shown[idx];
-      if (!b) continue;
-      const x = x0 + idx * step;
-      const label = this.intraday
-        ? new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric' }).format(new Date(b.t))
-        : new Intl.DateTimeFormat('ko-KR', { year: '2-digit', month: 'numeric' }).format(new Date(b.t));
-      g.fillStyle = cText;
-      g.fillText(label, Math.max(20, Math.min(this.w - PAD.right - 20, x)), this.h - PAD.bottom + 8);
-    }
+    this.#dates(g, x0, step, cText);
 
     /* ── 봉, 또는 선 ── */
     const bw = Math.max(1, Math.min(9, step * 0.66));
@@ -402,7 +425,7 @@ export class Chart {
       const b = this.shown[this.hover];
       const x = Math.round(x0 + this.hover * step) + 0.5;
       g.save();
-      g.strokeStyle = 'rgba(26,24,23,.34)';
+      g.strokeStyle = 'rgba(255,255,255,.26)';
       g.setLineDash([3, 4]);
       g.lineWidth = 1;
       g.beginPath(); g.moveTo(x, PAD.top); g.lineTo(x, this.h - PAD.bottom); g.stroke();
@@ -411,8 +434,8 @@ export class Chart {
       g.restore();
 
       // 오른쪽에 지금 값을 못박아 둔다
-      g.fillStyle = 'rgba(9,7,20,.94)';
-      g.strokeStyle = 'rgba(26,24,23,.4)';
+      g.fillStyle = this.#css('--bg-400', '#2d3547');
+      g.strokeStyle = 'rgba(255,255,255,.2)';
       g.lineWidth = 1;
       const label = px(b.c);
       g.font = '11px "IBM Plex Mono", monospace';
@@ -420,9 +443,132 @@ export class Chart {
       g.beginPath();
       g.rect(this.w - PAD.right + 3, y - 9, tw, 18);
       g.fill(); g.stroke();
-      g.fillStyle = this.#css('--gold-200', '#efdcb2');
+      g.fillStyle = this.#css('--tx-100', '#e6ebf2');
       g.textAlign = 'left'; g.textBaseline = 'middle';
       g.fillText(label, this.w - PAD.right + 9, y);
+    }
+  }
+
+  /* ═══════════════ 백분율 눈금 ═══════════════
+
+     견줄 것이 걸리면 여기로 온다. 창 왼쪽 끝을 0%로 삼고, 거기서
+     저마다 얼마나 움직였는지를 그린다. 창을 옮기면 기준도 함께
+     옮겨 간다 — "지금 보고 있는 이 구간에서" 를 재는 것이므로.
+
+     봉은 그리지 않는다. 여섯 개를 겹쳐 놓고 봉까지 그리면 아무것도
+     안 보인다. 견줄 때 필요한 것은 시가·고가·저가가 아니라 결이다. */
+
+  #drawPct(g, x0, step, cUp, cDown, cLine, cText) {
+    const base = this.shown[0]?.c;
+    if (!(base > 0)) return;
+
+    // 그릴 줄 전부 — 본디 것을 맨 앞에
+    const series = [
+      { name: this.name || '기준', color: this.#css('--tx-100', '#e6ebf2'), main: true,
+        vals: this.shown.map((b) => (b.c / base - 1) * 100) },
+      ...this.cmpShown.map((c) => {
+        const b0 = c.shown.find((v) => v != null);
+        return {
+          name: c.name,
+          color: c.color,
+          vals: b0 > 0 ? c.shown.map((v) => (v == null ? null : (v / b0 - 1) * 100)) : [],
+        };
+      }),
+    ];
+
+    let lo = Infinity, hi = -Infinity;
+    for (const ser of series) {
+      for (const v of ser.vals) {
+        if (v == null || !Number.isFinite(v)) continue;
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+      }
+    }
+    if (!Number.isFinite(lo)) return;
+    const pad = (hi - lo) * 0.1 || 2;
+    lo -= pad; hi += pad;
+
+    const top = PAD.top, bot = this.h - PAD.bottom;
+    const y = (v) => bot - ((v - lo) / (hi - lo)) * (bot - top);
+
+    /* ── 눈금 ── */
+    g.font = '11px "IBM Plex Mono", monospace';
+    g.textBaseline = 'middle';
+    for (let i = 0; i <= 5; i++) {
+      const v = lo + ((hi - lo) * i) / 5;
+      const yy = Math.round(y(v)) + 0.5;
+      g.strokeStyle = cLine;
+      g.lineWidth = 1;
+      g.beginPath(); g.moveTo(PAD.left, yy); g.lineTo(this.w - PAD.right, yy); g.stroke();
+      g.fillStyle = cText;
+      g.textAlign = 'left';
+      g.fillText(`${v > 0 ? '+' : ''}${v.toFixed(1)}%`, this.w - PAD.right + 8, yy);
+    }
+
+    // 0선 — 견줄 때 가장 중요한 줄이다. 그 위냐 아래냐가 전부다.
+    if (lo < 0 && hi > 0) {
+      const yz = Math.round(y(0)) + 0.5;
+      g.strokeStyle = this.#css('--line-hard', 'rgba(255,255,255,.13)');
+      g.lineWidth = 1;
+      g.beginPath(); g.moveTo(PAD.left, yz); g.lineTo(this.w - PAD.right, yz); g.stroke();
+    }
+
+    this.#dates(g, x0, step, cText);
+
+    /* ── 줄들 ── */
+    for (const ser of series) {
+      if (!ser.vals.length) continue;
+      g.strokeStyle = ser.color;
+      g.lineWidth = ser.main ? 1.9 : 1.3;
+      g.globalAlpha = ser.main ? 1 : 0.86;
+      g.beginPath();
+      let pen = false;
+      ser.vals.forEach((v, i) => {
+        if (v == null || !Number.isFinite(v)) { pen = false; return; }
+        const xx = x0 + i * step, yy = y(v);
+        if (pen) g.lineTo(xx, yy); else { g.moveTo(xx, yy); pen = true; }
+      });
+      g.stroke();
+      g.globalAlpha = 1;
+
+      // 오른쪽 끝에 지금 값을 적는다. 줄이 여럿이면 어느 줄이
+      // 어느 것인지 범례를 다시 보러 가지 않아도 되게.
+      const last = [...ser.vals].reverse().find((v) => v != null);
+      if (last == null) continue;
+      const yy = Math.round(y(last));
+      g.fillStyle = ser.color;
+      g.textAlign = 'left';
+      g.font = `${ser.main ? '600 ' : ''}11px "IBM Plex Mono", monospace`;
+      g.fillText(`${last > 0 ? '+' : ''}${last.toFixed(1)}%`, this.w - PAD.right + 8, yy);
+    }
+
+    /* ── 십자선 ── */
+    if (this.hover >= 0 && this.shown[this.hover]) {
+      const x = Math.round(x0 + this.hover * step) + 0.5;
+      g.save();
+      g.strokeStyle = 'rgba(255,255,255,.26)';
+      g.setLineDash([3, 4]);
+      g.lineWidth = 1;
+      g.beginPath(); g.moveTo(x, PAD.top); g.lineTo(x, bot); g.stroke();
+      g.restore();
+    }
+  }
+
+  /** 아래 날짜 — 두 눈금이 함께 쓴다 */
+  #dates(g, x0, step, cText) {
+    g.textAlign = 'center';
+    g.textBaseline = 'top';
+    const marks = Math.min(6, this.shown.length);
+    for (let i = 0; i < marks; i++) {
+      const idx = Math.round((this.shown.length - 1) * (i / (marks - 1 || 1)));
+      const b = this.shown[idx];
+      if (!b) continue;
+      const x = x0 + idx * step;
+      const label = this.intraday
+        ? new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric' }).format(new Date(b.t))
+        : new Intl.DateTimeFormat('ko-KR', { year: '2-digit', month: 'numeric' }).format(new Date(b.t));
+      g.fillStyle = cText;
+      g.fillText(label, Math.max(20, Math.min(this.w - PAD.right - 20, x)), this.h - PAD.bottom + 8);
     }
   }
 
@@ -736,3 +882,23 @@ const lastOf = (vals) => {
   for (let i = vals.length - 1; i >= 0; i--) if (vals[i] != null) return vals[i];
   return null;
 };
+
+/* ═══════════════════ 날짜로 짝짓기 ═══════════════════
+
+   기준 봉의 날짜마다 견줄 쪽의 그날 종가를 찾아 늘어놓는다. 없으면
+   null 이다. 개수만 맞춰 붙이면 하루씩 밀린 그림이 나오는데, 그것은
+   틀린 그림보다 나쁘다 — 틀린 줄은 알아보지만 하루 밀린 줄은
+   알아보지 못하기 때문이다.
+
+   30분봉은 날짜가 아니라 시각까지 맞춰야 하므로 시분까지 열쇠로 쓴다. */
+function alignTo(base, other) {
+  if (!base?.length || !other?.length) return [];
+  const intraday = base.length > 1 && base[1].t - base[0].t < 20 * 3600e3;
+  const key = (t) => (intraday
+    ? new Date(t).toISOString().slice(0, 16)
+    : new Date(t).toISOString().slice(0, 10));
+
+  const map = new Map();
+  for (const b of other) map.set(key(b.t), b.c);
+  return base.map((b) => map.get(key(b.t)) ?? null);
+}

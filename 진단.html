@@ -8,35 +8,35 @@
   :root { color-scheme: dark; }
   body {
     margin: 0; padding: 24px;
-    background: #08060e; color: #ddd4c6;
+    background: #0b0e14; color: #c2cbd8;
     font: 15px/1.7 "Noto Sans KR", system-ui, sans-serif;
   }
   .wrap { max-width: 820px; margin: 0 auto; }
-  h1 { font: 400 1.6rem/1.2 Georgia, serif; color: #e0c489; margin: 0 0 4px; }
-  .sub { color: #6d6780; font-size: .82rem; margin-bottom: 28px; }
-  section { border: 1px solid rgba(224,196,137,.12); border-radius: 10px;
-            padding: 16px 18px; margin-bottom: 14px; background: rgba(18,16,40,.5); }
-  h2 { font-size: .95rem; font-weight: 500; margin: 0 0 10px; color: #efdcb2; }
+  h1 { font: 400 1.6rem/1.2 Georgia, serif; color: #e6ebf2; margin: 0 0 4px; }
+  .sub { color: #6b7688; font-size: .82rem; margin-bottom: 28px; }
+  section { border: 1px solid rgba(255,255,255,.08); border-radius: 6px;
+            padding: 16px 18px; margin-bottom: 14px; background: #161b28; }
+  h2 { font-size: .95rem; font-weight: 500; margin: 0 0 10px; color: #e6ebf2; }
   .row { display: grid; grid-template-columns: 26px 1fr; gap: 10px;
          padding: 5px 0; align-items: start; font-size: .88rem; }
-  .row + .row { border-top: 1px solid rgba(224,196,137,.06); }
-  .ok   { color: #7fd6a8; }
-  .bad  { color: #e8836c; }
-  .warn { color: #e3c37e; }
-  .dim  { color: #6d6780; }
+  .row + .row { border-top: 1px solid rgba(255,255,255,.05); }
+  .ok   { color: #26a69a; }
+  .bad  { color: #f0554d; }
+  .warn { color: #e8a33d; }
+  .dim  { color: #6b7688; }
   .mark { font-weight: 700; text-align: center; }
-  .detail { color: #8f8896; font-size: .8rem; }
+  .detail { color: #97a2b4; font-size: .8rem; }
   video, canvas { border-radius: 6px; background: #000; }
   .stage { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
   .stage video { width: 150px; aspect-ratio: 612/828; object-fit: cover; }
-  button { font: inherit; padding: 9px 18px; border-radius: 999px; cursor: pointer;
-           border: 1px solid rgba(224,196,137,.34); background: rgba(224,196,137,.08); color: #efdcb2; }
-  button:hover { background: rgba(224,196,137,.16); }
+  button { font: inherit; padding: 9px 18px; border-radius: 4px; cursor: pointer;
+           border: 1px solid #2962ff; background: #2962ff; color: #fff; }
+  button:hover { background: #4d84ff; border-color: #4d84ff; }
   textarea { width: 100%; height: 190px; margin-top: 10px; padding: 12px;
-             border: 1px solid rgba(224,196,137,.14); border-radius: 8px;
-             background: #06040f; color: #b9b0a6; font: 12px/1.6 monospace; resize: vertical; }
-  .bar { height: 5px; border-radius: 99px; background: rgba(224,196,137,.12); overflow: hidden; margin: 14px 0 22px; }
-  .bar i { display: block; height: 100%; width: 0; background: #d0ab63; transition: width .3s; }
+             border: 1px solid rgba(255,255,255,.1); border-radius: 4px;
+             background: #0b0e14; color: #97a2b4; font: 12px/1.6 monospace; resize: vertical; }
+  .bar { height: 4px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; margin: 14px 0 22px; }
+  .bar i { display: block; height: 100%; width: 0; background: #2962ff; transition: width .3s; }
 </style>
 </head>
 <body>
@@ -46,19 +46,25 @@
   <div class="bar"><i id="bar"></i></div>
 
   <section><h2>1. 어디서 열었나</h2><div id="env"></div></section>
-  <section><h2>2. 유리아의 낯빛</h2><div id="files"></div></section>
   <section>
-    <h2>3. 영상이 실제로 그려지나</h2>
+    <h2>2. 시세와 소식이 들어오나</h2>
+    <div id="net"></div>
+    <p class="detail" style="margin-top:10px">
+      이 사이트가 고장 나는 자리는 거의 언제나 여기입니다. 시세도 소식도
+      남의 집에서 받아 오는데, 그 집들이 대개 문을 열어 주지 않아 중간에
+      다리를 놓고 다닙니다. 그 다리가 막히면 화면은 뜨는데 숫자가 안 옵니다.
+    </p>
+  </section>
+  <section><h2>3. 배경 영상 파일</h2><div id="files"></div></section>
+  <section>
+    <h2>4. 영상이 실제로 그려지나</h2>
     <div id="video"></div>
     <div class="stage" style="margin-top:12px">
       <video id="probe" muted playsinline preload="auto"></video>
       <canvas id="shot" width="150" height="203"></canvas>
-      <div class="detail">왼쪽이 살아 움직이고 오른쪽에 검은 그림이 잡히면 정상입니다.<br>
-        오른쪽이 온통 희면 그림이 그려지지 않는 것입니다.</div>
+      <div class="detail">왼쪽이 움직이고 오른쪽에 같은 그림이 잡히면 정상입니다.</div>
     </div>
   </section>
-  <section><h2>4. 목소리</h2><div id="voice"></div></section>
-  <section><h2>5. 바깥과 연결</h2><div id="net"></div></section>
 
   <section>
     <h2>보낼 내용</h2>
@@ -74,10 +80,10 @@
 /* 검사들이 저마다 다른 속도로 끝나므로, 끝난 순서대로 적으면
    결과가 엉뚱한 제목 아래로 들어간다. 항목별로 담아 두었다가
    마지막에 순서대로 펴 낸다. */
-const GROUPS = { env: '환경', files: '영상 파일', video: '영상 재생', voice: '목소리', net: '바깥 연결' };
-const bucket = { env: [], files: [], video: [], voice: [], net: [] };
+const GROUPS = { env: '환경', net: '바깥 연결', files: '영상 파일', video: '영상 재생' };
+const bucket = { env: [], net: [], files: [], video: [] };
 let done = 0;
-const TOTAL = 5;
+const TOTAL = 4;
 
 function step() { document.getElementById('bar').style.width = (++done / TOTAL * 100) + '%'; }
 
@@ -128,16 +134,16 @@ function render() {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduce) {
     put('env', 'warn', '"동작 줄이기"가 켜져 있습니다',
-        '윈도우 설정 → 접근성 → 시각 효과 → 애니메이션 효과. 켜져 있으면 배경과 전환이 멈춥니다. 유리아 영상 자체는 나옵니다.');
+        '윈도우 설정 → 접근성 → 시각 효과 → 애니메이션 효과. 켜져 있으면 배경이 멈춥니다. 숫자와 차트는 그대로입니다.');
   } else {
     put('env', 'ok', '동작 줄이기 꺼짐');
   }
   step();
 })();
 
-/* ── 2. 파일 ── */
+/* ── 3. 파일 ── */
 (async function () {
-  // 전신 하나 + 고요한 낯빛 열둘 + 격한 낯빛 열둘
+  // 전신 하나 + 잔잔한 것 열둘(바탕) + 격한 것 열둘(관문)
   const want = ['full'];
   for (let i = 1; i <= 12; i++) want.push('calm-' + String(i).padStart(2, '0'));
   for (let i = 1; i <= 12; i++) want.push('wild-' + String(i).padStart(2, '0'));
@@ -146,21 +152,21 @@ function render() {
   const bad = [];
   for (const name of want) {
     try {
-      const r = await fetch('assets/media/yuria/' + name + '.mp4', { method: 'HEAD' });
+      const r = await fetch('assets/media/ink/' + name + '.mp4', { method: 'HEAD' });
       if (r.ok) ok++; else bad.push(name + ' (' + r.status + ')');
     } catch (e) { bad.push(name + ' (못 받음)'); }
   }
 
   if (ok === want.length) {
-    put('files', 'ok', '유리아의 낯빛 ' + want.length + '가지가 모두 있습니다',
-        '전신 하나, 고요한 낯빛 열둘, 격한 낯빛 열둘.');
+    put('files', 'ok', '배경 영상 ' + want.length + '가지가 모두 있습니다',
+        '전신 하나, 바탕에 쓰는 잔잔한 것 열둘, 관문에 쓰는 격한 것 열둘.');
   } else {
     put('files', 'bad', '낯빛 ' + ok + '가지만 있습니다',
         '없는 것: ' + bad.join(', ') + ' — 압축을 다시 풀어 보십시오.');
   }
 
   try {
-    const r = await fetch('assets/media/yuria/full.mp4', { method: 'HEAD' });
+    const r = await fetch('assets/media/ink/full.mp4', { method: 'HEAD' });
     const type = r.headers.get('content-type') || '(없음)';
     if (/video\/mp4/i.test(type)) put('files', 'ok', '서버가 형식을 바르게 알려 줍니다 — ' + type);
     else put('files', 'warn', '서버가 형식을 이상하게 알려 줍니다 — ' + type,
@@ -173,7 +179,7 @@ function render() {
 (async function () {
   const v = document.getElementById('probe');
   const shot = document.getElementById('shot');
-  v.src = 'assets/media/yuria/calm-04.mp4';
+  v.src = 'assets/media/ink/calm-04.mp4';
 
   const loaded = await new Promise((res) => {
     v.onloadeddata = () => res(true);
@@ -192,41 +198,34 @@ function render() {
   v.currentTime = 2;
   await new Promise((r) => { v.onseeked = r; setTimeout(r, 3000); });
 
-  /* 유리아는 흰 종이에 그린 그림이라, 그림이 나오는지를 '밝은가'로
-     묻는 것은 뜻이 없다 — 배경이 온통 희기 때문이다. 대신 종이 위에
-     multiply 로 겹쳐 놓고, 배경은 종이 그대로인지 · 가운데는 먹빛인지
-     둘 다 본다. 이것이 실제로 화면에서 벌어지는 일과 같다. */
+  /* 정말로 그림이 그려졌는지는 '한 가지 색으로만 채워져 있지 않은가'
+     로 판단한다. 밝기 하나만 재면 안 된다 — 그리기가 실패한 캔버스는
+     온통 검은데, 이 영상도 어두운 쪽이라 검은 것만으로는 못 가른다.
+     그림이 있으면 밝은 곳과 어두운 곳이 함께 있다. */
   try {
     const g = shot.getContext('2d');
-    g.fillStyle = '#faf8f4';
+    g.fillStyle = '#0b0e14';
     g.fillRect(0, 0, shot.width, shot.height);
-    g.globalCompositeOperation = 'multiply';
     g.drawImage(v, 0, 0, shot.width, shot.height);
 
     const d = g.getImageData(0, 0, shot.width, shot.height).data;
-    const lum = (i) => d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11;
-
-    let dark = 0, total = 0, cornerSum = 0;
+    let lo = 255, hi = 0, sum = 0, n = 0;
     for (let i = 0; i < d.length; i += 4) {
-      const l = lum(i);
-      total += 1;
-      if (l < 90) dark += 1;
+      const l = d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11;
+      if (l < lo) lo = l;
+      if (l > hi) hi = l;
+      sum += l; n += 1;
     }
-    for (const [x, y] of [[2, 2], [shot.width - 3, 2], [2, shot.height - 3]]) {
-      cornerSum += lum((y * shot.width + x) * 4);
-    }
-    const corner = Math.round(cornerSum / 3);
-    const inkPct = Math.round((dark / total) * 100);
+    const spread = Math.round(hi - lo);
+    const mean = Math.round(sum / n);
 
-    if (inkPct < 3) {
-      put('video', 'bad', '그림이 나오지 않습니다 (먹빛 ' + inkPct + '%)',
-          '그래픽 드라이버나 하드웨어 가속 문제일 수 있습니다. 브라우저 설정에서 하드웨어 가속을 꺼 보십시오.');
-    } else if (corner < 235) {
-      put('video', 'warn', '배경이 종이색보다 어둡습니다 (귀퉁이 밝기 ' + corner + ')',
-          '유리아 둘레에 네모난 자국이 보일 수 있습니다.');
+    if (spread < 12) {
+      put('video', 'bad', '그림이 그려지지 않습니다 (명암 차 ' + spread + ')',
+          '한 가지 색으로만 채워졌습니다. 그래픽 드라이버나 하드웨어 가속 문제일 수 있습니다. '
+          + '브라우저 설정에서 하드웨어 가속을 꺼 보십시오.');
     } else {
-      put('video', 'ok', '종이에 잘 스밉니다 — 먹빛 ' + inkPct + '%, 귀퉁이 ' + corner,
-          '배경은 종이 그대로이고 그림만 남는다는 뜻입니다.');
+      put('video', 'ok', '잘 그려집니다 — 명암 차 ' + spread + ', 평균 밝기 ' + mean,
+          '배경에서는 여기서 다시 흐리고 어둡게 눌러 아주 옅게만 깔립니다.');
     }
   } catch (e) {
     put('video', 'warn', '그림을 확인하지 못했습니다', e.message);
@@ -234,88 +233,13 @@ function render() {
 
   try {
     await v.play();
-    put('video', 'ok', '자동 재생이 됩니다 — 유리아가 움직입니다');
+    put('video', 'ok', '자동 재생이 됩니다 — 배경이 움직입니다');
     v.pause();
   } catch (e) {
     put('video', 'warn', '자동 재생이 막혀 있습니다',
-        '유리아가 정지 그림으로 나타납니다. 화면을 한 번 누르면 움직입니다.');
+        '배경이 정지 그림으로 남습니다. 숫자와 차트는 그대로입니다.');
   }
   step();
-})();
-
-/* ── 4. 목소리 ── */
-(function () {
-  if (!window.speechSynthesis) {
-    put('voice', 'bad', '이 브라우저는 음성 합성을 지원하지 않습니다',
-        '크롬이나 엣지로 열어 보십시오.');
-    step(); return;
-  }
-
-  // 본 사이트(assets/js/voice/voices.js)가 쓰는 이름표의 요약본이다
-  const FEMALE = ['heami','sunhi','yuna','seoyeon','jimin','seohyeon','soonbok','yujin',
-                  'zira','aria','jenny','michelle','sara','eva','hazel','nancy','jane','emma',
-                  'samantha','victoria','karen','moira','tessa','fiona','serena','한국의','female'];
-  const MALE = ['injoon','bongjin','gookmin','hyunsu','david','mark','guy','ryan','george',
-                'daniel','alex','fred','tom','davis','tony','jason','andrew','brian','male'];
-
-  const isFemale = (n) => {
-    const s = n.toLowerCase();
-    if (s.includes('female')) return true;
-    if (FEMALE.some((w) => s.includes(w))) return true;
-    return false;
-  };
-  const isMale = (n) => {
-    const s = n.toLowerCase();
-    return !isFemale(n) && MALE.some((w) => s.includes(w));
-  };
-
-  function check() {
-    const all = speechSynthesis.getVoices();
-    if (!all.length) return false;
-    const ko = all.filter((x) => /^ko/i.test(x.lang));
-    const en = all.filter((x) => /^en/i.test(x.lang));
-    const f = all.filter((x) => isFemale(x.name));
-
-    put('voice', 'ok', '목소리 ' + all.length + '개를 찾았습니다');
-
-    // 유리아는 한국어와 영어를 둘 다 읽는다. 두 쪽 다 있어야 온전하다.
-    if (ko.length) put('voice', 'ok', '한국어 목소리 ' + ko.length + '개',
-                       ko.map((x) => x.name).join(', ').slice(0, 200));
-    else put('voice', 'bad', '한국어 목소리가 없습니다',
-             '윈도우 설정 → 시간 및 언어 → 음성 → 음성 추가. 또는 엣지로 열어 보십시오.');
-
-    if (en.length) put('voice', 'ok', '영어 목소리 ' + en.length + '개',
-                       en.map((x) => x.name).join(', ').slice(0, 200));
-    else put('voice', 'warn', '영어 목소리가 없습니다',
-             '영어 기사는 한국어 목소리가 대신 읽습니다. 발음이 어색합니다.');
-
-    if (f.length) {
-      const koF = ko.filter((x) => isFemale(x.name));
-      const enF = en.filter((x) => isFemale(x.name));
-      put('voice', 'ok', '여자 목소리로 짚이는 것 ' + f.length + '개'
-          + ' (한국어 ' + koF.length + ' · 영어 ' + enF.length + ')',
-          f.map((x) => x.name).join(', ').slice(0, 200));
-      if (ko.length && !koF.length) {
-        put('voice', 'warn', '한국어 여자 목소리가 없습니다',
-            '엣지로 열면 Microsoft SunHi 같은 목소리가 잡힙니다.');
-      }
-    } else {
-      put('voice', 'warn', '여자 목소리를 못 찾았습니다',
-          '엣지로 열면 Microsoft ... Online (Natural) 목소리가 여럿 잡힙니다.');
-    }
-
-    const m = all.filter((x) => isMale(x.name));
-    if (m.length) put('voice', 'dim', '남자 목소리 ' + m.length + '개는 후보에서 빠집니다',
-                      m.map((x) => x.name).join(', ').slice(0, 160));
-    step();
-    return true;
-  }
-
-  if (!check()) {
-    speechSynthesis.onvoiceschanged = () => { if (check()) speechSynthesis.onvoiceschanged = null; };
-    setTimeout(() => { if (!done || !speechSynthesis.getVoices().length) {
-      put('voice', 'bad', '목소리 목록을 못 받았습니다'); step(); } }, 5000);
-  }
 })();
 
 /* ── 5. 바깥 ──
@@ -387,7 +311,7 @@ function render() {
     } else {
       put('net', 'bad', label + ' — 어느 길로도 못 받았습니다',
           '두드려 본 길: ' + tried.join(', ') + '. 회사 방화벽이나 백신이 막고 있거나, '
-          + '공개 프록시가 다 같이 멎었을 수 있습니다. 소식과 시세만 안 나오고 유리아는 정상입니다.');
+          + '공개 프록시가 다 같이 멎었을 수 있습니다. 이 경우 화면은 떠도 숫자가 비어 있습니다.');
     }
   }
   step();

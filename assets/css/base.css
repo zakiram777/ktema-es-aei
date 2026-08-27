@@ -1,5 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════
    base.css — 초기화, 글자, 그리고 어디서나 쓰는 조각들
+
+   ── 왜 모서리가 각졌나 ──
+   둥근 모서리는 다정하다. 도구는 다정할 필요가 없다. 이 화면의 단추는
+   숫자 옆에 붙어 살고, 둥근 것이 숫자 옆에 있으면 눈이 그 곡선을
+   따라간다. 2~4px 이면 '깎여 있다' 는 것만 알고 곡선은 안 보인다.
    ═══════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -13,7 +18,7 @@ html {
 body {
   margin: 0;
   min-height: 100dvh;
-  background: var(--ink-950);
+  background: var(--bg-050);
   color: var(--tx-200);
   font-family: var(--f-ui);
   font-size: var(--t-md);
@@ -40,7 +45,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   border-radius: 2px;
 }
 
-::selection { background: rgba(26, 24, 23, .28); color: var(--gold-100); }
+::selection { background: var(--key-dim); color: var(--tx-000); }
 
 /* 얇고 어두운 스크롤바 */
 * { scrollbar-width: thin; scrollbar-color: var(--ink-500) transparent; }
@@ -69,9 +74,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
-  padding: 7px 14px;
+  padding: 6px 12px;
   border: 1px solid var(--btn-bd);
-  border-radius: 999px;
+  border-radius: var(--r-md);
   background: var(--btn-bg);
   color: var(--btn-fg);
   font-size: var(--t-sm);
@@ -87,18 +92,20 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .btn:hover:not(:disabled) {
   --btn-fg: var(--gold-200);
   --btn-bd: var(--line-hard);
-  --btn-bg: rgba(26, 24, 23, .06);
+  --btn-bg: rgba(255, 255, 255, .06);
 }
 .btn:disabled { opacity: .4; cursor: default; }
-.btn--gold {
-  --btn-fg: var(--gold-200);
-  --btn-bd: rgba(26, 24, 23, .34);
-  --btn-bg: rgba(26, 24, 23, .07);
+.btn--key, .btn--gold {
+  --btn-fg: #fff;
+  --btn-bd: var(--key-500);
+  --btn-bg: var(--key-500);
 }
-.btn--gold:hover:not(:disabled) {
-  --btn-bg: rgba(26, 24, 23, .14);
-  box-shadow: var(--glow-gold);
+.btn--key:hover:not(:disabled), .btn--gold:hover:not(:disabled) {
+  --btn-fg: #fff;
+  --btn-bd: var(--key-400);
+  --btn-bg: var(--key-400);
 }
+.btn--tiny { padding: 3px 9px; font-size: var(--t-xs); }
 .btn--quiet { --btn-bd: var(--line-soft); --btn-fg: var(--tx-400); }
 .btn--ghost { --btn-bd: transparent; padding: 7px 10px; }
 .btn--ghost:hover:not(:disabled) { --btn-bd: var(--line); }
@@ -147,6 +154,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .ico[data-ico="chart"]   { -webkit-mask-image: var(--i-chart);   mask-image: var(--i-chart); }
 .ico[data-ico="send"]    { -webkit-mask-image: var(--i-send);    mask-image: var(--i-send); }
 .ico[data-ico="eye"]     { -webkit-mask-image: var(--i-eye);     mask-image: var(--i-eye); }
+.ico[data-ico="candle"]  { -webkit-mask-image: var(--i-candle);  mask-image: var(--i-candle); }
+.ico[data-ico="grid"]    { -webkit-mask-image: var(--i-grid);    mask-image: var(--i-grid); }
+.ico[data-ico="sigma"]   { -webkit-mask-image: var(--i-sigma);   mask-image: var(--i-sigma); }
+.ico[data-ico="info"]    { -webkit-mask-image: var(--i-info);    mask-image: var(--i-info); }
+.ico[data-ico="search"]  { -webkit-mask-image: var(--i-search);  mask-image: var(--i-search); }
 
 :root {
   --i-refresh: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 12a9 9 0 1 1-2.64-6.36'/><path d='M21 3v6h-6'/></svg>");
@@ -163,6 +175,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
   --i-flask:   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M9 2h6v2h-1v5.2l5.3 9.3A2 2 0 0 1 17.6 21H6.4a2 2 0 0 1-1.7-2.5L10 9.2V4H9zm3 4v3.7L8.2 16h7.6L12 9.7z'/></svg>");
   --i-chart:   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M4 20V4h2v14h14v2zm4-3V9h3v8zm5 0V5h3v12zm5 0v-6h3v6z'/></svg>");
   --i-send:    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M3 20.5 21 12 3 3.5 3 10l12 2-12 2z'/></svg>");
+  --i-candle:  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M6 2h2v3h1v10H8v3H6v-3H5V5h1zm9 2h2v5h1v9h-1v3h-2v-3h-1V9h1z'/></svg>");
+  --i-grid:    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z'/></svg>");
+  --i-sigma:   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M18 4H6l6 8-6 8h12'/></svg>");
+  --i-info:    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20m-1 4h2v2h-2zm0 4h2v8h-2z'/></svg>");
+  --i-search:  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-4-4'/></svg>");
   --i-eye:     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M12 5C6.5 5 2.7 9.4 1.5 11.4a1.2 1.2 0 0 0 0 1.2C2.7 14.6 6.5 19 12 19s9.3-4.4 10.5-6.4a1.2 1.2 0 0 0 0-1.2C21.3 9.4 17.5 5 12 5m0 2.6a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8m0 2.2a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4'/></svg>");
 }
 
@@ -191,42 +208,22 @@ button, input, select, textarea { font: inherit; color: inherit; }
   color: var(--tx-500);
   letter-spacing: .01em;
 }
-.hint--speak::before {
-  content: "";
-  display: inline-block;
-  width: 11px; height: 11px;
-  margin-right: 6px;
-  vertical-align: -1px;
-  background: currentColor;
-  -webkit-mask-image: var(--i-voice); mask-image: var(--i-voice);
-  -webkit-mask-size: contain; mask-size: contain;
-  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-}
 
-/* 값 단추 — 누르면 유리아가 읽는다 */
-.val {
-  display: inline;
-  padding: 1px 4px;
-  margin: 0 -2px;
-  border: 0;
-  border-radius: var(--r-sm);
-  background: none;
-  color: inherit;
-  font: inherit;
+
+/* 눌러서 어디론가 가는 작은 이름표 — 기사 안의 종목 같은 것 */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-200);
+  color: var(--tx-200);
+  font-size: var(--t-xs);
   cursor: pointer;
-  position: relative;
-  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
-.val:hover, .val:focus-visible {
-  background: rgba(26, 24, 23, .12);
-  color: var(--gold-100);
-}
-.val:active { background: rgba(26, 24, 23, .22); }
-.val.is-said { animation: said .9s var(--ease); }
-@keyframes said {
-  0%   { background: rgba(26, 24, 23, .38); }
-  100% { background: rgba(26, 24, 23, 0); }
-}
+.tag:hover { color: var(--key-300); border-color: var(--key-500); }
 
 /* 방향 색 */
 .up   { color: var(--up); }
@@ -288,7 +285,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   width: 32px; height: 17px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(26, 24, 23, .35);
+  background: var(--bg-300);
   transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 .switch__dot {
@@ -299,12 +296,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
   transition: transform var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 .switch input:checked + .switch__track {
-  border-color: var(--line-hard);
-  background: rgba(26, 24, 23, .12);
+  border-color: var(--key-500);
+  background: var(--key-dim);
 }
 .switch input:checked + .switch__track .switch__dot {
   transform: translateX(15px);
-  background: var(--gold-300);
+  background: var(--key-300);
 }
 .switch input:focus-visible + .switch__track { outline: 1px solid var(--gold-400); outline-offset: 2px; }
 
@@ -312,7 +309,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .seg {
   display: inline-flex;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--r-md);
   overflow: hidden;
 }
 .seg button {
@@ -325,4 +322,4 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .seg button + button { border-left: 1px solid var(--line-soft); }
 .seg button:hover { color: var(--gold-200); }
-.seg button.is-on { background: rgba(26, 24, 23, .12); color: var(--gold-200); }
+.seg button.is-on { background: var(--key-dim); color: var(--key-300); }

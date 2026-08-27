@@ -8,7 +8,7 @@
    말은 전부 여기서 한다. Node 는 무엇을 쓰든 UTF-8 로 내보낸다.
 
    하는 일
-     1. 폴더가 온전한지 본다 (영상 열세 편, 소스, index.html)
+     1. 폴더가 온전한지 본다 (배경 영상 스물다섯 편, 소스, index.html)
      2. settings.json 이 있으면 알려 준다 — 켤 때 저절로 적용된다
      3. 바탕화면 바로가기를 만들지 묻는다
      4. 서버를 띄우고 브라우저를 연다
@@ -41,7 +41,7 @@ function check() {
     ['index.html',                    '첫 화면'],
     ['assets/js/main.js',             '프로그램'],
     ['assets/css/tokens.css',         '색과 글자'],
-    ['assets/media/zakiram/01.mp4',   '자키람 영상'],
+    ['assets/media/ink/full.mp4',     '배경 영상'],
     ['serve.mjs',                     '미리보기 서버'],
   ];
 
@@ -55,15 +55,17 @@ function check() {
     return false;
   }
 
-  // 영상 열세 편이 다 있나
+  // 배경 영상 스물넷이 다 있나 (바탕에 쓰는 calm 열둘, 관문에 쓰는 wild 열둘)
   const clips = [];
-  for (let i = 1; i <= 13; i++) {
-    const f = path.join(ROOT, 'assets/media/zakiram', String(i).padStart(2, '0') + '.mp4');
-    if (!fs.existsSync(f)) clips.push(i);
+  for (const kind of ['calm', 'wild']) {
+    for (let i = 1; i <= 12; i++) {
+      const name = `${kind}-${String(i).padStart(2, '0')}.mp4`;
+      if (!fs.existsSync(path.join(ROOT, 'assets/media/ink', name))) clips.push(name);
+    }
   }
   if (clips.length) {
-    say(C.gold(`자키람 영상 ${clips.length}편이 없습니다 (${clips.join(', ')}번).`));
-    say(C.gold('사이트는 뜨지만 표정이 덜 바뀝니다.'));
+    say(C.gold(`배경 영상 ${clips.length}편이 없습니다 (${clips.slice(0, 4).join(', ')}${clips.length > 4 ? ' …' : ''}).`));
+    say(C.gold('사이트는 그대로 돌아갑니다. 배경이 덜 갈릴 뿐입니다.'));
     say();
   }
 

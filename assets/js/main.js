@@ -5,14 +5,18 @@
    갈아 끼워도 나머지는 그대로 둘 수 있다.
 
    흐름
-     관문을 지난다 → 유리아가 나타난다 → 소식과 시세를 부른다
-     → 시세로 낯빛을 정한다 → 소식이 오면 속보를 가려 외친다
+     관문을 지난다 → 시세를 부른다 → 차트를 건다 → 소식을 부른다
+     → 그다음부터는 90초마다 시세만 조용히 다시 부른다
+
+   ── 무엇을 먼저 부르나 ──
+   시세가 먼저다. 이 사이트를 여는 사람이 첫 3초에 보고 싶어 하는 것은
+   숫자이지 기사가 아니다. 소식은 그 뒤에 조용히 채워 넣는다.
    ═══════════════════════════════════════════════════════════════ */
 
 import { $, el, wait, calmly } from './core/dom.js';
-import { on, emit } from './core/bus.js';
+import { on } from './core/bus.js';
 import * as store from './core/store.js';
-import { until, isKorean } from './core/fmt.js';
+import { until } from './core/fmt.js';
 
 import { checkSelfProxy } from './net/proxy.js';
 
@@ -23,101 +27,29 @@ import { Breaking } from './news/breaking.js';
 
 import * as quotes from './market/quotes.js';
 import { MarketView } from './market/view.js';
-import { DEFAULT_WATCH, RANGES } from './market/symbols.js';
+import { AnalysisView } from './market/anaview.js';
+import { DEFAULT_WATCH, RANGES, nameOf } from './market/symbols.js';
 
-import * as tts from './voice/tts.js';
-import * as script from './voice/script.js';
-
-import { Apparition } from './yuria/apparition.js';
-import { Guide } from './yuria/guide.js';
-import * as mood from './yuria/mood.js';
-
-import { Ambience, drawSealTicks, drawGateSpiral } from './ui/ambience.js';
+import { Veil, gateFilm } from './ui/ambience.js';
 import { Settings } from './ui/settings.js';
 import { Nav } from './ui/nav.js';
-import { Bubble } from './ui/bubble.js';
-import { summarize, forItem } from './core/summary.js';
+import { Picker, looksLikeSymbol } from './ui/picker.js';
+import { WatchList } from './ui/watch.js';
 
-import { Chat } from './chat/chat.js';
 import { JournalView } from './journal/view.js';
 import { BacktestView } from './backtest/view.js';
 
 /* ═══════════════════ 상태 ═══════════════════ */
 
 const app = {
-  yuria: null,
-  guide: null,
-  bubble: null,
-  nav: null,
-  chat: null,
-  journal: null,
-  backtest: null,
-  ambience: null,
-  news: null,
-  reader: null,
-  breaking: null,
-  market: null,
-  settings: null,
-  timer: 0,
-  countdown: 0,
-  seeding: null,
+  veil: null, nav: null, pick: null, watch: null,
+  news: null, reader: null, breaking: null,
+  market: null, ana: null, journal: null, backtest: null, settings: null,
+  timer: 0, countdown: 0, seeding: null,
   quotes: [],
   chartQ: null,
+  anaAt: 0,
 };
-
-/* ═══════════════════ 유리아의 말 ═══════════════════ */
-
-const sayEl = $('#sayText');
-const btnStop = $('#btnSpeakStop');
-
-/**
- * 지금 하는 말을 적어 둔다 — 눈에 보이지 않는 자리에.
- *
- * 예전에는 유리아 옆에 그 말을 그대로 띄웠다. 그런데 글자가 뜨면
- * 사람의 눈이 그리로 가서, 정작 유리아를 보지 않게 된다.
- * 읽는 것은 귀로 듣고 얼굴로 보는 편이 낫다. 다만 화면 낭독기를
- * 쓰는 사람에게는 남겨 두어야 하므로 sr-only 자리에 적는다.
- */
-function showSaying(text) {
-  if (sayEl) sayEl.textContent = text || '';
-}
-
-/**
- * 유리아가 말하게 하는 하나뿐인 문. 어디서 부르든 여기를 지난다.
- * @param {string[]|string} lines
- */
-function speak(lines, opts = {}) {
-  const arr = [].concat(lines).filter(Boolean);
-  if (!arr.length) return;
-
-  const lang = opts.lang || (isKorean(arr.join(' ')) ? 'ko' : 'en');
-
-  // 말하는 동안에는 입이 살아 있는 구간으로
-  app.yuria?.setMood(mood.speakingMood(opts.mood || mood.mood()));
-
-  tts.speak(arr, {
-    lang,
-    onstart: () => {
-      app.yuria?.setSpeaking(true);
-      btnStop.hidden = false;
-    },
-    onchunk: (i, text) => showSaying(text),
-    onend: () => {
-      app.yuria?.setSpeaking(false);
-      btnStop.hidden = true;
-      setTimeout(() => { if (!tts.speaking()) showSaying(''); }, 2600);
-      app.yuria?.setMood(mood.mood());
-      opts.onend?.();
-    },
-  });
-}
-
-function hush() {
-  tts.stop();
-  app.yuria?.setSpeaking(false);
-  btnStop.hidden = true;
-  showSaying('');
-}
 
 /* ═══════════════════ 소식 ═══════════════════ */
 
@@ -132,10 +64,10 @@ async function loadNews({ quiet = false, force = false } = {}) {
 
     if (!quiet) {
       const fresh = items.filter((x) => x.isNew).length;
-      const line = script.forRefresh(items.length, fresh, 'ko');
-      app.breaking.notice(line, { kind: '갱신', ms: 6000 });
-      // 새 것이 없으면 굳이 말하지 않는다. 조용한 편이 낫다.
-      if (fresh > 0 && !tts.speaking()) speak([line], { lang: 'ko' });
+      app.breaking.notice(
+        fresh > 0 ? `새 소식 ${fresh}건을 포함해 ${items.length}건.` : `${items.length}건. 새 것은 없습니다.`,
+        { kind: '갱신', ms: 5000 },
+      );
     }
   } catch (err) {
     console.warn('[news]', err);
@@ -170,35 +102,31 @@ function scheduleRefresh() {
 
 async function loadQuotes({ quiet = false } = {}) {
   const btn = $('#btnQuotes');
-  btn.classList.add('is-busy');
+  btn?.classList.add('is-busy');
   try {
     const watch = store.get('watch') || DEFAULT_WATCH;
     const { quotes: qs, at } = await quotes.fetchWatch(watch, { fresh: !quiet });
     app.quotes = qs;
     app.market.setQuotes(qs, at);
-
-    const m = mood.read(qs);
-    paintMood(m, mood.moodScore());
+    app.watch.set(qs, at);
   } catch (err) {
     console.warn('[quotes]', err);
     if (!app.quotes.length) {
       app.breaking.notice('시세를 가져오지 못했습니다.', { kind: '알림' });
     }
   } finally {
-    btn.classList.remove('is-busy');
+    btn?.classList.remove('is-busy');
   }
 }
 
-/* 차트는 시세와 소식을 다 부른 뒤에 마지막으로 나가는 부름이다. 그래서
-   공개 프록시가 잠깐 문턱을 걸어 잠글 때 혼자 넘어지기 쉽다 — 목록은
-   찼는데 차트만 "길이 막혔습니다" 로 남는 모양이 그것이다. 대개 한숨
-   쉬었다 다시 물으면 열리므로, 사람이 단추를 누르기 전에 한 번은
-   조용히 다시 물어본다.
+/* 차트는 시세를 부른 뒤에 나가는 부름이라, 공개 프록시가 잠깐 문턱을
+   걸어 잠글 때 혼자 넘어지기 쉽다 — 목록은 찼는데 차트만 "길이
+   막혔습니다" 로 남는 모양이 그것이다. 대개 한숨 쉬었다 다시 물으면
+   열리므로, 사람이 단추를 누르기 전에 한 번은 조용히 다시 물어본다.
 
    기다리는 시간을 늘려 가며 두 번 더 묻는다. 문턱은 "몇 초에 몇 번" 으로
    세어지므로, 두 번 다 같은 간격으로 물으면 둘 다 같은 창 안에 떨어져
-   함께 넘어진다. 1.2초 뒤에 한 번, 그래도 안 되면 3.5초 뒤에 한 번이면
-   대개 창이 지나가 있다. */
+   함께 넘어진다. */
 const CHART_RETRY_MS = [1200, 3500];
 
 async function loadChart(symbol, rangeId) {
@@ -210,6 +138,8 @@ async function loadChart(symbol, rangeId) {
       const q = await quotes.fetchOne(symbol, { range: r.id, interval: r.interval });
       app.chartQ = q;
       app.market.setChart(q, r.id);
+      app.pick.show(q.symbol, q.ko || q.name);
+      app.watch.live(q);
       return;
     } catch (err) {
       // 그새 다른 것을 골랐다면 옛 부름은 조용히 물러난다
@@ -222,59 +152,36 @@ async function loadChart(symbol, rangeId) {
   }
 }
 
-/* ═══════════════════ 낯빛 ═══════════════════ */
-
-function paintMood(m, score) {
-  app.yuria?.setMood(m);
-  const bar = $('#moodBar');
-  const val = $('#moodVal');
-  const face = $('#zakMood');
-  if (face) face.textContent = mood.MOOD_KO?.[m] || '';
-  if (bar) {
-    const clamped = Math.max(-3, Math.min(3, score || 0));
-    bar.style.left = `${50 + (clamped / 3) * 46}%`;
-  }
-  if (val) {
-    val.textContent = Number.isFinite(score)
-      ? `${score > 0 ? '+' : ''}${score.toFixed(2)}%`
-      : '—';
-    val.className = `meter__val ${score > 0.05 ? 'up' : score < -0.05 ? 'down' : ''}`;
-  }
+/** 무엇을 볼 것인가가 바뀌었다 — 한 곳으로 모아 둔다 */
+function goSymbol(sym, meta) {
+  store.set('symbol', sym);
+  app.market.setSymbol(sym);
+  app.market.clearCompare();
+  app.watch.mark(sym);
+  app.pick.show(sym, meta?.ko || nameOf(sym));
+  loadChart(sym, app.market.range);
+  app.nav?.show('chart');
 }
 
-/* ═══════════════════ 지금 화면에 있는 것 ═══════════════════
+/* ═══════════════════ 분석 ═══════════════════
 
-   대화가 바깥 모형에게 물을 때 함께 보내는 사실들이다. 이것이 없으면
-   모형은 오늘 시장을 모른 채 그럴듯한 말을 지어낸다. 지어낸 값은
-   시장의 말로는 가장 나쁜 것이다. 그래서 지금 받아 둔 값만 보낸다. */
+   한 해치 열둘을 부르는 일이라 무겁다. 그래서 분석 화면을 열 때만
+   부르고, 한 번 부른 것은 5분 동안 다시 부르지 않는다. */
 
-function marketFacts() {
-  const live = app.quotes.filter((q) => q.ok && Number.isFinite(q.changePct));
-  const items = (app.news?.items || []).slice(0, 6);
+const ANA_TTL = 5 * 60_000;
 
-  const quotesLine = live.length
-    ? live.slice(0, 8).map((q) =>
-      `${q.ko || q.name} ${Math.round(q.price * 100) / 100} (${q.changePct > 0 ? '+' : ''}${q.changePct.toFixed(2)}%)`,
-    ).join(', ')
-    : '';
-
-  const newsLine = items.length
-    ? items.map((i, n) => `${n + 1}. ${i.title}`).join(' / ')
-    : '';
-
-  const m = mood.mood();
-  const moodLine = Number.isFinite(mood.moodScore())
-    ? `시장의 기분은 ${mood.moodScore().toFixed(2)}% 쪽입니다.`
-    : '';
-
-  const brief = [
-    quotesLine ? '[시세] ' + quotesLine : '',
-    newsLine ? '[소식] ' + newsLine : '',
-    m ? '[낯빛] ' + m : '',
-    '[지금] ' + new Date().toLocaleString('ko-KR'),
-  ].filter(Boolean).join('\n');
-
-  return { quotesLine, newsLine, moodLine, brief };
+async function loadAnalysis({ force = false } = {}) {
+  if (!force && Date.now() - app.anaAt < ANA_TTL) return;
+  app.ana.loading();
+  try {
+    const watch = store.get('watch') || DEFAULT_WATCH;
+    const series = await quotes.fetchSeries(watch, { range: '1y', interval: '1d', fresh: force });
+    app.anaAt = Date.now();
+    app.ana.set(series, app.anaAt);
+  } catch (err) {
+    console.warn('[analysis]', err);
+    app.ana.failed(err.message);
+  }
 }
 
 /* ═══════════════════ 짓기 ═══════════════════ */
@@ -282,17 +189,10 @@ function marketFacts() {
 function build() {
   document.documentElement.dataset.tint = store.get('tint') || 'kr';
 
-  /* ── 배경 ── */
-  app.ambience = new Ambience($('#sky'));
-  if (store.get('motion') && !calmly()) app.ambience.start();
-
-  /* ── 유리아 ──
-     붙박이가 아니다. 화면 아무 데나 나타났다 사라진다.
-     말풍선이 그를 따라다니므로 나타나고 사라질 때 알려 준다. */
-  app.yuria = new Apparition({
-    onShow: () => app.bubble?.follow(),
-    onHide: () => app.bubble?.hide(),
-  });
+  /* ── 바탕 ── */
+  app.veil = new Veil({ film: $('#veilFilm'), grid: $('#veilGrid') });
+  if (store.get('motion') && !calmly()) app.veil.start();
+  else app.veil.pause();
 
   /* ── 소식 ── */
   app.news = new NewsView({
@@ -312,108 +212,67 @@ function build() {
   });
 
   app.reader = new Reader({
-    onStart: () => {
-      app.yuria?.setSpeaking(true);
-      app.yuria?.setMood(mood.speakingMood());
-      btnStop.hidden = false;
-    },
-    onChunk: (text) => showSaying(text),
-    onEnd: () => {
-      app.yuria?.setSpeaking(false);
-      app.yuria?.setMood(mood.mood());
-      btnStop.hidden = true;
-      setTimeout(() => { if (!tts.speaking()) showSaying(''); }, 2600);
-    },
+    watch: () => store.get('watch') || DEFAULT_WATCH,
+    onSymbol: (sym) => goSymbol(sym),
   });
 
-  app.bubble = new Bubble($('#yuriaSay'), app.yuria);
-
   app.breaking = new Breaking({
-    stage: app.yuria,
     onOpen: (item) => { if (item?.id && item.title) app.reader.open(item); },
-    onSpeak: (lines) => showSaying(lines.join(' ')),
-
-    /* 속보가 오면 얼굴 곁에 말풍선을 띄운다. 전문이 아니라 요지다 —
-       얼굴을 가리지 않아야 하고, 길면 읽지 않는다. 누르면 그 기사로
-       간다. 말로 하는 것은 흘러가 버리지만 이것은 남아서 눌린다. */
-    onBubble: (item) => {
-      app.bubble?.show(forItem(item, 130), {
-        kind: item.flag || '속보',
-        tone: 'urgent',
-        hint: '눌러서 기사 보기',
-        onClick: () => {
-          app.bubble.hide();
-          app.nav?.show('news');
-          app.reader.open(item);
-        },
-      });
-      app.nav?.mark('news', true);
-    },
+    onUrgent: () => app.nav?.mark('news', true),
   });
 
   /* ── 시장 ── */
   app.market = new MarketView({
-    onSymbol: (sym) => {
-      store.set('symbol', sym);
-      app.market.setSymbol(sym);
-      loadChart(sym, app.market.range);
-      app.nav?.show('chart');
-    },
+    onSymbol: (sym) => goSymbol(sym),
     onRange: (r) => loadChart(app.market.symbol, r),
-
-    // 숫자를 눌렀을 때
-    onSpeakValue: (v) => {
-      if (v.text) { speak([v.text], { lang: 'ko' }); return; }
-      const { lines, lang } = script.forValue({ ...v, lang: 'ko' });
-      speak(lines, { lang });
-    },
-
-    // 봉 하나를 눌렀을 때
-    onSpeakBar: (bar, i, bars, sym) => {
-      const prev = bars[i - 1];
-      const ch = prev ? bar.c - prev.c : null;
-      const chPct = prev ? ((bar.c - prev.c) / prev.c) * 100 : null;
-      const when = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric' })
-        .format(new Date(bar.t));
-      const name = app.chartQ?.ko || sym;
-      const { lines, lang } = script.forValue({
-        label: `${name} ${when} 종가`,
-        value: bar.c,
-        change: ch,
-        changePct: chPct,
-        lang: 'ko',
-      });
-      speak(lines, { lang });
-    },
   });
+  app.market.buildIndicatorPanel();
+  app.market.buildComparePanel((sym) => {
+    const r = RANGES.find((x) => x.id === app.market.range) || RANGES[3];
+    return quotes.fetchOne(sym, { range: r.id, interval: r.interval });
+  });
+
+  app.ana = new AnalysisView({ onSymbol: (sym) => goSymbol(sym) });
+
+  /* ── 머리띠의 고르개 ── */
+  app.pick = new Picker({ onPick: (sym, meta) => goSymbol(sym, meta) });
+  app.pick.show(app.market.symbol, nameOf(app.market.symbol));
+
+  /* ── 오른쪽 관심종목 ── */
+  app.watch = new WatchList({
+    onPick: (sym) => goSymbol(sym),
+    onChanged: () => { app.anaAt = 0; loadQuotes({ quiet: false }); },
+  });
+  app.watch.mark(app.market.symbol);
 
   /* ── 설정 ── */
   app.settings = new Settings({
     onAutoRefresh: () => scheduleRefresh(),
     onRefresh: () => loadNews(),
-    onMotion: (v) => (v ? app.ambience.start() : app.ambience.pause()),
-    onYuriaOff: () => app.yuria?.hide(),
-    onForgetGuide: () => app.guide?.forget(),
+    onMotion: (v) => (v ? app.veil.start() : app.veil.pause()),
     onTint: () => { app.market.chart.draw(); app.market.setQuotes(app.quotes); },
-    // 대화를 어디에 이었는지 바뀌면 입력칸 아래의 말도 바뀐다
-    onChat: () => app.chat?.paintHint(),
+    onRange: (r) => { app.market.range = r; },
+    onWatchReset: () => app.watch.reset(),
     // 다른 PC 에서 가져온 설정을 화면에 반영한다
     onImported: () => {
       document.documentElement.dataset.tint = store.get('tint') || 'kr';
       $('#autoRefresh').checked = !!store.get('autoRefresh');
       app.market.chart.draw();
       app.market.setQuotes(app.quotes);
+      app.anaAt = 0;
       scheduleRefresh();
+      loadQuotes({ quiet: true });
       loadNews({ quiet: true, force: true });
     },
   });
 
   /* ── 화면 나누기 ──
-     소식·시장·차트·일지·시험이 한 자리를 나누어 쓴다. 숨어 있던
-     화면은 제 크기를 몰랐으므로, 보일 때 다시 그리라고 알린다. */
+     여섯 화면이 가운데 칸 하나를 나누어 쓴다. 숨어 있던 화면은 제
+     크기를 몰랐으므로, 보일 때 다시 그리라고 알린다. */
   app.nav = new Nav({
     onShow: (id) => {
       if (id === 'chart') app.market.refresh();
+      if (id === 'analysis') loadAnalysis();
       if (id === 'backtest') app.backtest?.refresh();
       if (id === 'journal') app.journal?.paint();
     },
@@ -424,8 +283,6 @@ function build() {
     quotes: () => app.quotes,
     onSaved: () => app.breaking.notice('일지에 적어 두었습니다.', { kind: '일지', ms: 4000 }),
   });
-  $('#btnJournalOut').addEventListener('click', () => app.journal.exportFile());
-  $('#btnJournalIn').addEventListener('click', () => app.journal.importFile());
 
   /* ── 전략 시험 ──
      시세를 부르는 일만 넘겨준다. 시험하는 셈은 backtest/engine.js 가
@@ -437,54 +294,27 @@ function build() {
     },
   });
 
-  /* ── 대화 ──
-     답은 세 곳으로 나간다 — 대화창(전문), 말풍선(요지), 목소리(소리). */
-  app.chat = new Chat({
-    facts: () => marketFacts(),
-    onSpeak: (text) => speak([text], { lang: isKorean(text) ? 'ko' : 'en' }),
-    onBubble: (brief) => {
-      app.bubble?.show(brief, {
-        kind: 'Ὑρία',
-        hint: '전문은 대화창에',
-        onClick: () => {
-          app.bubble.hide();
-          $('#chat')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        },
-      });
-    },
-  });
-
-  /* ── 길잡이 ──
-     나타났다 사라지기만 하면 장식이다. 처음 온 사람에게 무엇이
-     어디 있는지 알려 주고, 오래 머물면 이따금 거든다. */
-  app.guide = new Guide({
-    yuria: app.yuria,
-    view: () => app.nav?.current,
-    speak: (lines, opts) => speak(lines, opts),
-    bubble: (brief, opts) => app.bubble?.show(brief, opts),
-    busy: () => tts.speaking() || !document.querySelector('#reader')?.hidden,
-  });
-
-  /* ── 차트의 지표 서랍 ── */
-  app.market.buildIndicatorPanel();
-  $('#btnIndicators').addEventListener('click', () => {
-    const box = $('#inds');
-    box.hidden = !box.hidden;
-    if (!box.hidden) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  });
-
   wireButtons();
   wireBus();
 
   // 콘솔에서 속을 들여다볼 수 있게 열어 둔다. 고칠 때 쓴다.
+  app.load = { news: loadNews, quotes: loadQuotes, chart: loadChart, analysis: loadAnalysis };
   window.KTEMA = app;
 }
 
 function wireButtons() {
   $('#btnRefresh').addEventListener('click', () => loadNews());
-  $('#btnQuotes').addEventListener('click', () => {
-    loadQuotes();
-    loadChart(app.market.symbol, app.market.range);
+  $('#btnQuotes').addEventListener('click', () => loadQuotes());
+
+  $('#btnRefreshAll').addEventListener('click', (e) => {
+    const b = e.currentTarget;
+    b.classList.add('is-busy');
+    Promise.allSettled([
+      loadQuotes(),
+      loadNews({ quiet: true, force: true }),
+      loadChart(app.market.symbol, app.market.range),
+      app.nav?.current === 'analysis' ? loadAnalysis({ force: true }) : null,
+    ]).then(() => b.classList.remove('is-busy'));
   });
 
   $('#autoRefresh').checked = !!store.get('autoRefresh');
@@ -493,59 +323,54 @@ function wireButtons() {
     scheduleRefresh();
   });
 
-  btnStop.addEventListener('click', hush);
-
-  $('#btnBrief').addEventListener('click', () => {
-    if (tts.speaking()) { hush(); return; }
-    const { lines, lang } = script.forBriefing(app.quotes, mood.mood(), 'ko');
-    speak(lines, { lang });
-  });
-
-  $('#btnReadChart').addEventListener('click', () => {
-    if (tts.speaking()) { hush(); return; }
-    if (!app.chartQ) return;
-    const view = app.market.chartView(app.chartQ);
-    if (!view) return;
-    const { lines, lang } = script.forChart(view, 'ko');
-    speak(lines, { lang });
-  });
-
-  const btnMute = $('#btnMute');
-  const paintMute = () => {
-    const m = store.get('muted');
-    btnMute.setAttribute('aria-pressed', m ? 'true' : 'false');
-    btnMute.querySelector('.ico').dataset.ico = m ? 'mute' : 'sound';
-    btnMute.querySelector('.btn__label').textContent = m ? '소리 꺼짐' : '소리';
-    btnMute.classList.toggle('btn--gold', !m);
-  };
-  btnMute.addEventListener('click', () => {
-    const next = !store.get('muted');
-    store.set('muted', next);
-    if (next) hush();
-    paintMute();
-  });
-  paintMute();
-
-  // 기다리지 않고 지금 부른다
-  $('#btnYuria')?.addEventListener('click', () => {
-    if (app.yuria?.visible) app.yuria.hide();
-    else app.yuria?.show({ reason: 'called', force: true });
-  });
-
-  $('#btnVoice').addEventListener('click', () => app.settings.open('voice'));
   $('#btnSettings').addEventListener('click', () => app.settings.open());
+
+  /* 지표·비교 서랍 — 둘 다 차트 아래에 있고, 한 번에 하나만 편다.
+     둘 다 펴면 차트가 화면 밖으로 밀려난다. */
+  const drawer = (mine, other) => {
+    const a = $(mine), b = $(other);
+    b.hidden = true;
+    a.hidden = !a.hidden;
+    if (!a.hidden) a.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  };
+  $('#btnIndicators').addEventListener('click', () => drawer('#inds', '#cmp'));
+  $('#btnCompare').addEventListener('click', () => drawer('#cmp', '#inds'));
+
+  /* 관심종목에 더하기 — 머리띠의 고르개를 그대로 쓴다.
+     찾는 자리를 두 곳에 두면 둘 다 반쯤만 좋아진다. */
+  $('#btnWatchAdd').addEventListener('click', () => {
+    app.pick.open();
+    app.pick.hooks.onPick = (sym, meta) => {
+      const added = app.watch.add(sym, meta);
+      app.breaking.notice(
+        added ? `${meta?.ko || nameOf(sym)}을(를) 관심종목에 넣었습니다.` : '이미 목록에 있습니다.',
+        { kind: '관심종목', ms: 4000 },
+      );
+      // 한 번 쓰고 원래 하던 일로 되돌린다
+      app.pick.hooks.onPick = (s, m) => goSymbol(s, m);
+    };
+  });
+
+  $('#btnWatchReset').addEventListener('click', () => app.watch.reset());
+
+  $('#btnJournalOut').addEventListener('click', () => app.journal.exportFile());
+  $('#btnJournalIn').addEventListener('click', () => app.journal.importFile());
 
   $('#brand').addEventListener('click', (e) => {
     e.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    app.nav.show('chart');
   });
 
-  // 자판
+  // 자판 — 도구에는 손이 빠른 길이 있어야 한다
   document.addEventListener('keydown', (e) => {
     if (e.target.matches('input, select, textarea')) return;
-    if (e.key === 'r' && !e.metaKey && !e.ctrlKey) loadNews();
-    if (e.key === 'm') $('#btnMute').click();
-    if (e.key === 'Escape' && tts.speaking()) hush();
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    if (e.key === '/') { e.preventDefault(); app.pick.open(); return; }
+    if (e.key === 'r') loadNews();
+
+    const jump = { c: 'chart', m: 'market', a: 'analysis', n: 'news', j: 'journal', b: 'backtest' };
+    if (jump[e.key]) app.nav.show(jump[e.key]);
   });
 }
 
@@ -553,16 +378,16 @@ function wireBus() {
   // 펼쳐 본 것은 목록에서도 읽은 것으로 흐려진다
   on('news:open', ({ item }) => app.news?.markRead(item.id));
 
-  on('mood:changed', ({ mood: m, score }) => paintMood(m, score));
-
-  // 속보로 곤두선 뒤에는 시세를 다시 보고 낯빛을 되돌린다
-  setInterval(() => {
-    const m = mood.settle(app.quotes);
-    if (m !== app.yuria?.mood) paintMood(m, mood.moodScore());
-  }, 8000);
-
+  // 관심종목이 갈리면 분석은 낡은 것이 된다
   on('settings:changed', ({ key }) => {
-    if (key === 'voiceKo' || key === 'voiceEn') tts.refreshVoices();
+    if (key === 'watch') app.anaAt = 0;
+  });
+
+  // 창을 덮어 두었을 때는 부르지 않는다. 돌아오면 한 번 부른다.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { app.veil?.pause(); return; }
+    if (store.get('motion') && !calmly()) app.veil?.start();
+    if (Date.now() - (app.quotesAt || 0) > 90_000) loadQuotes({ quiet: true });
   });
 }
 
@@ -574,8 +399,7 @@ function wireBus() {
 
    같은 파일을 볼 때마다 덮어쓰면, 새 PC 에서 취향을 바꿔 놓아도
    다음에 켤 때 도로 돌아가 버린다. 그래서 한 번 심은 파일은
-   표시해 두고 두 번 심지 않는다. 파일을 새로 내보내 갈아 끼우면
-   표시가 달라지므로 그때는 다시 심는다. */
+   표시해 두고 두 번 심지 않는다. */
 
 const SEED_MARK = 'ktema.seed.v1';
 
@@ -601,17 +425,11 @@ async function seedSettings() {
 
 /* ═══════════════════ 관문 ═══════════════════
 
-   브라우저는 사람이 한 번 눌러 주기 전에는 소리를 내지 못하게
-   막는다. 그래서 첫 누름이 필요하다. 그 필요를 사이트의 첫 장면으로
-   삼았다.
-
-   ── 넉 자 ──
    오늘 날짜의 월일이 열쇠다. 8월 27일이면 0827, 12월 12일이면 1212.
 
    이것은 자물쇠가 아니다. 답이 달력에 적혀 있으니 들어오려는 자를
    막지 못한다. 막을 셈이었다면 서버가 있어야 하고, 이 사이트에는
    서버가 없다. 이것은 문턱이다 — 오늘을 알고 온 이에게 열리는.
-   진짜로 막아야 할 것이 생기면 그때는 서버 뒤에 두어야 한다.
 
    날짜는 보는 사람의 기기 시각으로 셈한다. 시차가 있는 곳에서는
    그 기기의 오늘이 답이다. */
@@ -623,10 +441,6 @@ function todayCode(now = new Date()) {
   return mm + dd;
 }
 
-/**
- * 관문의 숫자 칸을 짓는다.
- * 한 자 넣으면 다음 칸으로 옮겨 가고, 넉 자가 차면 스스로 열어 본다.
- */
 function wireGate() {
   const form = $('#gateForm');
   const hint = $('#gateHint');
@@ -634,14 +448,10 @@ function wireGate() {
   const digits = [0, 1, 2, 3].map((i) => $('#gateD' + i));
 
   const value = () => digits.map((d) => d.value).join('');
-
-  const paint = () => {
-    for (const d of digits) d.classList.toggle('is-filled', !!d.value);
-  };
+  const paint = () => { for (const d of digits) d.classList.toggle('is-filled', !!d.value); };
 
   digits.forEach((d, i) => {
     d.addEventListener('input', () => {
-      // 숫자가 아닌 것은 받지 않는다
       d.value = d.value.replace(/\D/g, '').slice(0, 1);
       paint();
       if (d.value && i < 3) digits[i + 1].focus();
@@ -664,9 +474,7 @@ function wireGate() {
       const text = (e.clipboardData?.getData('text') || '').replace(/\D/g, '');
       if (!text) return;
       e.preventDefault();
-      text.slice(0, 4).split('').forEach((ch, n) => {
-        if (digits[n]) digits[n].value = ch;
-      });
+      text.slice(0, 4).split('').forEach((ch, n) => { if (digits[n]) digits[n].value = ch; });
       paint();
       digits[Math.min(3, text.length - 1)].focus();
       if (value().length === 4) form.requestSubmit();
@@ -714,8 +522,7 @@ function wireGate() {
  */
 async function enter() {
   const gate = $('#gate');
-  const btn = $('#enter');
-  btn.classList.add('is-waking');
+  $('#enter').classList.add('is-waking');
 
   // ── 1. 무슨 일이 있어도 화면부터 드러낸다 ──
   document.body.dataset.phase = 'app';
@@ -727,12 +534,6 @@ async function enter() {
   setTimeout(() => { gate.hidden = true; }, 1000);
 
   try {
-    // 이 누름이 소리의 문을 연다
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      if (ctx.state === 'suspended') await ctx.resume();
-    } catch { /* 무시 */ }
-
     // 폴더에 놓인 설정 파일이 있으면 화면을 짓기 전에 먼저 심는다.
     // 짓고 나서 심으면 이미 그려진 값들이 옛 설정으로 남는다.
     const seeded = await app.seeding;
@@ -741,30 +542,20 @@ async function enter() {
     store.set('seen', true);
 
     if (seeded) {
-      app.breaking.notice(
-        `가져온 설정 ${seeded}가지를 적용했습니다.`,
-        { kind: '설정', ms: 8000 },
-      );
+      app.breaking.notice(`가져온 설정 ${seeded}가지를 적용했습니다.`, { kind: '설정', ms: 8000 });
     }
 
-    // 소식과 시세를 먼저 부른다. 유리아가 늦게 나타나더라도
-    // 글과 숫자는 그동안 채워진다.
+    // 숫자가 먼저다. 소식은 그 뒤에 조용히 채워 넣는다.
+    await loadQuotes({ quiet: true });
+    app.quotesAt = Date.now();
+    loadChart(app.market.symbol, app.market.range);
     loadNews({ quiet: true });
-    loadQuotes({ quiet: true }).then(() => {
-      loadChart(app.market.symbol, app.market.range);
-    });
-    setInterval(() => loadQuotes({ quiet: true }), 90_000);
 
-    await tts.warm();
-    await wait(1100);
-
-    /* 들어오자마자 유리아가 인사한다.
-
-       인사는 길잡이가 맡는다 — 처음 온 사람에게는 자기가 누구인지
-       말하고, 두 번째부터는 말없이 나타나기만 한다. 예전에는 여기서
-       따로 한 마디 하고 길잡이가 또 한 마디 했는데, 그러면 둘이
-       겹쳐 뒤엣것이 통째로 묻혔다. 입은 하나여야 한다. */
-    app.guide?.greet();
+    setInterval(() => {
+      if (document.hidden) return;
+      app.quotesAt = Date.now();
+      loadQuotes({ quiet: true });
+    }, 90_000);
   } catch (err) {
     console.error('[enter]', err);
     fail(err);
@@ -773,31 +564,21 @@ async function enter() {
 
 /** 켜는 중에 넘어졌을 때 — 조용히 죽지 말고 무엇이 잘못됐는지 보여 준다 */
 function fail(err) {
-  const box = el('div.bootfail', [
+  document.body.appendChild(el('div.bootfail', [
     el('strong', { text: '켜는 중에 문제가 생겼습니다.' }),
     el('code', { text: String(err?.message || err) }),
     el('span', { text: '새로 고침(F5)을 해 보시고, 그래도 같으면 진단.html 을 열어 보십시오.' }),
-  ]);
-  document.body.appendChild(box);
+  ]));
 }
 
 /* ═══════════════════ 켜기 ═══════════════════ */
 
-(async function boot() {
+(function boot() {
   // 관문을 지나기 전에 미리 시작해 둔다. 사람이 넉 자를 넣을 때쯤이면
   // 대개 끝나 있어서 기다리는 느낌이 없다.
   app.seeding = seedSettings();
   checkSelfProxy();
 
-  // 관문의 인장은 관문이 보이는 동안 그려져 있어야 한다.
-  // 들어오기 전에 이미 홀려 있어야 하기 때문이다.
-  drawSealTicks($('#sealTicks'));
-  drawGateSpiral($('#sealSpiral'));
-
+  gateFilm($('#gateFilm'));
   wireGate();
-
-  if (!tts.supported) {
-    $('#gateHint').textContent =
-      '이 브라우저는 음성 합성을 지원하지 않습니다. 소식과 차트는 그대로 볼 수 있습니다.';
-  }
-})();
+}());

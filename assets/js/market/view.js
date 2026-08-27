@@ -1,16 +1,20 @@
 /* ═══════════════════════════════════════════════════════════════
-   view.js — 시세판·띠·차트 판을 그리고, 숫자에 목소리를 붙인다
+   view.js — 시세판·띠·차트 판을 그린다
 
-   여기가 8번 요구가 사는 곳이다. 화면에 뜬 숫자는 전부 누를 수
-   있고, 누르면 유리아가 그 숫자를 읽는다. 값마다 .val 단추를 씌우고
-   무엇을 읽어야 하는지 dataset 에 적어 둔다. 실제로 읽는 일은
-   한곳(main.js 의 speak)에서 맡아, 어느 숫자를 눌러도 같은 방식으로
-   말한다.
+   여기는 그리기만 한다. 값을 부르는 일은 main.js 가, 셈하는 일은
+   quotes/indicators/analysis 가 맡는다. 그리는 자리가 부르는 일까지
+   하면 화면을 고칠 때마다 부르는 길을 건드리게 된다.
+
+   ── 무엇이 어디에 있나 ──
+     머리띠      기간 단추 (#topRanges)
+     시세 화면   판 (#board) · 흐르는 띠 (#tapeTrack)
+     차트 화면   머리(값·등락) · 캔버스 · 아래 칸 · 범례 · 요약 숫자
+     서랍 둘     지표 만들기 (#inds) · 견주어 보기 (#cmp)
    ═══════════════════════════════════════════════════════════════ */
 
 import { $, el, clear, ico } from '../core/dom.js';
-import { px, num, pct, big, dir, arrow, stamp, sayNum } from '../core/fmt.js';
-import { DEFAULT_WATCH, QUICK, RANGES, nameOf, MARKETS, isOpen, unitFor } from './symbols.js';
+import { px, num, pct, big, dir, arrow, stamp, clock } from '../core/fmt.js';
+import { DEFAULT_WATCH, RANGES, nameOf, MARKETS, isOpen } from './symbols.js';
 import { Chart, LowerChart, sparkline } from './chart.js';
 import {
   KINDS, kindById, blank, sane, nameOf as indName, COLORS, colorVar,
@@ -18,15 +22,17 @@ import {
 } from './indicators.js';
 import { check as checkFormula, HELP as FX_HELP } from './formula.js';
 import { ma, extremes } from './quotes.js';
+import { vol, drawdown, position } from './analysis.js';
 import * as store from '../core/store.js';
-import { clock } from '../core/fmt.js';
+
+/** 견줄 것에 돌려 가며 물리는 색 */
+const CMP_COLORS = ['--key-300', '--ok', '--warn', '--tx-300', '--up', '--down'];
 
 export class MarketView {
-  /**
-   * @param {{onSpeakValue, onSpeakQuote, onSpeakBar, onSymbol, onRange}} hooks
-   */
+  /** @param {{onSymbol, onRange}} hooks */
   constructor(hooks = {}) {
     this.hooks = hooks;
+
     this.board = $('#board');
     this.tape = $('#tapeTrack');
     this.stamp = $('#marketStamp');
@@ -35,55 +41,28 @@ export class MarketView {
     this.symEl = $('#chartSym');
     this.nameEl = $('#chartName');
     this.priceEl = $('#chartPrice');
-    this.rangeEl = $('#chartRanges');
     this.statsEl = $('#chartStats');
-    this.pickerEl = $('#chartPicker');
+    this.rangeEl = $('#topRanges');
     this.veil = $('#chartVeil');
+    this.zoomEl = $('#chartZoom');
+    this.legendEl = $('#chartLegend');
 
     this.quotes = [];
     this.symbol = store.get('symbol') || '^KS11';
     this.range = store.get('range') || '6mo';
 
     this.indicators = loadIndicators();
+    this.compare = [];                       // [{symbol, ko, bars}]
+
     this.lowerHost = $('#chartLower');
     this.lower = new LowerChart($('#chartLowerCanvas'));
-    this.legendEl = $('#chartLegend');
 
-    this.zoomEl = $('#chartZoom');
-    this.chart = new Chart($('#chartCanvas'), {
-      tip: $('#chartTip'),
-      onPick: (bar, i, bars) => this.hooks.onSpeakBar?.(bar, i, bars, this.symbol),
-    });
-    // 굴려서 들여다본 만큼을 머리에 적고, 아래 칸도 같이 따라가게 한다
+    this.chart = new Chart($('#chartCanvas'), { tip: $('#chartTip') });
     this.chart.onView = () => { this.#paintZoom(); this.#paintLower(); };
 
     this.#buildRanges();
-    this.#buildPicker();
     this.#buildClocks();
     setInterval(() => this.#tickClocks(), 20_000);
-
-    // 값 단추는 판 하나에서 한꺼번에 듣는다 (위임)
-    document.addEventListener('click', (e) => {
-      const b = e.target.closest('.val');
-      if (!b) return;
-      e.stopPropagation();
-      this.#saidFlash(b);
-      this.hooks.onSpeakValue?.({
-        label: b.dataset.label || '',
-        value: b.dataset.value != null ? Number(b.dataset.value) : null,
-        unit: b.dataset.unit || '',
-        change: b.dataset.change != null ? Number(b.dataset.change) : null,
-        changePct: b.dataset.pct != null ? Number(b.dataset.pct) : null,
-        text: b.dataset.say || '',
-      });
-    });
-  }
-
-  #saidFlash(b) {
-    b.classList.remove('is-said');
-    void b.offsetWidth;
-    b.classList.add('is-said');
-    setTimeout(() => b.classList.remove('is-said'), 950);
   }
 
   /* ─────────────── 시계 ─────────────── */
@@ -136,30 +115,11 @@ export class MarketView {
           document.createTextNode(q.ko || q.name),
           el('span.card__sym', { text: q.symbol }),
         ]),
-        el('div.card__px', [
-          this.#val({
-            text: q.price != null ? px(q.price) : '—',
-            label: q.ko || q.name,
-            value: q.price,
-            change: q.change,
-            pct: q.changePct,
-            unit: unitFor(q),
-          }),
-        ]),
+        el('div.card__px', { text: q.price != null ? px(q.price) : '—' }),
         el('div.card__ch', { class: d }, [
-          document.createTextNode(arrow(q.changePct) + ' '),
-          this.#val({
-            text: q.change != null ? px(Math.abs(q.change)) : '—',
-            label: `${q.ko || q.name} 등락폭`,
-            value: q.change != null ? Math.abs(q.change) : null,
-          }),
-          this.#val({
-            text: q.changePct != null ? pct(q.changePct) : '',
-            label: `${q.ko || q.name} 등락률`,
-            say: q.changePct != null
-              ? `${q.ko || q.name}, ${sayNum(Math.abs(q.changePct), 'ko')} 퍼센트 ${q.changePct > 0 ? '상승' : q.changePct < 0 ? '하락' : '보합'}입니다`
-              : '',
-          }),
+          el('span', { text: arrow(q.changePct) }),
+          el('span', { text: q.change != null ? px(Math.abs(q.change)) : '—' }),
+          el('span.card__pct', { text: q.changePct != null ? pct(q.changePct) : '' }),
         ]),
         q.bars?.length > 1 ? el('canvas.card__spark') : null,
       ]);
@@ -177,23 +137,6 @@ export class MarketView {
     }
   }
 
-  /** 값 하나를 누를 수 있는 단추로 */
-  #val({ text, label, value, change, pct: p, unit, say }) {
-    if (text === '' || text == null) return document.createTextNode('');
-    return el('button.val', {
-      type: 'button',
-      title: '눌러서 듣기',
-      data: {
-        label: label || '',
-        value: value != null && Number.isFinite(value) ? String(value) : null,
-        change: change != null && Number.isFinite(change) ? String(change) : null,
-        pct: p != null && Number.isFinite(p) ? String(p) : null,
-        unit: unit || null,
-        say: say || null,
-      },
-    }, text);
-  }
-
   #renderTape() {
     clear(this.tape);
     const make = () => {
@@ -203,7 +146,10 @@ export class MarketView {
         frag.appendChild(el('div.tick', [
           el('span.tick__sym', { text: q.ko || q.name }),
           el('span.tick__px', { text: px(q.price) }),
-          el('span.tick__ch', { class: dir(q.changePct), text: `${arrow(q.changePct)} ${pct(q.changePct)}` }),
+          el('span.tick__ch', {
+            class: dir(q.changePct),
+            text: `${arrow(q.changePct)} ${pct(q.changePct)}`,
+          }),
         ]));
       }
       return frag;
@@ -213,7 +159,7 @@ export class MarketView {
     this.tape.appendChild(make());
   }
 
-  /* ─────────────── 차트 판 ─────────────── */
+  /* ─────────────── 기간 ─────────────── */
 
   #buildRanges() {
     clear(this.rangeEl);
@@ -222,36 +168,25 @@ export class MarketView {
         type: 'button',
         class: r.id === this.range ? 'is-on' : '',
         text: r.label,
+        data: { range: r.id },
         onclick: () => {
           this.range = r.id;
           store.set('range', r.id);
-          for (const b of this.rangeEl.children) b.classList.toggle('is-on', b.textContent === r.label);
+          for (const b of this.rangeEl.children) b.classList.toggle('is-on', b.dataset.range === r.id);
           this.hooks.onRange?.(r.id);
         },
       }));
     }
   }
 
-  #buildPicker() {
-    clear(this.pickerEl);
-    for (const s of QUICK) {
-      this.pickerEl.appendChild(el('button.pick', {
-        type: 'button',
-        class: s === this.symbol ? 'is-on' : '',
-        text: nameOf(s),
-        data: { sym: s },
-        onclick: () => this.hooks.onSymbol?.(s),
-      }));
-    }
-  }
-
   setSymbol(sym) {
     this.symbol = sym;
-    for (const b of this.pickerEl.children) b.classList.toggle('is-on', b.dataset.sym === sym);
     for (const c of this.board.children) {
       c.classList.toggle('is-on', c.querySelector('.card__sym')?.textContent === sym);
     }
   }
+
+  /* ─────────────── 차트 ─────────────── */
 
   chartLoading(on) {
     this.veil.hidden = !on;
@@ -266,36 +201,30 @@ export class MarketView {
   /** 차트를 새로 그린다 */
   setChart(q, range) {
     this.veil.hidden = true;
-    this.symEl.textContent = q.symbol;
-    this.nameEl.textContent = `${q.ko || ''}${q.ko && q.name && q.ko !== q.name ? ' · ' : ''}${q.name || ''}`;
+    this.q = q;
 
-    const d = dir(q.changePct);
+    this.symEl.textContent = q.symbol;
+    this.nameEl.textContent =
+      `${q.ko || ''}${q.ko && q.name && q.ko !== q.name ? ' · ' : ''}${q.name || ''}`;
+
     clear(this.priceEl);
-    this.priceEl.appendChild(el('span.px', [
-      this.#val({
-        text: q.price != null ? px(q.price) : '—',
-        label: q.ko || q.name,
-        value: q.price,
-        change: q.change,
-        pct: q.changePct,
-        unit: unitFor(q),
-      }),
-    ]));
-    this.priceEl.appendChild(el('span.ch', { class: d }, [
-      this.#val({
-        text: `${arrow(q.changePct)} ${q.change != null ? px(Math.abs(q.change)) : '—'} (${pct(q.changePct)})`,
-        label: `${q.ko || q.name} 등락`,
-        value: q.change != null ? Math.abs(q.change) : null,
-        change: q.change,
-        pct: q.changePct,
-      }),
-    ]));
+    this.priceEl.append(
+      el('span.px', { text: q.price != null ? px(q.price) : '—' }),
+      el('span.ch', { class: dir(q.changePct) }, [
+        el('span', { text: arrow(q.changePct) }),
+        el('span', { text: q.change != null ? px(Math.abs(q.change)) : '—' }),
+        el('span', { text: `(${pct(q.changePct)})` }),
+      ]),
+    );
 
     const intraday = range === '5d';
-    this.chart.set(q.bars, { intraday, indicators: this.indicators });
+    this.chart.set(q.bars, {
+      intraday,
+      indicators: this.indicators,
+      name: q.ko || q.name || q.symbol,
+    });
     this.#paintLower();
     this.#paintLegend();
-
     this.#renderStats(q);
   }
 
@@ -309,7 +238,9 @@ export class MarketView {
 
     const a = this.chart.bars[r.from];
     const b = this.chart.bars[r.to];
-    const day = (x) => (x ? new Date(x.t).toLocaleDateString('ko-KR', { year: '2-digit', month: 'numeric', day: 'numeric' }) : '');
+    const day = (x) => (x
+      ? new Date(x.t).toLocaleDateString('ko-KR', { year: '2-digit', month: 'numeric', day: 'numeric' })
+      : '');
 
     clear(this.zoomEl);
     this.zoomEl.hidden = false;
@@ -320,11 +251,9 @@ export class MarketView {
         type: 'button',
         title: '두 번 눌러도 됩니다',
         onclick: () => this.chart.resetView(),
-      }, '전부 보기'),
+      }, '전부'),
     );
   }
-
-  /* ─────────────── 지표 ─────────────── */
 
   /** 아래 칸 — 그릴 것이 없으면 칸 자체를 접는다 */
   #paintLower() {
@@ -332,7 +261,7 @@ export class MarketView {
     this.lowerHost.hidden = !list.length;
     if (!list.length) return;
     // 여럿이면 칸을 늘린다. 셋을 132px 에 우겨 넣으면 아무것도 안 보인다.
-    this.lowerHost.style.height = Math.min(360, 96 + list.length * 46) + 'px';
+    this.lowerHost.style.height = Math.min(340, 92 + list.length * 44) + 'px';
     requestAnimationFrame(() => {
       this.lower.fit?.();
       this.lower.set(this.chart.shown, list);
@@ -341,7 +270,26 @@ export class MarketView {
 
   #paintLegend() {
     clear(this.legendEl);
+
+    if (this.chart.pctMode) {
+      this.legendEl.appendChild(el('b.legend--mode', { text: '백분율 눈금' }));
+      this.legendEl.appendChild(el('b', [
+        el('i', { style: { background: 'var(--tx-100)' } }),
+        document.createTextNode(this.q?.ko || this.symbol),
+      ]));
+      this.chart.cmp.forEach((c) => {
+        this.legendEl.appendChild(el('b', [
+          el('i', { style: { background: c.color } }),
+          document.createTextNode(c.name),
+        ]));
+      });
+    }
+
     for (const l of this.chart.legend()) {
+      // 백분율 눈금일 때는 값 칸에 겹치는 지표를 그리지 않는다(chart.js).
+      // 그리지 않은 것을 범례에 적어 두면 사람은 그것을 찾다가 지친다.
+      if (this.chart.pctMode && l.pane === 'price') continue;
+
       this.legendEl.appendChild(el('b', [
         el('i', { style: { background: l.color } }),
         document.createTextNode(l.name),
@@ -350,16 +298,68 @@ export class MarketView {
     }
   }
 
-  /** 지표 만드는 서랍을 짓는다 (차트 화면의 '지표' 단추가 편다) */
+  /** 차트 화면이 다시 보일 때 — 숨어 있는 동안에는 크기를 잴 수 없었다 */
+  refresh() {
+    this.chart.fit?.();
+    this.chart.draw();
+    this.#paintLower();
+  }
+
+  /* ─────────────── 요약 숫자 ───────────────
+
+     차트 아래의 한 줄. 눈으로는 안 보이는 것만 적는다 — 얼마나
+     흔들렸나, 꼭대기에서 얼마나 팠나, 한 해 폭 어디쯤인가. 시가·고가
+     같은 것은 차트를 보면 알므로 뒤로 민다. */
+
+  #renderStats(q) {
+    if (!this.statsEl) return;
+    clear(this.statsEl);
+
+    const bars = q.bars || [];
+    if (!bars.length) return;
+
+    const { hi, lo } = extremes(bars);
+    const r = RANGES.find((x) => x.id === this.range) || RANGES[3];
+    const dd = drawdown(bars);
+    const v = vol(bars, r.interval);
+    const pos = position(bars, q.yearHigh, q.yearLow);
+
+    const rows = [
+      ['구간 고',  px(hi.v), null, '이 구간에서 가장 높았던 값'],
+      ['구간 저',  px(lo.v), null, '이 구간에서 가장 낮았던 값'],
+      ['20일선',  ma(bars, 20) != null ? px(ma(bars, 20)) : null, null, '스무 날 이동평균'],
+      ['60일선',  ma(bars, 60) != null ? px(ma(bars, 60)) : null, null, '예순 날 이동평균'],
+      ['흔들림',  v != null ? v.toFixed(1) + '%' : null, null,
+        '한 해로 늘린 변동성. 지금까지 이 정도로 널뛰었다는 뜻입니다.'],
+      ['최대 낙폭', dd.mdd ? pct(dd.mdd, 1) : null, dir(dd.mdd),
+        '이 구간에서 꼭대기부터 가장 깊이 팠던 자리'],
+      ['지금 낙폭', dd.now != null ? pct(dd.now, 1) : null, dir(dd.now),
+        '꼭대기에서 지금 얼마나 내려와 있나'],
+      ['폭 안 자리', pos != null ? Math.round(pos) + '%' : null, null,
+        '한 해 폭에서 0은 바닥, 100은 꼭대기'],
+      ['52주 고', q.yearHigh != null ? px(q.yearHigh) : null, null, null],
+      ['52주 저', q.yearLow != null ? px(q.yearLow) : null, null, null],
+      ['거래량',  Number.isFinite(q.volume) ? big(q.volume) : null, null, null],
+    ];
+
+    for (const [k, text, cls, note] of rows) {
+      if (text == null) continue;
+      this.statsEl.appendChild(el('div.stat', { title: note || '' }, [
+        el('span.stat__k', { text: k }),
+        el('span.stat__v', { class: cls || '', text }),
+      ]));
+    }
+  }
+
+  /* ═══════════════ 지표 서랍 ═══════════════ */
+
   buildIndicatorPanel() {
     const list = $('#indsList');
     const add = $('#indsAdd');
     clear(list);
     clear(add);
 
-    for (const ind of this.indicators) {
-      list.appendChild(this.#indRow(ind));
-    }
+    for (const ind of this.indicators) list.appendChild(this.#indRow(ind));
 
     if (!this.indicators.length) {
       list.appendChild(el('p.inds__note', { text: '지표가 하나도 없습니다. 아래에서 더해 보십시오.' }));
@@ -400,7 +400,6 @@ export class MarketView {
       }),
     ]));
 
-    // 수식 틀은 값이 아니라 글을 받는다
     const fxBox = k.free ? this.#formulaBox(ind, () => {
       row.querySelector('.ind__name').textContent = indName(sane(ind) || ind);
     }) : null;
@@ -448,8 +447,7 @@ export class MarketView {
     return row;
   }
 
-  /* ─────────────── 수식 칸 ───────────────
-
+  /* ── 수식 칸 ──
      적는 대로 곧바로 읽어 본다. 틀렸으면 왜 틀렸는지 그 자리에서
      말해 주고 차트는 건드리지 않는다 — 반쯤 적다 만 수식 때문에
      보고 있던 줄이 사라지면 성가시다. */
@@ -494,7 +492,6 @@ export class MarketView {
           ind.cfg.expr = src;
           this.#saveIndicators();
           this.#refreshIndicators();
-          // 셈해 보고 값이 하나도 안 나오면 그것도 알려 준다
           const hit = (this.chart.inds || []).find((x) => x.ind.id === ind.id);
           if (hit?.out?.error) {
             say.textContent = hit.out.error;
@@ -543,12 +540,8 @@ export class MarketView {
     ]);
   }
 
-  /** 쓸 수 있는 이름과 함수, 그리고 흔히 쓰는 수식 몇 */
   #formulaHelp(box, done) {
-    const put = (text) => {
-      box.value = text;
-      done();
-    };
+    const put = (text) => { box.value = text; done(); };
 
     return el('div.fx__help', { hidden: true }, [
       el('div.fx__cols', [
@@ -592,78 +585,94 @@ export class MarketView {
     this.#paintLegend();
   }
 
-  /** 차트 화면이 다시 보일 때 — 숨어 있는 동안에는 크기를 잴 수 없었다 */
-  refresh() {
-    this.chart.fit?.();
-    this.chart.draw();
-    this.#paintLower();
+  /* ═══════════════ 견주어 보기 서랍 ═══════════════ */
+
+  /** @param {(sym:string)=>Promise<object>} fetchBars */
+  buildComparePanel(fetchBars) {
+    this.fetchBars = fetchBars;
+    this.#paintCompare();
   }
 
-  #renderStats(q) {
-    clear(this.statsEl);
-    const bars = q.bars || [];
-    const { hi, lo } = bars.length ? extremes(bars) : { hi: { v: null }, lo: { v: null } };
-    const m20 = ma(bars, 20), m60 = ma(bars, 60);
+  #paintCompare() {
+    const list = $('#cmpList');
+    const add = $('#cmpAdd');
+    if (!list) return;
+    clear(list);
+    clear(add);
 
-    const rows = [
-      ['시가',   q.bars?.at(-1)?.o, null],
-      ['고가',   q.dayHigh ?? q.bars?.at(-1)?.h, null],
-      ['저가',   q.dayLow ?? q.bars?.at(-1)?.l, null],
-      ['구간 고', hi.v, '이 구간에서 가장 높았던 값'],
-      ['구간 저', lo.v, '이 구간에서 가장 낮았던 값'],
-      ['20일선', m20, '스무 날 이동평균'],
-      ['60일선', m60, '예순 날 이동평균'],
-      ['52주 고', q.yearHigh, null],
-      ['52주 저', q.yearLow, null],
-    ];
-
-    for (const [k, v, note] of rows) {
-      if (v == null || !Number.isFinite(v)) continue;
-      this.statsEl.appendChild(el('div.stat', [
-        el('span.stat__k', { text: k }),
-        el('span.stat__v', [
-          this.#val({
-            text: px(v),
-            label: `${q.ko || q.name} ${note || k}`,
-            value: v,
-            unit: unitFor(q),
-          }),
-        ]),
-      ]));
+    if (!this.compare.length) {
+      list.appendChild(el('p.inds__note', {
+        text: '아직 견줄 것이 없습니다. 아래에서 골라 보십시오. 하나라도 걸면 '
+            + '눈금이 값에서 백분율로 바뀝니다.',
+      }));
     }
 
-    if (Number.isFinite(q.volume)) {
-      this.statsEl.appendChild(el('div.stat', [
-        el('span.stat__k', { text: '거래량' }),
-        el('span.stat__v', [
-          this.#val({
-            text: big(q.volume),
-            label: `${q.ko || q.name} 거래량`,
-            say: `${q.ko || q.name} 거래량은 ${big(q.volume)}입니다`,
-          }),
-        ]),
+    this.compare.forEach((c, i) => {
+      list.appendChild(el('div.cmp__row', [
+        el('i.cmp__dot', { style: { background: `var(${CMP_COLORS[i % CMP_COLORS.length]})` } }),
+        el('b', { text: c.ko }),
+        el('code', { text: c.symbol }),
+        el('span.ind__spacer'),
+        el('button.iconbtn.iconbtn--sm', {
+          type: 'button', 'aria-label': '빼기',
+          onclick: () => {
+            this.compare = this.compare.filter((x) => x !== c);
+            this.#applyCompare();
+            this.#paintCompare();
+          },
+        }, '×'),
       ]));
+    });
+
+    // 지켜보는 것들 중에서 고른다. 지금 보고 있는 것과 이미 건 것은 뺀다.
+    const watch = store.get('watch') || DEFAULT_WATCH;
+    const pool = watch.filter((w) =>
+      w.symbol !== this.symbol && !this.compare.some((c) => c.symbol === w.symbol));
+
+    for (const w of pool.slice(0, 14)) {
+      add.appendChild(el('button.btn.btn--quiet.btn--tiny', {
+        type: 'button',
+        disabled: this.compare.length >= 5,
+        onclick: (e) => this.#addCompare(w, e.currentTarget),
+      }, [ico('plus'), el('span.btn__label', { text: w.ko || nameOf(w.symbol) })]));
+    }
+
+    if (this.compare.length >= 5) {
+      add.appendChild(el('span.inds__note', { text: '다섯이면 넉넉합니다. 더 얹으면 결이 안 보입니다.' }));
     }
   }
 
-  /** 지금 화면에 걸린 차트를 말로 읽을 재료 */
-  chartView(q) {
-    const bars = q.bars || [];
-    if (!bars.length) return null;
-    const { hi, lo } = extremes(bars);
-    return {
-      symbol: q.symbol,
-      name: q.ko || q.name,
-      bars,
-      range: this.range,
-      first: bars[0].c,
-      // 장중이면 오늘 봉이 아직 닫히지 않아 마지막 봉은 어제 것이다.
-      // 화면 머리에 뜬 값과 어긋나지 않게 지금 값을 먼저 쓴다.
-      last: Number.isFinite(q.price) ? q.price : bars.at(-1).c,
-      hi, lo,
-      ma20: ma(bars, 20),
-      ma60: ma(bars, 60),
-    };
+  async #addCompare(w, btn) {
+    if (!this.fetchBars) return;
+    btn?.classList.add('is-busy');
+    try {
+      const q = await this.fetchBars(w.symbol);
+      this.compare.push({ symbol: w.symbol, ko: w.ko || nameOf(w.symbol), bars: q.bars || [] });
+      this.#applyCompare();
+      this.#paintCompare();
+    } catch {
+      btn?.classList.remove('is-busy');
+      btn?.classList.add('is-bad');
+      setTimeout(() => btn?.classList.remove('is-bad'), 1400);
+    }
+  }
+
+  #applyCompare() {
+    const css = getComputedStyle(document.documentElement);
+    this.chart.setCompare(this.compare.map((c, i) => ({
+      ...c,
+      color: css.getPropertyValue(CMP_COLORS[i % CMP_COLORS.length]).trim() || '#6b9bff',
+    })));
+    this.#paintLegend();
+  }
+
+  /** 종목이 갈리면 견주던 것은 물린다 — 다른 것에 붙어 있으면 헷갈린다 */
+  clearCompare() {
+    if (!this.compare.length) return;
+    this.compare = [];
+    this.chart.setCompare([]);
+    this.#paintCompare();
+    this.#paintLegend();
   }
 }
 

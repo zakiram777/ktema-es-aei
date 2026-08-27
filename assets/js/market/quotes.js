@@ -324,3 +324,82 @@ export function extremes(bars) {
 }
 
 export function clearCache() { cache.clear(); }
+
+/* ═══════════════════ 긴 줄을 한꺼번에 ═══════════════════
+
+   분석 화면은 지켜보는 것 전부의 한 해치가 있어야 한다. 열두 개를
+   하나씩 물으면 열두 번 나가고, 공개 프록시는 그쯤에서 문턱을 건다.
+
+   spark 문은 종가 줄만 주는 대신 여럿을 한 번에 준다. 분석에 쓰는
+   숫자 — 수익률·흔들림·판 깊이·같이 움직이는 정도 — 는 전부 종가만
+   있으면 셈해진다. 그래서 여기서는 그 길로 간다.
+
+   고가·저가가 없으므로 h=l=c 다. 한 해 폭 안의 자리를 잴 때 종가 폭을
+   쓰게 되는데, 꼬리까지 재는 것보다 오히려 견주기에 낫다.
+*/
+export async function fetchSeries(watch, { range = '1y', interval = '1d', fresh = false } = {}) {
+  const list = watch.map((w) => (typeof w === 'string' ? { symbol: w } : w));
+  const got = await fetchSpark(list.map((w) => w.symbol), { range, interval, fresh });
+
+  const out = [];
+  for (const w of list) {
+    const q = shapeSpark(got.get(w.symbol), w);
+    if (q) out.push({ ...w, ...q, ok: true });
+  }
+  if (!out.length) throw new Error('시세가 오지 않았습니다');
+  return out;
+}
+
+/* ═══════════════════ 찾기 ═══════════════════
+
+   기호를 외우고 있는 사람은 없다. 삼성전자가 005930.KS 라는 것은
+   알아도 SK하이닉스가 000660 인지 000670 인지는 헷갈린다. 그래서
+   이름으로 찾을 수 있어야 한다.
+
+   야후의 찾기 문을 쓴다. 길이 막히면 빈 목록을 돌려준다 — 찾기가
+   안 된다고 화면이 멎으면 안 되고, 기호를 아는 사람은 그냥 적어
+   넣으면 되기 때문이다.
+*/
+const SEARCH = 'https://query1.finance.yahoo.com/v1/finance/search';
+
+export async function search(term, { limit = 12 } = {}) {
+  const q = String(term || '').trim();
+  if (q.length < 1) return [];
+
+  const key = 'search|' + q.toLowerCase();
+  const hit = cached(key);
+  if (hit) return hit;
+
+  try {
+    const url = `${SEARCH}?q=${encodeURIComponent(q)}&quotesCount=${limit}&newsCount=0&listsCount=0`;
+    const { data } = await fetchJSON(url, { timeout: 9000 });
+
+    const out = (data?.quotes || [])
+      .filter((r) => r?.symbol)
+      .map((r) => ({
+        symbol: r.symbol,
+        name: r.shortname || r.longname || r.symbol,
+        ko: nameOf(r.symbol) !== r.symbol ? nameOf(r.symbol) : (r.shortname || r.symbol),
+        kind: kindOf(r.quoteType),
+        where: r.exchDisp || r.exchange || '',
+      }));
+
+    cache.set(key, { at: Date.now(), data: out });
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/** 야후가 부르는 종류를 이 사이트가 쓰는 이름으로 */
+function kindOf(t) {
+  switch (String(t || '').toUpperCase()) {
+    case 'INDEX':      return 'index';
+    case 'CURRENCY':   return 'fx';
+    case 'CRYPTOCURRENCY': return 'crypto';
+    case 'FUTURE':     return 'commodity';
+    case 'ETF':
+    case 'MUTUALFUND': return 'fund';
+    default:           return 'stock';
+  }
+}

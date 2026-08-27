@@ -11,23 +11,6 @@ const KEY = 'ktema.v1';
 
 /** 처음 오는 사람이 보게 될 값 */
 export const DEFAULTS = {
-  /* ── 소리 ── */
-  muted:        false,
-  voiceKo:      '',      // speechSynthesis voice 이름
-  voiceEn:      '',
-  rate:         0.98,
-  pitch:        1.06,    // 지성 — 여성 음역이되 들뜨지 않은 자리
-  volume:       0.95,
-  preset:       'sage',
-  femaleOnly:   true,    // 목소리 목록에 여성만 보일지
-  mixLang:      true,    // 한 문장에 섞인 영어를 영어 목소리로 읽을지
-  readBody:     true,    // 제목만 읽을지, 요약까지 읽을지
-  readLang:     'auto',  // auto | ko | en
-  readOnOpen:   true,    // 기사를 열면 바로 읽기 시작할지
-
-  /* ── 유리아 ── */
-  yuria:        true,    // 문득 나타나는 것을 꺼 둘 수 있다
-
   /* ── 소식 ── */
   tab:          'all',
   autoRefresh:  true,
@@ -47,7 +30,7 @@ export const DEFAULTS = {
   watch:        null,    // null 이면 기본 목록
 
   /* ── 화면 ── */
-  view:         'news',  // 마지막으로 보던 화면 (nav.js)
+  view:         'chart', // 마지막으로 보던 화면 (nav.js)
 
   /* ── 차트의 지표 ── 만든 것이 여기 남는다 (market/indicators.js) ── */
   indicators:   null,    // null 이면 기본값(MA20·MA60)
@@ -56,18 +39,6 @@ export const DEFAULTS = {
   strategy:     null,    // null 이면 보기 전략(골든크로스)
   btSymbol:     '^KS11',
   btRange:      '5y',
-
-  /* ── 대화 ──
-     열쇠는 이 브라우저에만 남는다. 우리에게도 오지 않는다.
-     다만 브라우저에 둔 열쇠는 그 기기를 쓰는 사람이면 꺼내 볼 수 있다 —
-     혼자 쓰는 기기에서, 한도를 걸어 둔 열쇠로 쓰기를 권한다.
-     여럿이 보는 사이트라면 'proxy' 길로 서버 뒤에 두어야 한다. */
-  chatProvider: 'local', // local | claude | openai | grok | proxy
-  chatModel:    '',
-  chatUrl:      '',      // proxy 길일 때의 내 서버 주소
-  chatKeyclaude: '',
-  chatKeyopenai: '',
-  chatKeygrok:   '',
 
   /* ── 모습 ── */
   motion:       true,    // 배경 움직임
@@ -166,16 +137,14 @@ export const EXPORT_VERSION = 1;
 
 /* 내보내지 않는 것들.
 
-   ── 열쇠 ──
-   대화에 쓰는 API 열쇠는 절대 파일로 나가지 않는다. 이 파일은
-   settings.json 이라는 이름으로 받아지고, README 는 그것을 폴더에
-   넣거나 웹호스팅에 올려도 된다고 적어 두었다. 열쇠가 그 안에 있으면
-   올리는 순간 아무나 읽을 수 있고, 그 열쇠로 나가는 값은 주인이
-   문다. 옮길 때는 새 기기에서 다시 넣는 편이 옳다.
-
    ── 마지막으로 보던 화면 ──
-   옮겨 봐야 쓸모가 없다. 새 기기에서는 그 기기의 첫 화면이 맞다. */
-const NEVER_EXPORT = /^chatKey|^chatUrl$|^view$/;
+   옮겨 봐야 쓸모가 없다. 새 기기에서는 그 기기의 첫 화면이 맞다.
+
+   ── chatKey* / chatUrl ──
+   지금은 쓰이지 않는 이름이다. 그래도 자를 마름은 남겨 둔다. 예전에
+   내보낸 settings.json 을 다시 들여올 수 있고, 그 안에 열쇠가 들어
+   있다면 이 파일을 거쳐 다시 밖으로 나가서는 안 되기 때문이다. */
+const NEVER_EXPORT = /^chatKey|^chatUrl$|^view$/;   /* chat* 은 남은 파일을 위해 남겨 둔다 */
 
 export function exportAll() {
   const settings = {};

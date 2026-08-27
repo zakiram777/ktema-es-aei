@@ -1,0 +1,506 @@
+/* ═══════════════════════════════════════════════════════════════
+   app.css — 틀
+
+   ── 왜 이 짜임인가 ──
+   시세를 보는 화면은 대개 같은 모양이다. 위에 띠 하나, 왼쪽에 좁은
+   메뉴, 가운데에 가장 큰 것(차트), 오른쪽에 지켜보는 목록.
+
+   그 모양이 굳은 데는 까닭이 있다.
+
+     · 무엇을 볼 것인가(종목)는 늘 같은 자리에 있어야 한다. 화면을
+       옮겨 다녀도 그 자리는 움직이지 않는다. 그래서 머리띠다.
+     · 지켜보는 목록은 늘 보여야 한다. 차트를 보다가 다른 것이
+       움직이면 곁눈으로 알아채야 한다. 그래서 곁칸이다.
+     · 화면을 갈아 끼우는 것은 자주 하는 일이 아니다. 그래서 왼쪽
+       구석에 좁게 둔다.
+
+   ── 스크롤은 안쪽에서만 ──
+   창 전체가 굴러가면 머리띠와 곁칸이 따라 올라가 사라진다. 그래서
+   바깥은 고정하고 가운데만 구른다.
+   ═══════════════════════════════════════════════════════════════ */
+
+html, body { height: 100%; }
+
+body {
+  background: var(--bg-050);
+  color: var(--tx-200);
+  font-family: var(--f-ui);
+  overflow: hidden;              /* 구르는 것은 안쪽뿐이다 */
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: var(--h-top) auto minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+}
+.app[hidden] { display: none; }
+
+/* ─────────────── 머리띠 ─────────────── */
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0 var(--s-3);
+  background: var(--bg-100);
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  padding: 0 var(--s-2) 0 0;
+  color: var(--tx-300);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.brand:hover { color: var(--tx-100); }
+.brand__gr {
+  font-family: var(--f-greek);
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--key-400);
+}
+.brand__ko {
+  font-family: var(--f-greek);
+  font-size: var(--t-sm);
+  letter-spacing: .04em;
+}
+
+.top__spacer { flex: 1 1 auto; }
+
+.top__actions { display: flex; gap: 2px; }
+
+.top__clocks {
+  display: flex;
+  gap: var(--s-3);
+  font-size: var(--t-xxs);
+  color: var(--tx-500);
+  white-space: nowrap;
+}
+.clock { display: flex; align-items: center; gap: 5px; }
+.clock__dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--tx-600);
+}
+.clock.is-open .clock__dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.clock.is-open .clock__city { color: var(--tx-300); }
+.clock__city { letter-spacing: .1em; }
+.clock__time { font-family: var(--f-num); color: var(--tx-400); }
+
+/* ── 무엇을 볼 것인가 ── */
+
+.pick { position: relative; }
+
+.pick__btn {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  padding: 5px var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-200);
+  color: var(--tx-100);
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.pick__btn:hover { background: var(--bg-300); border-color: var(--line-hard); }
+.pick.is-open .pick__btn { border-color: var(--key-500); background: var(--bg-300); }
+
+.pick__sym {
+  font-family: var(--f-num);
+  font-size: var(--t-md);
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.pick__name {
+  font-size: var(--t-xs);
+  color: var(--tx-400);
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pick__caret { font-size: 9px; color: var(--tx-500); }
+
+.pick__pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 90;
+  width: 380px;
+  max-width: 92vw;
+  padding: var(--s-3);
+  border: 1px solid var(--line-hard);
+  border-radius: var(--r-lg);
+  background: var(--bg-200);
+  box-shadow: var(--lift-hi);
+}
+.pick__search {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-000);
+  color: var(--tx-100);
+  font: inherit;
+  font-size: var(--t-sm);
+}
+.pick__search:focus { outline: none; border-color: var(--key-500); }
+
+.pick__list {
+  max-height: 320px;
+  overflow-y: auto;
+  margin: var(--s-2) -4px 0;
+  padding: 0 4px;
+}
+.pick__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--tx-200);
+  text-align: left;
+  cursor: pointer;
+}
+.pick__row:hover, .pick__row.is-on { background: var(--bg-300); color: var(--tx-100); }
+.pick__row code {
+  font-family: var(--f-num);
+  font-size: var(--t-xs);
+  color: var(--key-300);
+  min-width: 8ch;
+}
+.pick__row span { font-size: var(--t-sm); }
+.pick__row small { margin-left: auto; color: var(--tx-500); font-size: var(--t-xxs); }
+.pick__note {
+  margin: var(--s-2) 0 0;
+  font-size: var(--t-xxs);
+  line-height: 1.6;
+  color: var(--tx-500);
+}
+.pick__note code { color: var(--tx-400); font-family: var(--f-num); }
+
+/* ── 기간 단추 ── */
+
+.top__ranges { display: flex; gap: 1px; }
+.top__ranges button {
+  padding: 5px 9px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--tx-400);
+  font: inherit;
+  font-size: var(--t-xs);
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.top__ranges button:hover { color: var(--tx-100); background: var(--bg-200); }
+.top__ranges button.is-on { color: var(--key-300); background: var(--key-dim); }
+
+/* ─────────────── 시세띠 ─────────────── */
+
+.tape {
+  overflow: hidden;
+  background: var(--bg-000);
+  border-bottom: 1px solid var(--line);
+  height: 26px;
+}
+.tape__track {
+  display: flex;
+  gap: var(--s-5);
+  padding: 0 var(--s-4);
+  height: 100%;
+  align-items: center;
+  width: max-content;
+  animation: tape 90s linear infinite;
+}
+.tape:hover .tape__track { animation-play-state: paused; }
+@keyframes tape { to { transform: translateX(-50%); } }
+
+.tick {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--t-xxs);
+  white-space: nowrap;
+}
+.tick__sym { color: var(--tx-500); letter-spacing: .06em; }
+.tick__px { font-family: var(--f-num); color: var(--tx-200); }
+.tick__ch { font-family: var(--f-num); }
+.tick__ch.up { color: var(--up); }
+.tick__ch.down { color: var(--down); }
+
+/* ─────────────── 몸통 ─────────────── */
+
+.body {
+  display: grid;
+  grid-template-columns: var(--w-rail) minmax(0, 1fr) var(--w-side);
+  min-height: 0;
+}
+
+/* ── 왼쪽 메뉴 ── */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-2) 5px;
+  background: var(--bg-100);
+  border-right: 1px solid var(--line);
+}
+
+.rail__item {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 8px 2px 6px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--tx-500);
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.rail__item:hover { color: var(--tx-200); background: var(--bg-200); }
+.rail__item.is-on { color: var(--key-300); background: var(--key-dim); }
+.rail__item .ico { width: 18px; height: 18px; }
+.rail__ko {
+  font-size: 9px;
+  letter-spacing: .02em;
+  line-height: 1;
+}
+
+.rail__dot {
+  position: absolute;
+  top: 5px; right: 7px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--up);
+}
+
+/* ── 가운데 ── */
+
+.main {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--bg-050);
+}
+
+.view { padding: var(--s-4); }
+.view[hidden] { display: none; }
+
+/* 차트 화면만은 창을 꽉 채운다 — 차트는 클수록 좋다 */
+.view--chart {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 0;
+}
+
+.panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--line);
+}
+.panel__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin: 0;
+  font-weight: 400;
+}
+.panel__gr {
+  font-family: var(--f-greek);
+  font-size: var(--t-lg);
+  color: var(--tx-300);
+  letter-spacing: .03em;
+}
+.panel__ko {
+  font-size: var(--t-xs);
+  color: var(--tx-500);
+  letter-spacing: .08em;
+}
+.panel__tools { display: flex; align-items: center; gap: var(--s-2); }
+
+.stamp {
+  font-family: var(--f-num);
+  font-size: var(--t-xxs);
+  color: var(--tx-500);
+}
+
+.hint {
+  margin: 0 0 var(--s-4);
+  font-size: var(--t-xs);
+  line-height: 1.75;
+  color: var(--tx-400);
+  max-width: 78ch;
+}
+.hint--warn {
+  padding-left: var(--s-3);
+  border-left: 2px solid var(--warn);
+}
+.hint--warn b { color: var(--tx-100); font-weight: 500; }
+
+/* ── 오른쪽 관심종목 ── */
+
+.side {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--bg-100);
+  border-left: 1px solid var(--line);
+  min-height: 0;
+}
+
+.side__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3) var(--s-3) var(--s-2);
+  border-bottom: 1px solid var(--line);
+}
+.side__title {
+  font-size: var(--t-xs);
+  letter-spacing: .12em;
+  color: var(--tx-400);
+  text-transform: uppercase;
+}
+
+.side__list { overflow-y: auto; min-height: 0; }
+
+.side__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-top: 1px solid var(--line);
+}
+
+/* 관심종목 한 줄 */
+.wrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  padding: 7px var(--s-3);
+  border: 0;
+  border-left: 2px solid transparent;
+  background: none;
+  color: var(--tx-200);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.wrow:hover { background: var(--bg-200); }
+.wrow.is-on { background: var(--bg-200); border-left-color: var(--key-500); }
+.wrow.is-stale { opacity: .45; }
+
+.wrow__id { min-width: 0; }
+.wrow__name {
+  display: block;
+  font-size: var(--t-sm);
+  color: var(--tx-100);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wrow__sym {
+  display: block;
+  font-family: var(--f-num);
+  font-size: var(--t-xxs);
+  color: var(--tx-500);
+}
+
+.wrow__num { text-align: right; font-family: var(--f-num); }
+.wrow__px {
+  display: block;
+  font-size: var(--t-sm);
+  color: var(--tx-100);
+  font-variant-numeric: tabular-nums;
+}
+.wrow__ch {
+  display: block;
+  font-size: var(--t-xxs);
+  font-variant-numeric: tabular-nums;
+}
+.wrow__ch.up { color: var(--up); }
+.wrow__ch.down { color: var(--down); }
+
+/* 값이 바뀐 순간 한 번 번쩍인다 — 무엇이 움직였는지 곁눈으로 알아채게 */
+.wrow.is-tick-up { animation: tickUp .7s var(--ease); }
+.wrow.is-tick-down { animation: tickDown .7s var(--ease); }
+@keyframes tickUp {
+  from { background: var(--up-soft); }
+}
+@keyframes tickDown {
+  from { background: var(--down-soft); }
+}
+
+.wrow__x {
+  opacity: 0;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--tx-500);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.wrow:hover .wrow__x { opacity: 1; }
+.wrow__x:hover { color: var(--bad); }
+
+/* ─────────────── 좁은 화면 ─────────────── */
+
+@media (max-width: 1180px) {
+  :root { --w-side: 240px; }
+}
+
+@media (max-width: 940px) {
+  .body { grid-template-columns: var(--w-rail) minmax(0, 1fr); }
+  .side { display: none; }
+  .top__clocks { display: none; }
+}
+
+/* 좁은 화면에서 기간 단추를 숨기면 휴대폰에서는 차트 기간을 바꿀 길이
+   없어진다. 눈요기를 접는 것과 하던 일을 못 하게 되는 것은 다르다.
+   그래서 숨기지 않고 머리띠를 두 줄로 접는다. */
+@media (max-width: 620px) {
+  :root { --w-rail: 46px; }
+
+  .app { grid-template-rows: auto auto minmax(0, 1fr); }
+
+  .top {
+    flex-wrap: wrap;
+    padding: var(--s-2) var(--s-3);
+    row-gap: var(--s-2);
+  }
+  .top__ranges {
+    order: 10;                 /* 둘째 줄로 내린다 */
+    flex: 1 0 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .top__ranges::-webkit-scrollbar { display: none; }
+  .top__ranges button { flex: 0 0 auto; }
+
+  .brand__ko { display: none; }
+  .pick__name { display: none; }
+  .view { padding: var(--s-3); }
+}

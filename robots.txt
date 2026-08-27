@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 
 # 영상은 검색엔진이 굳이 받아 갈 것이 없다
-Disallow: /assets/media/yuria/
+Disallow: /assets/media/ink/

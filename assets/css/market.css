@@ -1,49 +1,58 @@
 /* ═══════════════════════════════════════════════════════════════
    market.css — 시세판과 차트
+
+   ── 차트는 크게 ──
+   차트 화면에서 차트는 남는 자리를 전부 먹는다. 창을 키우면 차트가
+   커진다. 봉 하나가 3px 인 차트와 9px 인 차트는 다른 도구다.
+
+   ── 판과 판은 선이 아니라 밝기로 ──
+   빽빽한 화면에 선을 그으면 선만 보인다. 1px 틈을 두고 바탕색을
+   비쳐 보이게 하면 격자가 저절로 생긴다.
    ═══════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════ 시세판 ═══════════════════ */
 
 .board {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
   gap: 1px;
-  margin: var(--s-4) 0 var(--s-6);
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--line);
   border-radius: var(--r-md);
   overflow: hidden;
-  background: var(--line-soft);
+  background: var(--line);          /* 칸 사이로 비쳐 보이는 것이 격자다 */
 }
 
 .card {
   position: relative;
   display: grid;
-  gap: 5px;
-  padding: var(--s-4) var(--s-4) var(--s-3);
-  background: rgba(13, 10, 27, .74);
+  gap: 4px;
+  padding: var(--s-3) var(--s-4);
+  background: var(--bg-100);
   cursor: pointer;
   transition: background var(--dur) var(--ease);
 }
-.card:hover { background: rgba(250, 248, 244, .6); }
+.card:hover { background: var(--bg-200); }
 .card.is-on {
-  background: rgba(250, 248, 244, .8);
-  box-shadow: inset 2px 0 0 var(--gold-400);
+  background: var(--bg-200);
+  box-shadow: inset 2px 0 0 var(--key-500);
 }
+.card.is-stale { opacity: .45; }
 
 .card__name {
-  font-size: var(--t-xs);
-  color: var(--tx-500);
-  letter-spacing: .06em;
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: var(--t-xs);
+  color: var(--tx-300);
 }
 .card__sym {
   font-family: var(--f-num);
   font-size: 10px;
-  color: var(--tx-600);
+  color: var(--tx-500);
 }
 .card__px {
   font-family: var(--f-num);
-  font-size: 1.24rem;
+  font-size: 1.2rem;
   font-weight: 500;
   color: var(--tx-100);
   font-variant-numeric: tabular-nums;
@@ -52,33 +61,27 @@
 .card__ch {
   display: flex;
   align-items: baseline;
-  gap: var(--s-2);
+  gap: 5px;
   font-family: var(--f-num);
   font-size: var(--t-sm);
   font-variant-numeric: tabular-nums;
 }
+.card__pct { opacity: .8; }
 .card__spark {
   position: absolute;
   right: 0; bottom: 0;
-  width: 62%; height: 34%;
-  opacity: .3;
+  width: 60%; height: 34%;
+  opacity: .32;
   pointer-events: none;
 }
-.card.is-stale { opacity: .55; }
 
-/* 값이 바뀌면 잠깐 번진다 */
-.card__px.is-up   { animation: flashUp .9s var(--ease); }
-.card__px.is-down { animation: flashDown .9s var(--ease); }
-@keyframes flashUp   { 0% { color: var(--up); }   100% { color: var(--tx-100); } }
-@keyframes flashDown { 0% { color: var(--down); } 100% { color: var(--tx-100); } }
-
-/* ─────────────── 차트 ─────────────── */
+/* ═══════════════════ 차트 ═══════════════════ */
 
 .chart {
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-md);
-  background: rgba(255, 255, 255, .5);
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .chart__head {
@@ -86,19 +89,24 @@
   align-items: center;
   gap: var(--s-4);
   flex-wrap: wrap;
-  padding: var(--s-4);
-  border-bottom: 1px solid var(--line-soft);
+  padding: var(--s-2) var(--s-4);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-100);
 }
-.chart__id { display: grid; gap: 2px; min-width: 0; }
+.chart__id { display: flex; align-items: baseline; gap: var(--s-2); min-width: 0; }
 .chart__sym {
   font-family: var(--f-num);
-  font-size: var(--t-lg);
-  color: var(--gold-200);
-  letter-spacing: .06em;
+  font-size: var(--t-md);
+  font-weight: 600;
+  color: var(--tx-100);
+  letter-spacing: .03em;
 }
 .chart__name {
   font-size: var(--t-xs);
-  color: var(--tx-500);
+  color: var(--tx-400);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .chart__price {
   display: flex;
@@ -107,135 +115,10 @@
   font-family: var(--f-num);
   font-variant-numeric: tabular-nums;
 }
-.chart__price .px { font-size: 1.5rem; color: var(--tx-100); letter-spacing: -.02em; }
-.chart__price .ch { font-size: var(--t-md); }
-.chart__ranges { margin-left: auto; display: flex; gap: var(--s-1); }
-.chart__ranges button {
-  padding: 5px 11px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: none;
-  color: var(--tx-600);
-  font-family: var(--f-num);
-  font-size: var(--t-xs);
-  cursor: pointer;
-  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease);
-}
-.chart__ranges button:hover { color: var(--gold-200); border-color: var(--line); }
-.chart__ranges button.is-on {
-  color: var(--gold-200);
-  border-color: var(--line-hard);
-  background: rgba(26, 24, 23, .09);
-}
+.chart__price .px { font-size: 1.28rem; color: var(--tx-100); letter-spacing: -.02em; }
+.chart__price .ch { display: flex; align-items: baseline; gap: 5px; font-size: var(--t-sm); }
 
-.chart__stage {
-  position: relative;
-  height: clamp(260px, 38vw, 400px);
-  cursor: crosshair;
-}
-.chart__stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-
-.chart__veil {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: rgba(255, 255, 255, .8);
-  color: var(--tx-500);
-  font-size: var(--t-sm);
-  transition: opacity var(--dur) var(--ease);
-}
-.chart__veil[hidden] { display: none; }
-
-.chart__tip {
-  position: absolute;
-  z-index: 5;
-  min-width: 148px;
-  padding: var(--s-3);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, .96);
-  box-shadow: var(--lift);
-  pointer-events: none;
-  font-family: var(--f-num);
-  font-size: var(--t-xs);
-  font-variant-numeric: tabular-nums;
-  line-height: 1.75;
-  color: var(--tx-300);
-}
-.chart__tip b { color: var(--gold-200); font-weight: 500; }
-.chart__tip dl { display: grid; grid-template-columns: auto 1fr; gap: 0 var(--s-3); margin: 5px 0 0; }
-.chart__tip dt { color: var(--tx-600); }
-.chart__tip dd { margin: 0; text-align: right; color: var(--tx-200); }
-.chart__tip .hint { display: block; margin-top: 6px; color: var(--tx-600); font-size: 10px; }
-
-.chart__stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
-  gap: 1px;
-  border-top: 1px solid var(--line-soft);
-  background: var(--line-soft);
-}
-.stat {
-  display: grid;
-  gap: 3px;
-  padding: var(--s-3) var(--s-4);
-  background: rgba(255, 255, 255, .72);
-}
-.stat__k {
-  font-size: 10px;
-  letter-spacing: .12em;
-  color: var(--tx-600);
-  text-transform: uppercase;
-}
-.stat__v {
-  font-family: var(--f-num);
-  font-size: var(--t-md);
-  color: var(--tx-200);
-  font-variant-numeric: tabular-nums;
-}
-
-.chart__foot {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  flex-wrap: wrap;
-  padding: var(--s-4);
-  border-top: 1px solid var(--line-soft);
-}
-.chart__picker {
-  display: flex;
-  gap: var(--s-1);
-  flex-wrap: wrap;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.pick {
-  padding: 4px 11px;
-  border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  background: none;
-  color: var(--tx-500);
-  font-family: var(--f-num);
-  font-size: var(--t-xs);
-  cursor: pointer;
-  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
-}
-.pick:hover { color: var(--gold-200); border-color: var(--line); }
-.pick.is-on { color: var(--gold-200); border-color: var(--line-hard); background: rgba(26, 24, 23, .08); }
-
-@media (max-width: 640px) {
-  .board { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-  .chart__head { gap: var(--s-3); padding: var(--s-3); }
-  .chart__ranges { margin-left: 0; width: 100%; overflow-x: auto; scrollbar-width: none; }
-  .chart__ranges::-webkit-scrollbar { display: none; }
-  .chart__price .px { font-size: 1.24rem; }
-}
-
-/* ── 차트를 손으로 다루는 결 ──
-   굴리면 당겨지고, 끌면 옆으로 흐른다 (js/market/chart.js). */
-#chartCanvas { cursor: crosshair; touch-action: pan-y; }
-#chartCanvas.is-dragging { cursor: grabbing; }
+.chart__tools { margin-left: auto; display: flex; gap: 2px; }
 
 /* 지금 얼마나 들여다보고 있는지 */
 .chart__zoom {
@@ -245,15 +128,210 @@
   font-size: var(--t-xs);
   color: var(--tx-500);
 }
-.chart__zoom b { font-weight: 400; color: var(--tx-300); font-family: var(--f-num); }
+.chart__zoom b { font-weight: 400; color: var(--tx-200); font-family: var(--f-num); }
 .chart__zoom button {
   padding: 2px 8px;
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: none;
-  color: var(--tx-500);
+  color: var(--tx-400);
   font: inherit;
   font-size: var(--t-xs);
   cursor: pointer;
 }
-.chart__zoom button:hover { color: var(--ink-200); border-color: var(--line-hard); }
+.chart__zoom button:hover { color: var(--tx-100); border-color: var(--line-hard); }
+
+/* 남는 자리를 전부 먹는다 */
+.chart__stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 240px;
+  cursor: crosshair;
+}
+.chart__stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+#chartCanvas { cursor: crosshair; touch-action: pan-y; }
+#chartCanvas.is-dragging { cursor: grabbing; }
+
+.chart__lower {
+  position: relative;
+  flex: 0 0 auto;
+  border-top: 1px solid var(--line);
+}
+.chart__lower canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.chart__veil {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(11, 14, 20, .78);
+  color: var(--tx-400);
+  font-size: var(--t-sm);
+}
+.chart__veil[hidden] { display: none; }
+
+.chart__tip {
+  position: absolute;
+  z-index: 5;
+  min-width: 152px;
+  padding: var(--s-3);
+  border: 1px solid var(--line-hard);
+  border-radius: var(--r-md);
+  background: var(--bg-200);
+  box-shadow: var(--lift);
+  pointer-events: none;
+  font-family: var(--f-num);
+  font-size: var(--t-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.7;
+  color: var(--tx-300);
+}
+.chart__tip b { color: var(--tx-100); font-weight: 600; }
+.chart__tip dl { display: grid; grid-template-columns: auto 1fr; gap: 0 var(--s-3); margin: 5px 0 0; }
+.chart__tip dt { color: var(--tx-500); }
+.chart__tip dd { margin: 0; text-align: right; color: var(--tx-100); }
+.chart__tip .hint { display: block; margin-top: 6px; color: var(--tx-500); font-size: 10px; }
+
+/* ── 범례 ── */
+
+.chart__legend {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  padding: 6px var(--s-4);
+  border-top: 1px solid var(--line);
+  background: var(--bg-100);
+  font-size: var(--t-xxs);
+  color: var(--tx-300);
+}
+.chart__legend b { display: inline-flex; align-items: center; gap: 5px; font-weight: 400; }
+.chart__legend i {
+  width: 9px; height: 2px;
+  border-radius: 2px;
+}
+.chart__legend .num { font-family: var(--f-num); color: var(--tx-400); }
+.legend--mode {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--key-dim);
+  color: var(--key-300) !important;
+}
+
+/* ── 요약 숫자 ── */
+
+.chart__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 1px;
+  border-top: 1px solid var(--line);
+  background: var(--line);
+}
+.stat {
+  display: grid;
+  gap: 2px;
+  padding: 7px var(--s-3);
+  background: var(--bg-100);
+}
+.stat__k {
+  font-size: 10px;
+  letter-spacing: .1em;
+  color: var(--tx-500);
+}
+.stat__v {
+  font-family: var(--f-num);
+  font-size: var(--t-sm);
+  color: var(--tx-100);
+  font-variant-numeric: tabular-nums;
+}
+.stat__v.up { color: var(--up); }
+.stat__v.down { color: var(--down); }
+
+/* ═══════════════════ 서랍 ═══════════════════
+   지표 만들기와 견주어 보기. 차트 아래에 있고 한 번에 하나만 편다. */
+
+.inds, .cmp {
+  flex: 0 0 auto;
+  padding: var(--s-4);
+  border-top: 1px solid var(--line);
+  background: var(--bg-100);
+}
+.inds[hidden], .cmp[hidden] { display: none; }
+
+.inds__head { margin-bottom: var(--s-3); }
+.inds__head h3 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin-bottom: 4px;
+}
+.inds__note {
+  max-width: 74ch;
+  font-size: var(--t-xs);
+  line-height: 1.7;
+  color: var(--tx-400);
+}
+.inds__note b { color: var(--tx-200); font-weight: 500; }
+
+.inds__list, .cmp__list { display: grid; gap: 1px; background: var(--line); }
+.inds__list:empty, .cmp__list:empty { background: none; }
+
+.inds__add, .cmp__add {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: var(--s-3);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--line);
+}
+
+.cmp__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 7px var(--s-3);
+  background: var(--bg-200);
+  font-size: var(--t-sm);
+}
+.cmp__row code { font-family: var(--f-num); font-size: var(--t-xs); color: var(--tx-500); }
+.cmp__dot { width: 12px; height: 2px; border-radius: 2px; }
+
+.btn.is-bad { border-color: var(--bad); color: var(--bad); }
+
+@media (max-width: 640px) {
+  .board { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .chart__head { gap: var(--s-3); padding: var(--s-2) var(--s-3); }
+  .chart__price .px { font-size: 1.1rem; }
+  .chart__tools { margin-left: 0; }
+}
+
+/* ── 지표 한 줄 ── */
+
+.ind {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  padding: 7px var(--s-3);
+  background: var(--bg-200);
+}
+.ind.is-off { opacity: .42; }
+.ind__swatch {
+  width: 12px; height: 3px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+.ind__name {
+  min-width: 12ch;
+  font-size: var(--t-sm);
+  color: var(--tx-100);
+}
+.ind__spacer { flex: 1 1 auto; }
+.ind__note {
+  flex: 0 0 100%;
+  font-size: var(--t-xxs);
+  line-height: 1.6;
+  color: var(--tx-500);
+}

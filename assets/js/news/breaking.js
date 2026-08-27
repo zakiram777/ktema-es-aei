@@ -1,37 +1,32 @@
 /* ═══════════════════════════════════════════════════════════════
-   breaking.js — 유리아이 먼저 입을 여는 자리
+   breaking.js — 스스로 말을 거는 유일한 자리
 
-   속보가 오면 알림이 뜨고, 유리아이 낯빛을 바꾸고, 제목을 읽는다.
-   이것은 사람이 시키지 않은 소리다. 그러니 조심스러워야 한다.
+   사람이 시키지 않았는데 화면에 무언가가 뜨는 곳은 여기뿐이다.
+   그러니 인색해야 한다.
 
-     · 지금 다른 것을 읽고 있으면 끼어들지 않고 기다린다
-     · 한 번에 하나씩, 사이를 두고
      · 같은 것을 두 번 외치지 않는다
-     · 소리를 꺼 두었으면 화면에만 띄운다
+     · 한 번에 넷까지만 쌓인다. 넘치면 오래된 것부터 버린다
+     · 마우스를 얹으면 사라지지 않는다 — 읽는 중에 없어지면 화가 난다
+     · 급하지 않은 것은 조용한 모양으로 뜬다
+
+   ── 종소리 ──
+   속보에만 짧게 울린다. 파일을 받지 않고 그 자리에서 만든다. 두 음을
+   겹쳐 두면 놋쇠 그릇을 친 것처럼 들린다.
    ═══════════════════════════════════════════════════════════════ */
 
 import { $, el, ico } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
-import * as tts from '../voice/tts.js';
-import { forBreaking } from '../voice/script.js';
-import * as mood from '../yuria/mood.js';
 
 /** 알림이 스스로 사라지는 데 걸리는 시간 */
 const LIVE_MS = 22_000;
-/** 하나를 외치고 다음까지 쉬는 시간 */
-const GAP_MS = 2200;
 
 export class Breaking {
-  /**
-   * @param {{stage, onOpen:(item)=>void, onSpeak:(lines,lang)=>void}} hooks
-   */
+  /** @param {{onOpen:(item)=>void, onUrgent:(item)=>void}} hooks */
   constructor(hooks = {}) {
     this.hooks = hooks;
     this.host = $('#alerts');
-    this.queue = [];
     this.said = new Set();
-    this.busy = false;
 
     on('news:urgent', ({ item }) => this.push(item));
   }
@@ -39,12 +34,11 @@ export class Breaking {
   push(item) {
     if (this.said.has(item.id)) return;
     this.said.add(item.id);
+    if (!store.get('breaking')) return;
 
     this.card(item, { urgent: true });
-
-    if (!store.get('breaking')) return;      // 화면에만 띄우고 입은 다문다
-    this.queue.push(item);
-    this.#drain();
+    if (store.get('chime')) chime();
+    this.hooks.onUrgent?.(item);
   }
 
   /** 급하지 않은 알림 — 갱신 결과 같은 것 */
@@ -62,7 +56,7 @@ export class Breaking {
         dismiss();
       },
     }, [
-      el('span.alert__ico', [ico(urgent ? 'bolt' : 'voice')]),
+      el('span.alert__ico', [ico(urgent ? 'bolt' : 'info')]),
       el('div.alert__body', [
         el('span.alert__kind', { text: urgent ? (item.flag || '속보') : (item.srcName || '알림') }),
         el('span.alert__title', { text: item.title }),
@@ -76,7 +70,6 @@ export class Breaking {
     this.host.appendChild(node);
 
     let timer = setTimeout(dismiss, ms);
-    const self = this;
     function dismiss() {
       clearTimeout(timer);
       if (!node.isConnected) return;
@@ -86,61 +79,12 @@ export class Breaking {
     node.addEventListener('pointerenter', () => clearTimeout(timer));
     node.addEventListener('pointerleave', () => { timer = setTimeout(dismiss, 4000); });
 
-    // 너무 많이 쌓이지 않게
     while (this.host.children.length > 4) this.host.firstChild.remove();
     return node;
   }
-
-  /* ─────────────── 차례로 외치기 ─────────────── */
-
-  async #drain() {
-    if (this.busy) return;
-    this.busy = true;
-
-    while (this.queue.length) {
-      // 사람이 무언가를 읽고 있으면 끝날 때까지 기다린다
-      if (tts.speaking()) { await wait(900); continue; }
-
-      // 소리를 꺼 두었으면 입은 다물되 말풍선은 띄운다
-      if (store.get('muted')) {
-        for (const item of this.queue.splice(0)) {
-          mood.startle();
-          this.hooks.stage?.flash('alert');
-          this.hooks.onBubble?.(item);
-          await wait(GAP_MS);
-        }
-        break;
-      }
-
-      const item = this.queue.shift();
-      mood.startle();
-      this.hooks.stage?.flash('alert');
-
-      // 얼굴 곁의 말풍선. 소리를 꺼 두었어도 이것은 뜬다 —
-      // 무엇 때문에 낯빛이 바뀌었는지는 보여야 한다.
-      this.hooks.onBubble?.(item);
-
-      if (store.get('chime')) chime();
-
-      const { lang, lines } = forBreaking(item);
-      this.hooks.onSpeak?.(lines, lang);
-
-      await new Promise((done) => {
-        tts.speak(lines, { lang, onend: done });
-      });
-
-      await wait(GAP_MS);
-    }
-
-    this.busy = false;
-  }
 }
 
-const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-
-/* ─────────────── 종 ───────────────
-   짧은 종소리 하나. 파일을 받지 않고 그 자리에서 만든다.
-   두 음을 겹쳐 두면 놋쇠 그릇을 친 것처럼 들린다. */
+/* ─────────────── 종 ─────────────── */
 
 let ac = null;
 function chime() {
@@ -160,7 +104,7 @@ function chime() {
       osc.type = 'sine';
       osc.frequency.value = freq;
       g.gain.setValueAtTime(0.0001, now + delay);
-      g.gain.exponentialRampToValueAtTime(0.16 * level, now + delay + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.13 * level, now + delay + 0.012);
       g.gain.exponentialRampToValueAtTime(0.0001, now + delay + 1.5);
       osc.connect(g); g.connect(out);
       osc.start(now + delay);

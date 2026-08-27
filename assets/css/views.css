@@ -8,149 +8,6 @@
    전략 시험(bt) 이 들어 있다. 말풍선과 대화는 chat.css 에 있다.
    ═══════════════════════════════════════════════════════════════ */
 
-/* ─────────────── 메뉴 ─────────────── */
-
-.nav {
-  position: sticky;
-  top: 46px;
-  z-index: 30;
-  display: flex;
-  gap: 2px;
-  padding: 0 var(--s-5);
-  overflow-x: auto;
-  scrollbar-width: none;
-  border-bottom: 1px solid var(--line-soft);
-  background: rgba(255, 255, 255, .86);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-.nav::-webkit-scrollbar { display: none; }
-
-.nav__item {
-  position: relative;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 11px var(--s-4) 10px;
-  border: 0;
-  background: none;
-  color: var(--tx-500);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color var(--dur) var(--ease);
-}
-.nav__item:hover { color: var(--tx-300); }
-
-.nav__gr {
-  font-family: var(--f-greek);
-  font-size: .98rem;
-  letter-spacing: .03em;
-}
-.nav__ko { font-size: var(--t-xs); letter-spacing: .06em; }
-
-.nav__item.is-on { color: var(--gold-200); }
-.nav__item.is-on::after {
-  content: "";
-  position: absolute;
-  left: var(--s-3); right: var(--s-3); bottom: -1px;
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, transparent, var(--gold-400), transparent);
-}
-
-/* 무언가 새로 온 자리에 붙는 점 */
-.nav__dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: var(--coral-500);
-  align-self: center;
-  box-shadow: 0 0 8px rgba(158, 31, 24, .8);
-}
-
-/* ─────────────── 지표 만들기 ─────────────── */
-
-.inds {
-  margin-top: var(--s-5);
-  padding: var(--s-4);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-md);
-  background: rgba(255, 255, 255, .42);
-}
-.inds__head h3 {
-  display: flex;
-  align-items: baseline;
-  gap: var(--s-3);
-  margin: 0 0 6px;
-  font-weight: 400;
-}
-.inds__note {
-  margin: 0 0 var(--s-4);
-  font-size: var(--t-xs);
-  line-height: 1.7;
-  color: var(--tx-500);
-  max-width: 68ch;
-}
-.inds__list { display: grid; gap: 8px; }
-
-.ind {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 8px 10px;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, .5);
-}
-.ind.is-off { opacity: .45; }
-.ind__swatch {
-  width: 10px; height: 10px;
-  border-radius: 2px;
-  flex: none;
-}
-.ind__name {
-  font-size: var(--t-sm);
-  color: var(--tx-200);
-  min-width: 8em;
-}
-.ind__spacer { flex: 1 1 auto; }
-.ind__note {
-  flex-basis: 100%;
-  font-size: var(--t-xs);
-  color: var(--tx-600);
-  line-height: 1.6;
-}
-.inds__add { margin-top: var(--s-3); display: flex; gap: 8px; flex-wrap: wrap; }
-
-/* 차트 아래 칸 — 상대강도·MACD·거래량 */
-.chart__lower {
-  position: relative;
-  height: 132px;
-  margin-top: 6px;
-  border-top: 1px solid var(--line-soft);
-}
-.chart__lower canvas { display: block; width: 100%; height: 100%; }
-
-.chart__legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  padding: 8px 2px 0;
-  font-size: var(--t-xs);
-  color: var(--tx-500);
-}
-.chart__legend b {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-weight: 400;
-}
-.chart__legend i {
-  width: 14px; height: 2px;
-  border-radius: 2px;
-  display: inline-block;
-}
-
 /* ─────────────── 투자일지 ─────────────── */
 
 .jr__form {
@@ -161,7 +18,7 @@
   border: 1px solid var(--line-soft);
   border-left: 2px solid var(--gold-700);
   border-radius: var(--r-md);
-  background: rgba(255, 255, 255, .5);
+  background: rgba(11, 14, 20, .5);
 }
 .jr__title,
 .jr__tags,
@@ -170,7 +27,7 @@
   padding: 10px 12px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, .6);
+  background: rgba(11, 14, 20, .6);
   color: var(--tx-100);
   font: inherit;
 }
@@ -181,7 +38,7 @@
   padding: 12px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, .6);
+  background: rgba(11, 14, 20, .6);
   color: var(--tx-100);
   font-family: var(--f-read);
   font-size: var(--t-sm);
@@ -191,7 +48,7 @@
 .jr__title:focus, .jr__body:focus, .jr__tags:focus, .jr__search:focus {
   outline: none;
   border-color: var(--gold-600);
-  box-shadow: 0 0 0 3px rgba(26, 24, 23, .1);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .1);
 }
 
 .jr__moods { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -209,7 +66,7 @@
 .jr__mood:hover { border-color: var(--gold-700); color: var(--tx-300); }
 .jr__mood.is-on {
   border-color: var(--gold-500);
-  background: rgba(26, 24, 23, .1);
+  background: rgba(255, 255, 255, .1);
   color: var(--gold-200);
 }
 .jr__mood-gr { font-family: var(--f-greek); font-size: .82rem; }
@@ -234,7 +91,7 @@
 .chip--pick:hover, .chip--tag:hover { color: var(--tx-200); border-color: var(--gold-700); }
 .chip--pick.is-on, .chip--tag.is-on {
   border-color: var(--gold-500);
-  background: rgba(26, 24, 23, .12);
+  background: rgba(255, 255, 255, .12);
   color: var(--gold-200);
 }
 
@@ -251,7 +108,7 @@
   border: 1px solid var(--line-soft);
   border-left: 2px solid var(--tx-600);
   border-radius: var(--r-md);
-  background: rgba(255, 255, 255, .42);
+  background: rgba(11, 14, 20, .42);
 }
 .jr__item[data-tone="up"]    { border-left-color: var(--up); }
 .jr__item[data-tone="down"]  { border-left-color: var(--down); }
@@ -305,7 +162,7 @@
   padding: 7px 10px;
   margin-bottom: 8px;
   border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, .5);
+  background: rgba(11, 14, 20, .5);
   font-size: var(--t-xs);
 }
 .jr__snaplabel { color: var(--tx-600); letter-spacing: .08em; }
@@ -338,7 +195,7 @@
   padding: var(--s-3) var(--s-4) var(--s-4);
   border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
-  background: rgba(255, 255, 255, .42);
+  background: rgba(11, 14, 20, .42);
 }
 .bt__h {
   margin: 0 0 var(--s-3);
@@ -356,7 +213,7 @@
   padding: 6px 9px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, .68);
+  background: rgba(11, 14, 20, .68);
   color: var(--tx-100);
   font: inherit;
   font-size: var(--t-sm);
@@ -376,7 +233,7 @@
   margin-bottom: 6px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, .45);
+  background: rgba(11, 14, 20, .45);
 }
 .bt__indid {
   font-family: var(--f-num);
@@ -384,7 +241,7 @@
   color: var(--gold-600);
   padding: 2px 5px;
   border-radius: 3px;
-  background: rgba(26, 24, 23, .08);
+  background: rgba(255, 255, 255, .08);
 }
 .bt__side { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 .bt__constval { width: 5.5em; font-family: var(--f-num); }
@@ -414,7 +271,7 @@
   padding: 9px 11px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, .5);
+  background: rgba(11, 14, 20, .5);
 }
 .bt__stat[data-tone="up"] { border-left: 2px solid var(--up); }
 .bt__stat[data-tone="down"] { border-left: 2px solid var(--down); }
@@ -448,7 +305,7 @@
   padding: var(--s-3);
   border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
-  background: rgba(255, 255, 255, .45);
+  background: rgba(11, 14, 20, .45);
 }
 .bt__chart canvas { display: block; width: 100%; height: 100%; }
 
@@ -470,7 +327,7 @@
 }
 .bt__table td {
   padding: 5px 8px;
-  border-bottom: 1px solid rgba(26, 24, 23, .05);
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
   color: var(--tx-300);
   white-space: nowrap;
 }
@@ -539,7 +396,7 @@
 .fx__input:focus {
   outline: none;
   border-color: var(--ink-400);
-  box-shadow: 0 0 0 3px rgba(26, 24, 23, .06);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .06);
 }
 .fx__input.is-bad { border-color: var(--blood-500); }
 
@@ -576,7 +433,7 @@
 .fx__help code {
   font-family: var(--f-num);
   color: var(--ink-200);
-  background: rgba(26, 24, 23, .05);
+  background: rgba(255, 255, 255, .05);
   padding: 1px 4px;
   border-radius: 2px;
 }
@@ -610,4 +467,192 @@
   font-size: 10px;
   line-height: 1.65;
   color: var(--tx-500);
+}
+
+/* ═══════════════════ 분석 ═══════════════════
+
+   숫자 열둘을 나란히 놓는 자리다. 여기서 지켜야 할 것은 둘뿐이다 —
+   자리가 흔들리지 않을 것, 그리고 정렬이 한 번에 될 것.
+
+   숫자의 자리가 흔들리면 눈이 매번 다시 찾는다. 그래서 폭이 고정된
+   글꼴에 tabular-nums 를 건다. 값이 1에서 11이 되어도 소수점이
+   같은 자리에 남는다. */
+
+.ana { display: grid; gap: var(--s-6); }
+
+.ana__wait {
+  padding: var(--s-6);
+  text-align: center;
+  color: var(--tx-400);
+  font-size: var(--t-sm);
+}
+.ana__wait.is-bad { color: var(--bad); }
+
+.ana__block { display: grid; gap: var(--s-3); }
+.ana__h {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t-md);
+  color: var(--tx-100);
+}
+.ana__h small { font-size: var(--t-xxs); color: var(--tx-500); font-weight: 400; }
+.ana__why {
+  max-width: 76ch;
+  font-size: var(--t-xs);
+  line-height: 1.75;
+  color: var(--tx-400);
+}
+
+/* ── 표 ── */
+
+.tbl {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow-x: auto;
+  background: var(--bg-100);
+}
+
+.tbl__head, .tbl__row {
+  display: grid;
+  grid-template-columns: var(--cols);
+  align-items: center;
+  min-width: 880px;
+}
+
+.tbl__head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-200);
+}
+.tbl__h {
+  padding: 7px var(--s-3);
+  border: 0;
+  background: none;
+  color: var(--tx-400);
+  font: inherit;
+  font-size: var(--t-xxs);
+  letter-spacing: .04em;
+  text-align: right;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--dur) var(--ease);
+}
+.tbl__h.is-left { text-align: left; }
+.tbl__h:hover { color: var(--tx-100); }
+.tbl__h.is-on { color: var(--key-300); }
+.tbl__arr { font-style: normal; margin-left: 3px; }
+
+.tbl__row {
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.tbl__row:last-child { border-bottom: 0; }
+.tbl__row:hover { background: var(--bg-200); }
+
+.tbl__c {
+  padding: 7px var(--s-3);
+  font-size: var(--t-sm);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tbl__c.num {
+  font-family: var(--f-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-100);
+}
+.tbl__c.is-left {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  text-align: left;
+}
+.tbl__c.is-left b { font-weight: 500; color: var(--tx-100); }
+.tbl__c.is-left code {
+  font-family: var(--f-num);
+  font-size: var(--t-xxs);
+  color: var(--tx-500);
+}
+
+/* 한 해 폭 안의 자리 — 숫자보다 눈금 위의 점이 빠르다 */
+.posbar {
+  position: relative;
+  display: inline-block;
+  width: 46px; height: 3px;
+  margin-right: 7px;
+  vertical-align: middle;
+  border-radius: 2px;
+  background: var(--bg-400);
+}
+.posbar i {
+  position: absolute;
+  top: -2px;
+  width: 3px; height: 7px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--key-300);
+}
+.posbar__v { color: var(--tx-300); }
+
+/* ── 열지도 ── */
+
+.heat {
+  display: grid;
+  gap: 1px;
+  overflow-x: auto;
+  font-family: var(--f-num);
+  font-size: 10px;
+}
+.heat__c {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  padding: 6px 2px;
+  background: var(--bg-100);
+  color: var(--tx-200);
+  cursor: default;
+}
+.heat__corner { background: transparent; }
+.heat__top, .heat__side {
+  background: transparent;
+  color: var(--tx-400);
+  font-family: var(--f-ui);
+  font-size: var(--t-xxs);
+}
+.heat__side { justify-items: end; padding-right: 7px; white-space: nowrap; }
+.heat__c.is-self { color: var(--tx-600); background: var(--bg-050); }
+
+/* ── 한 줄로 ── */
+
+.ana__lines { display: grid; gap: 1px; background: var(--line); }
+.ana__line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: 8px var(--s-3);
+  border: 0;
+  background: var(--bg-100);
+  color: var(--tx-300);
+  font: inherit;
+  font-size: var(--t-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.ana__line:hover { background: var(--bg-200); }
+.ana__line b {
+  min-width: 9ch;
+  font-weight: 500;
+  color: var(--tx-100);
+}
+
+@media (max-width: 720px) {
+  .heat { font-size: 9px; }
+  .heat__c { min-width: 28px; }
 }
