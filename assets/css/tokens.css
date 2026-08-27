@@ -1,0 +1,123 @@
+/* ═══════════════════════════════════════════════════════════════
+   tokens.css — 색·글자·간격의 단 하나의 출처
+
+   자키람 영상에서 그대로 뽑은 색으로 짰다. 짙은 남색 옷,
+   삭은 청동빛 가면, 낡은 금, 산호빛 붉은 구슬, 상아빛 해골.
+   화면 전체가 그 초상화 안에 있는 것처럼 보이는 것이 목표다.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── 바탕 ── 밤이되 검지 않다. 남보라가 깔려 있다 */
+  --ink-950: #060410;
+  --ink-900: #090714;
+  --ink-850: #0d0a1b;
+  --ink-800: #121028;
+  --ink-700: #191534;
+  --ink-600: #221c45;
+  --ink-500: #2e2758;
+
+  /* ── 금 ── 강조·글자·테두리 */
+  --gold-100: #f7ead0;
+  --gold-200: #efdcb2;
+  --gold-300: #e0c489;
+  --gold-400: #d0ab63;
+  --gold-500: #b98f45;
+  --gold-600: #8f6c31;
+  --gold-700: #5f4820;
+  --gold-800: #3a2c14;
+
+  /* ── 가면의 청동 ── 보조 강조 */
+  --jade-300: #8fc0ab;
+  --jade-500: #5f9481;
+  --jade-700: #35594c;
+
+  /* ── 구슬 ── 경고·긴급 */
+  --coral-300: #e58a72;
+  --coral-500: #cf5a41;
+  --coral-700: #8c3626;
+  --rose-500:  #b8455c;
+
+  /* ── 시세 ── 한국 관행: 오름 붉음, 내림 푸름
+     (설정에서 뒤집을 수 있다. html[data-tint="global"]) */
+  --up:      #e2564a;
+  --up-dim:  #8e3129;
+  --down:    #4f92e6;
+  --down-dim:#2b5a92;
+  --flat:    #8b8395;
+
+  /* ── 글자색 ── */
+  --tx-100: #f2ece1;
+  --tx-200: #ddd4c6;
+  --tx-300: #b9b0a6;
+  --tx-400: #8f8896;
+  --tx-500: #6d6780;
+  --tx-600: #4c4763;
+
+  /* ── 면 ── */
+  --pane:        rgba(18, 16, 40, .58);
+  --pane-solid:  #12102a;
+  --pane-hi:     rgba(34, 28, 69, .62);
+  --line:        rgba(224, 196, 137, .14);
+  --line-soft:   rgba(224, 196, 137, .07);
+  --line-hard:   rgba(224, 196, 137, .28);
+
+  /* ── 글꼴 ── */
+  --f-greek: "GFS Didot", "Cormorant Garamond", Georgia, serif;
+  --f-disp:  "Cormorant Garamond", "GFS Didot", Georgia, serif;
+  --f-read:  "Noto Serif KR", "Cormorant Garamond", Georgia, serif;
+  --f-ui:    "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-num:   "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* ── 크기 ── */
+  --t-xs:  .72rem;
+  --t-sm:  .8rem;
+  --t-md:  .9rem;
+  --t-lg:  1.02rem;
+  --t-xl:  1.25rem;
+  --t-2xl: 1.6rem;
+  --t-3xl: 2.4rem;
+
+  /* ── 사이 ── */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 72px;
+
+  /* ── 모서리 ── */
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 14px;
+  --r-xl: 22px;
+
+  /* ── 그림자·빛 ── */
+  --glow-gold: 0 0 24px rgba(208, 171, 99, .18);
+  --glow-soft: 0 8px 40px rgba(0, 0, 0, .55);
+  --lift:      0 18px 60px -18px rgba(0, 0, 0, .85);
+
+  /* ── 움직임 ── */
+  --ease: cubic-bezier(.22, .61, .36, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --dur-fast: .16s;
+  --dur: .28s;
+  --dur-slow: .6s;
+
+  /* ── 폭 ── */
+  --w-rail: 372px;
+  --w-max: 1560px;
+}
+
+/* 세계 관행(오름 초록)으로 뒤집기 */
+[data-tint="global"] {
+  --up:      #47b37e;
+  --up-dim:  #26654a;
+  --down:    #e2564a;
+  --down-dim:#8e3129;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: .01ms; --dur: .01ms; --dur-slow: .01ms; }
+}

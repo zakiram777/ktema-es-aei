@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Κτῆμα ἐς Ἀεί</title>
+<meta name="description" content="Κτῆμα ἐς Ἀεί — 시장의 소식을 모으고, 자키람이 읽어 준다.">
+<meta name="theme-color" content="#08060e">
+<link rel="icon" href="assets/media/sigil.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/media/zakiram/poster/11.jpg">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Κτῆμα ἐς Ἀεί">
+<meta property="og:description" content="Κτῆμα ἐς Ἀεί">
+<meta property="og:image" content="assets/media/zakiram/poster/11.jpg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=GFS+Didot&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Noto+Serif+KR:wght@300;400;600&family=Noto+Sans+KR:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="assets/css/tokens.css">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/ambience.css">
+<link rel="stylesheet" href="assets/css/shell.css">
+<link rel="stylesheet" href="assets/css/zakiram.css">
+<link rel="stylesheet" href="assets/css/news.css">
+<link rel="stylesheet" href="assets/css/market.css">
+<link rel="stylesheet" href="assets/css/sheets.css">
+</head>
+
+<body data-phase="gate">
+
+<!-- ═══════════════════ 배경 ═══════════════════ -->
+<div class="ambience" aria-hidden="true">
+  <div class="ambience__wash"></div>
+  <canvas class="ambience__sky" id="sky"></canvas>
+  <div class="ambience__grain"></div>
+  <div class="ambience__vignette"></div>
+</div>
+
+<!-- ═══════════════════ 관문 ═══════════════════ -->
+<section class="gate" id="gate">
+  <div class="gate__inner">
+
+    <div class="gate__seal" aria-hidden="true">
+      <svg viewBox="0 0 220 220" class="seal" id="seal">
+        <g class="seal__out">
+          <circle cx="110" cy="110" r="104"/>
+          <circle cx="110" cy="110" r="98"/>
+        </g>
+        <g class="seal__mid">
+          <circle cx="110" cy="110" r="78"/>
+          <path d="M110 34 L176 148 L44 148 Z"/>
+          <path d="M110 186 L44 72 L176 72 Z"/>
+        </g>
+        <g class="seal__in">
+          <circle cx="110" cy="110" r="50"/>
+          <circle cx="110" cy="110" r="34"/>
+        </g>
+        <g class="seal__ticks" id="sealTicks"></g>
+      </svg>
+    </div>
+
+    <h1 class="wordmark">
+      <span class="wordmark__gr">Κτῆμα ἐς Ἀεί</span>
+      <span class="wordmark__lat">KTEMA ES AEI</span>
+    </h1>
+
+    <p class="gate__epigraph">
+      <span>κτῆμα ἐς αἰεὶ μᾶλλον ἢ ἀγώνισμα ἐς τὸ παραχρῆμα ἀκούειν</span>
+      <em>Θουκυδίδης &middot; I.22</em>
+    </p>
+
+    <button class="enter" id="enter" type="button">
+      <span class="enter__gr">ΕΙΣΟΔΟΣ</span>
+      <span class="enter__sub">자키람을 깨운다</span>
+    </button>
+
+    <p class="gate__hint">들어가면 자키람이 소리로 응답합니다. 소리는 언제든 끌 수 있습니다.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 본체 ═══════════════════ -->
+<div class="app" id="app" hidden>
+
+  <header class="top">
+    <a class="brand" href="#" id="brand"><span class="brand__gr">Κτῆμα ἐς Ἀεί</span></a>
+
+    <div class="top__clocks" id="clocks"></div>
+
+    <div class="top__actions">
+      <button class="btn btn--ghost" id="btnMute" type="button" aria-pressed="false" title="소리 끄기 / 켜기">
+        <span class="ico" data-ico="sound"></span><span class="btn__label">소리</span>
+      </button>
+      <button class="btn btn--ghost" id="btnVoice" type="button" title="목소리 고르기">
+        <span class="ico" data-ico="voice"></span><span class="btn__label">목소리</span>
+      </button>
+      <button class="btn btn--ghost" id="btnSettings" type="button" title="설정">
+        <span class="ico" data-ico="gear"></span><span class="btn__label">설정</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="tape" id="tape"><div class="tape__track" id="tapeTrack"></div></div>
+
+  <main class="shell">
+    <div class="shell__flow">
+
+      <!-- ─────── 소식 ─────── -->
+      <section class="panel" id="news" aria-labelledby="newsTitle">
+        <div class="panel__head">
+          <h2 class="panel__title" id="newsTitle">
+            <span class="panel__gr">Ἀγγελίαι</span><span class="panel__ko">소식</span>
+          </h2>
+          <div class="panel__tools">
+            <span class="stamp" id="newsStamp"></span>
+            <button class="btn btn--gold" id="btnRefresh" type="button">
+              <span class="ico" data-ico="refresh"></span><span class="btn__label">갱신</span>
+            </button>
+          </div>
+        </div>
+
+        <nav class="tabs" id="newsTabs" role="tablist"></nav>
+
+        <div class="feedbar">
+          <label class="switch">
+            <input type="checkbox" id="autoRefresh">
+            <span class="switch__track"><span class="switch__dot"></span></span>
+            <span class="switch__label">자동 갱신</span>
+          </label>
+          <span class="feedbar__next" id="nextRefresh"></span>
+          <span class="feedbar__spacer"></span>
+          <span class="feedbar__count" id="newsCount"></span>
+        </div>
+
+        <ol class="feed" id="feed"></ol>
+
+        <div class="feed__more">
+          <button class="btn btn--quiet" id="btnMore" type="button">더 보기</button>
+        </div>
+      </section>
+
+      <!-- ─────── 시장 ─────── -->
+      <section class="panel" id="market" aria-labelledby="marketTitle">
+        <div class="panel__head">
+          <h2 class="panel__title" id="marketTitle">
+            <span class="panel__gr">Ἀγορά</span><span class="panel__ko">시장</span>
+          </h2>
+          <div class="panel__tools">
+            <span class="stamp" id="marketStamp"></span>
+            <button class="btn btn--gold" id="btnQuotes" type="button">
+              <span class="ico" data-ico="refresh"></span><span class="btn__label">시세 갱신</span>
+            </button>
+          </div>
+        </div>
+
+        <p class="hint hint--speak">숫자를 누르면 자키람이 읽어 줍니다.</p>
+
+        <div class="board" id="board"></div>
+
+        <div class="chart">
+          <div class="chart__head">
+            <div class="chart__id">
+              <span class="chart__sym" id="chartSym"></span>
+              <span class="chart__name" id="chartName"></span>
+            </div>
+            <div class="chart__price" id="chartPrice"></div>
+            <div class="chart__ranges" id="chartRanges"></div>
+          </div>
+          <div class="chart__stage" id="chartStage">
+            <canvas id="chartCanvas"></canvas>
+            <div class="chart__tip" id="chartTip" hidden></div>
+            <div class="chart__veil" id="chartVeil">시세를 부르는 중…</div>
+          </div>
+          <div class="chart__stats" id="chartStats"></div>
+          <div class="chart__foot">
+            <div class="chart__picker" id="chartPicker"></div>
+            <button class="btn btn--quiet" id="btnReadChart" type="button">
+              <span class="ico" data-ico="voice"></span><span class="btn__label">차트 읽어 줘</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ─────── 자키람 ─────── -->
+    <aside class="rail" id="rail">
+      <div class="rail__sticky">
+
+        <figure class="zak" id="zak" data-mood="serene">
+          <div class="zak__halo" aria-hidden="true"></div>
+          <div class="zak__frame">
+            <!-- 바닥에 깔린 정지 초상.
+                 영상이 못 뜨거나 코덱이 없거나 자동 재생이 막혀도
+                 자키람의 모습만은 반드시 보이게 하는 마지막 바닥이다.
+                 영상이 뜨면 그 위에 덮인다. -->
+            <img class="zak__still" src="assets/media/zakiram/poster/13.jpg"
+                 alt="자키람" decoding="async" fetchpriority="high">
+            <video class="zak__layer is-on" data-layer="a" muted playsinline preload="auto" disablepictureinpicture></video>
+            <video class="zak__layer" data-layer="b" muted playsinline preload="auto" disablepictureinpicture></video>
+            <div class="zak__tone" aria-hidden="true"></div>
+            <div class="zak__scrim" aria-hidden="true"></div>
+            <div class="zak__wave" id="zakWave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="zak__wake" id="zakWake">
+              <span><b>Ἔγειρε</b>화면을 한 번 눌러<br>자키람을 깨워 주십시오</span>
+            </div>
+          </div>
+          <figcaption class="zak__id">
+            <span class="zak__name">Ζακιράμ</span>
+            <span class="zak__mood" id="zakMood"></span>
+          </figcaption>
+        </figure>
+
+        <!-- 자키람이 지금 하는 말.
+             화면에는 내지 않는다 — 얼굴 옆에 글자가 흐르면 눈이 그리로
+             가서 정작 자키람을 보지 않게 된다. 다만 화면 낭독기에게는
+             남겨 두어야 하므로 보이지 않는 자리에 적는다. -->
+        <p class="sr-only" id="sayText" aria-live="polite"></p>
+
+        <div class="rail__controls">
+          <button class="btn btn--gold btn--wide" id="btnSpeakStop" type="button" hidden>
+            <span class="ico" data-ico="stop"></span><span class="btn__label">그만</span>
+          </button>
+          <button class="btn btn--quiet btn--wide" id="btnBrief" type="button">
+            <span class="ico" data-ico="voice"></span><span class="btn__label">지금 시장 브리핑</span>
+          </button>
+        </div>
+
+        <div class="rail__meta">
+          <div class="meter">
+            <span class="meter__label">시장 기분</span>
+            <span class="meter__bar"><i id="moodBar"></i></span>
+            <span class="meter__val" id="moodVal">—</span>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    <span class="foot__gr">Κτῆμα ἐς Ἀεί</span>
+    <span class="foot__note">소식은 각 언론사의 공개 피드에서 옵니다. 시세는 참고용이며 투자 판단의 근거가 아닙니다.</span>
+  </footer>
+</div>
+
+<!-- ═══════════════════ 읽기 ═══════════════════ -->
+<div class="reader" id="reader" hidden aria-modal="true" role="dialog" aria-labelledby="readerTitle">
+  <div class="reader__scrim" data-close></div>
+  <article class="reader__body">
+    <header class="reader__head">
+      <div class="reader__src"><span class="chip" id="readerSrc"></span><time id="readerTime"></time></div>
+      <button class="iconbtn" data-close type="button" aria-label="닫기"><span class="ico" data-ico="close"></span></button>
+    </header>
+
+    <h3 class="reader__title" id="readerTitle"></h3>
+
+    <div class="reader__actions">
+      <button class="btn btn--gold" id="btnRead" type="button">
+        <span class="ico" data-ico="voice"></span><span class="btn__label">자키람이 읽어 준다</span>
+      </button>
+      <div class="seg" id="readLang" role="group" aria-label="읽을 언어">
+        <button type="button" data-lang="ko" class="is-on">한국어</button>
+        <button type="button" data-lang="en">English</button>
+      </div>
+      <a class="btn btn--quiet" id="readerLink" target="_blank" rel="noopener noreferrer">
+        <span class="btn__label">원문</span><span class="ico" data-ico="out"></span>
+      </a>
+    </div>
+
+    <div class="reader__text" id="readerText"></div>
+    <p class="reader__note" id="readerNote"></p>
+  </article>
+</div>
+
+<!-- ═══════════════════ 설정 ═══════════════════ -->
+<div class="sheet" id="settings" hidden aria-modal="true" role="dialog" aria-labelledby="setTitle">
+  <div class="sheet__scrim" data-close></div>
+  <div class="sheet__body">
+    <header class="sheet__head">
+      <h3 id="setTitle"><span class="panel__gr">Ῥυθμίσεις</span><span class="panel__ko">설정</span></h3>
+      <button class="iconbtn" data-close type="button" aria-label="닫기"><span class="ico" data-ico="close"></span></button>
+    </header>
+    <div class="sheet__scroll" id="settingsBody"></div>
+  </div>
+</div>
+
+<div class="alerts" id="alerts" aria-live="polite"></div>
+
+<noscript>
+  <p style="padding:2rem;color:#e3c37e;font-family:serif">Κτῆμα ἐς Ἀεί — 이 사이트는 자바스크립트가 있어야 움직입니다.</p>
+</noscript>
+
+<script type="module" src="assets/js/main.js"></script>
+</body>
+</html>

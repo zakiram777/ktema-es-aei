@@ -1,0 +1,246 @@
+/* ═══════════════════════════════════════════════════════════════
+   ambience.css — 신비한 바탕
+
+   네 겹이다.
+     wash      남보라 빛무리. 아주 느리게 숨쉰다
+     sky       티끌과 만다라 (canvas, ui/ambience.js 가 그린다)
+     grain     낡은 종이 결
+     vignette  가장자리를 눌러 시선을 가운데로
+   ═══════════════════════════════════════════════════════════════ */
+
+.ambience {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* ── 빛무리 ── */
+.ambience__wash {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(46% 38% at 22% 18%, rgba(78, 54, 132, .40), transparent 62%),
+    radial-gradient(40% 34% at 82% 26%, rgba(150, 106, 48, .22), transparent 60%),
+    radial-gradient(52% 44% at 62% 86%, rgba(30, 72, 92, .28), transparent 64%),
+    radial-gradient(70% 60% at 50% 50%, rgba(12, 9, 26, .0), rgba(6, 4, 16, .92) 92%),
+    var(--ink-950);
+  animation: wash 46s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+@keyframes wash {
+  0%   { transform: scale(1) translate3d(0, 0, 0); opacity: .96; }
+  50%  { transform: scale(1.06) translate3d(-1.4%, 1%, 0); opacity: 1; }
+  100% { transform: scale(1.02) translate3d(1.2%, -1.2%, 0); opacity: .93; }
+}
+
+/* ── 티끌과 만다라 ── */
+.ambience__sky {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: .85;
+}
+
+/* ── 결 ── */
+.ambience__grain {
+  position: absolute;
+  inset: -50%;
+  opacity: .05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  animation: grain 7s steps(6) infinite;
+}
+@keyframes grain {
+  0%,100% { transform: translate(0, 0); }
+  17%  { transform: translate(-3%, 2%); }
+  33%  { transform: translate(2%, -3%); }
+  50%  { transform: translate(-2%, -2%); }
+  67%  { transform: translate(3%, 1%); }
+  83%  { transform: translate(-1%, 3%); }
+}
+
+/* ── 가장자리 ── */
+.ambience__vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 45%, transparent 42%, rgba(4, 3, 10, .70) 100%),
+    linear-gradient(to bottom, rgba(4, 3, 10, .55), transparent 22%, transparent 78%, rgba(4, 3, 10, .70));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambience__wash,
+  .ambience__grain { animation: none; }
+}
+
+/* ═══════════════════ 관문 ═══════════════════ */
+
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--s-5);
+  text-align: center;
+}
+
+/* 물러날 때.
+   끝 상태를 규칙에 곧바로 적어 둔다. 애니메이션에는 채우기(fill-mode)를
+   주지 않는다 — 창이 뒤에 있어 애니메이션이 돌지 못하면 관문은 그냥
+   즉시 사라진다. 반대로 채우기를 주면 시작 상태에 붙들려 화면을 덮은
+   채 남는다. 자바스크립트에서도 한 박자 뒤에 hidden 을 걸어 겹으로 막는다. */
+.gate.is-gone {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(1.06);
+  pointer-events: none;
+  animation: gateOut .9s var(--ease);
+}
+@keyframes gateOut {
+  from { opacity: 1; visibility: visible; transform: none; }
+}
+.gate[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gate.is-gone { animation-duration: .01ms; }
+}
+
+.gate__inner {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--s-5);
+  max-width: 640px;
+  animation: rise 1.6s var(--ease) both;
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── 인장 ── 자키람의 후광이 되는 회전 문양 */
+.gate__seal {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: min(78vmin, 560px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  z-index: -1;
+  opacity: .5;
+}
+.seal { width: 100%; height: 100%; overflow: visible; }
+.seal circle, .seal path, .seal line {
+  fill: none;
+  stroke: var(--gold-500);
+  stroke-width: .5;
+  vector-effect: non-scaling-stroke;
+}
+.seal__out  { opacity: .5;  transform-origin: 110px 110px; animation: turn 220s linear infinite; }
+.seal__mid  { opacity: .34; transform-origin: 110px 110px; animation: turn 150s linear infinite reverse; }
+.seal__in   { opacity: .46; transform-origin: 110px 110px; animation: turn 96s linear infinite; }
+.seal__ticks{ opacity: .3;  transform-origin: 110px 110px; animation: turn 300s linear infinite reverse; }
+@keyframes turn { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .seal__out, .seal__mid, .seal__in, .seal__ticks { animation: none; }
+  .gate__inner { animation: none; }
+}
+
+/* ── 이름 ── */
+.wordmark {
+  display: grid;
+  gap: var(--s-2);
+  justify-items: center;
+}
+.wordmark__gr {
+  font-family: var(--f-greek);
+  font-size: clamp(2.4rem, 8.4vw, 4.6rem);
+  line-height: 1.02;
+  color: var(--gold-200);
+  letter-spacing: .015em;
+  text-shadow: 0 0 44px rgba(208, 171, 99, .30), 0 2px 0 rgba(0, 0, 0, .4);
+}
+.wordmark__lat {
+  font-family: var(--f-disp);
+  font-size: clamp(.66rem, 1.9vw, .82rem);
+  letter-spacing: .58em;
+  text-indent: .58em;
+  color: var(--tx-500);
+  text-transform: uppercase;
+}
+
+.gate__epigraph {
+  display: grid;
+  gap: 6px;
+  max-width: 34em;
+  font-family: var(--f-greek);
+  font-size: clamp(.8rem, 2.1vw, .96rem);
+  line-height: 1.75;
+  color: var(--tx-400);
+}
+.gate__epigraph em {
+  font-family: var(--f-disp);
+  font-style: normal;
+  font-size: var(--t-xs);
+  letter-spacing: .3em;
+  color: var(--tx-600);
+}
+
+/* ── 입장 ── */
+.enter {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  padding: 16px 46px;
+  border: 1px solid var(--line-hard);
+  border-radius: 2px;
+  background: rgba(224, 196, 137, .04);
+  color: var(--gold-200);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color var(--dur-slow) var(--ease),
+              background var(--dur-slow) var(--ease),
+              box-shadow var(--dur-slow) var(--ease),
+              letter-spacing var(--dur-slow) var(--ease);
+}
+.enter::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 32%, rgba(247, 234, 208, .22) 50%, transparent 68%);
+  transform: translateX(-130%);
+  animation: sheen 5.5s var(--ease) infinite;
+}
+@keyframes sheen {
+  0%, 62% { transform: translateX(-130%); }
+  92%,100%{ transform: translateX(130%); }
+}
+.enter:hover {
+  border-color: var(--gold-400);
+  background: rgba(224, 196, 137, .11);
+  box-shadow: 0 0 50px -8px rgba(208, 171, 99, .40);
+}
+.enter__gr {
+  font-family: var(--f-greek);
+  font-size: 1.16rem;
+  letter-spacing: .32em;
+  text-indent: .32em;
+}
+.enter__sub {
+  font-size: var(--t-xs);
+  letter-spacing: .2em;
+  color: var(--tx-500);
+}
+.enter.is-waking { pointer-events: none; opacity: .55; }
+
+@media (prefers-reduced-motion: reduce) { .enter::after { animation: none; } }
+
+.gate__hint {
+  font-size: var(--t-xs);
+  color: var(--tx-600);
+  letter-spacing: .06em;
+}

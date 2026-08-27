@@ -1,0 +1,87 @@
+# ═══════════════════════════════════════════════════════════════
+#  Κτῆμα ἐς Ἀεί — Apache 설정
+#
+#  일반 웹호스팅(카페24·가비아·닷홈 등)의 Apache 에서 쓴다.
+#  Nginx 를 쓴다면 이 파일 대신 nginx.conf.example 을 보라.
+#  이 파일이 없어도 사이트는 뜬다. 있으면 더 빠르고 안전하다.
+# ═══════════════════════════════════════════════════════════════
+
+# ── 글자 인코딩 ──
+AddDefaultCharset UTF-8
+
+# ── MIME ──
+# 자바스크립트 모듈과 영상의 형식을 서버가 잘못 말하면 통째로 멎는다.
+<IfModule mod_mime.c>
+  AddType text/javascript            .js .mjs
+  AddType text/css                   .css
+  AddType image/svg+xml              .svg
+  AddType video/mp4                  .mp4
+  AddType image/webp                 .webp
+  AddType application/json           .json
+  AddType application/manifest+json  .webmanifest
+</IfModule>
+
+# ── 첫 화면 ──
+DirectoryIndex index.html
+
+# ── 눌러 보내기 ──
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml text/plain
+</IfModule>
+
+# ── 두어 두기 ──
+# 영상과 그림은 오래 둔다. 파일 이름이 바뀌지 않으니 안전하다.
+# 코드는 짧게 둔다. 고치면 바로 반영되어야 한다.
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType video/mp4        "access plus 1 year"
+  ExpiresByType image/jpeg       "access plus 1 year"
+  ExpiresByType image/webp       "access plus 1 year"
+  ExpiresByType image/svg+xml    "access plus 1 month"
+  ExpiresByType text/css         "access plus 1 hour"
+  ExpiresByType text/javascript  "access plus 1 hour"
+  ExpiresByType text/html        "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(mp4|jpg|jpeg|webp)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+
+  # ── 지킴이 ──
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Permissions-Policy "geolocation=(), camera=(), microphone=()"
+</IfModule>
+
+# ── 영상 이어받기 ──
+# 이것이 없으면 브라우저가 구간을 건너뛸 수 없어 얼굴 전환이 늦어진다.
+<IfModule mod_headers.c>
+  Header set Accept-Ranges "bytes"
+</IfModule>
+
+# ── 숨길 것 ──
+# 미리보기와 문서용 파일들이다. 실수로 같이 올라가더라도 남이 읽을
+# 까닭이 없다. robots.txt 는 .txt 지만 남겨 두어야 하므로 따로 적는다.
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+<FilesMatch "\.(bat|sh|mjs|md)$">
+  Require all denied
+</FilesMatch>
+<Files "NODE-REQUIRED.txt">
+  Require all denied
+</Files>
+<Files "시작하기.txt">
+  Require all denied
+</Files>
+# 설정을 같이 올렸다면, 그것은 이 사이트가 스스로 읽어 심는 파일이다.
+# 남에게 보일 것은 아니므로 아래 두 줄을 살려도 되지만, 그러면 사이트도
+# 못 읽어 심지 못한다. 혼자 쓰는 사이트가 아니라면 아예 올리지 않는 편이 낫다.
+# <Files "settings.json">
+#   Require all denied
+# </Files>

@@ -1,0 +1,95 @@
+# ═══════════════════════════════════════════════════════════════
+#  Κτῆμα ἐς Ἀεί — Nginx 설정 본
+#
+#  Nginx 는 .htaccess 를 읽지 않는다. 아래를 server 블록에 옮긴다.
+# ═══════════════════════════════════════════════════════════════
+
+server {
+    listen 80;
+    server_name  example.com;
+
+    root  /var/www/ktema;
+    index index.html;
+    charset utf-8;
+
+    # ── MIME ──
+    # 모듈 자바스크립트의 형식이 틀리면 사이트가 통째로 멎는다
+    types {
+        text/html                 html;
+        text/css                  css;
+        text/javascript           js mjs;
+        application/json          json;
+        image/svg+xml             svg;
+        image/jpeg                jpg jpeg;
+        image/webp                webp;
+        video/mp4                 mp4;
+        font/woff2                woff2;
+    }
+    default_type application/octet-stream;
+
+    # ── 눌러 보내기 ──
+    gzip              on;
+    gzip_vary         on;
+    gzip_min_length   512;
+    gzip_types        text/plain text/css text/javascript application/javascript
+                      application/json image/svg+xml;
+
+    # ── 지킴이 ──
+    add_header X-Content-Type-Options "nosniff"                        always;
+    add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
+    add_header X-Frame-Options        "SAMEORIGIN"                     always;
+
+    # ── 두어 두기 ──
+    # nginx 의 add_header 는 물려받지 않는다. location 안에서 한 줄이라도
+    # 쓰는 순간 위에 적은 지킴이 세 줄이 그 자리에서만 사라진다. 그래서
+    # 아래 블록들은 지킴이를 다시 적는다. 번거롭지만 이것이 맞다.
+    #
+    # ※ 정규식 location 은 위에서부터 처음 걸리는 하나만 쓴다. 그래서
+    #   "숨길 것" 을 먼저 적는다. 캐시 규칙 뒤에 적으면 .mjs 처럼 두 곳에
+    #   걸리는 것이 숨겨지지 않는다.
+
+    # ── 숨길 것 ──
+    # 미리보기와 문서용 파일들이다. 실수로 같이 올라가도 남이 읽을 까닭이 없다.
+    location ~ /\. { deny all; }
+    location = /README.md { deny all; }
+    location ~* \.(bat|sh|mjs|md)$ { deny all; }
+    location = /NODE-REQUIRED.txt { deny all; }
+    location = /시작하기.txt { deny all; }
+
+    # PHP-FPM 을 붙이지 않았다면 .php 는 소스가 그대로 내려간다. 그래서 막는다.
+    # PHP 를 붙일 것이라면 이 줄을 지우고 맨 아래 블록을 살린다.
+    location ~ \.php$ { deny all; }
+
+    # ── 두어 두기(이어서) ──
+    location ~* \.(mp4|jpg|jpeg|webp)$ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        # 영상 구간을 건너뛰려면 이어받기가 되어야 한다
+        add_header Accept-Ranges  "bytes";
+        add_header X-Content-Type-Options "nosniff"                        always;
+        add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
+        add_header X-Frame-Options        "SAMEORIGIN"                     always;
+    }
+
+    location ~* \.(css|js|mjs)$ {
+        add_header Cache-Control "public, max-age=3600";
+        add_header X-Content-Type-Options "nosniff"                        always;
+        add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
+        add_header X-Frame-Options        "SAMEORIGIN"                     always;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-cache, must-revalidate";
+        add_header X-Content-Type-Options "nosniff"                        always;
+        add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
+        add_header X-Frame-Options        "SAMEORIGIN"                     always;
+    }
+
+    # ── PHP 프록시를 쓴다면 ──
+    # (PHP-FPM 이 돌고 있을 때만. 없으면 이 블록을 통째로 지운다)
+    # location ~ ^/api/.*\.php$ {
+    #     fastcgi_pass   unix:/run/php/php8.2-fpm.sock;
+    #     fastcgi_index  index.php;
+    #     fastcgi_param  SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    #     include        fastcgi_params;
+    # }
+}

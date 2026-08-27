@@ -1,0 +1,325 @@
+/* ═══════════════════════════════════════════════════════════════
+   news.css — 갈래·목록·읽기 판
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─────────────── 갈래 ─────────────── */
+
+.tabs {
+  display: flex;
+  gap: var(--s-1);
+  margin: var(--s-4) 0 var(--s-3);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, #000 92%, transparent);
+  mask-image: linear-gradient(to right, #000 92%, transparent);
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 8px 15px;
+  border: 0;
+  background: none;
+  color: var(--tx-500);
+  font-size: var(--t-sm);
+  letter-spacing: .03em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--dur) var(--ease);
+}
+.tab::after {
+  content: "";
+  position: absolute;
+  left: 15px; right: 15px; bottom: 2px;
+  height: 1px;
+  background: var(--gold-400);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur) var(--ease);
+}
+.tab:hover { color: var(--tx-200); }
+.tab.is-on { color: var(--gold-200); }
+.tab.is-on::after { transform: scaleX(1); }
+.tab__gr {
+  display: block;
+  font-family: var(--f-greek);
+  font-size: var(--t-xs);
+  letter-spacing: .12em;
+  color: var(--tx-600);
+  line-height: 1.2;
+}
+.tab.is-on .tab__gr { color: var(--gold-600); }
+
+/* ─────────────── 상태 줄 ─────────────── */
+
+.feedbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) 0 var(--s-3);
+  border-bottom: 1px solid var(--line-soft);
+  font-size: var(--t-xs);
+  color: var(--tx-500);
+}
+.feedbar__spacer { flex: 1 1 auto; }
+.feedbar__next, .feedbar__count {
+  font-family: var(--f-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-600);
+}
+
+/* ─────────────── 목록 ─────────────── */
+
+.feed { display: grid; }
+
+.item {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-3);
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
+  transition: background var(--dur) var(--ease);
+  animation: itemIn .5s var(--ease) both;
+}
+@keyframes itemIn { from { opacity: 0; transform: translateY(7px); } }
+.item:hover { background: rgba(224, 196, 137, .045); }
+.item:hover .item__title { color: var(--gold-100); }
+.item::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 12%; bottom: 12%;
+  width: 1px;
+  background: var(--gold-400);
+  transform: scaleY(0);
+  transition: transform var(--dur) var(--ease);
+}
+.item:hover::before { transform: scaleY(1); }
+
+.item__src {
+  font-size: var(--t-xs);
+  color: var(--tx-600);
+  letter-spacing: .06em;
+  white-space: nowrap;
+  min-width: 4.6em;
+}
+.item__main { min-width: 0; }
+.item__title {
+  font-family: var(--f-read);
+  font-size: var(--t-lg);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--tx-200);
+  transition: color var(--dur) var(--ease);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.item__dek {
+  margin-top: 5px;
+  font-size: var(--t-sm);
+  color: var(--tx-500);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.item__time {
+  font-family: var(--f-num);
+  font-size: var(--t-xs);
+  color: var(--tx-600);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.item.is-new .item__title { color: var(--gold-200); }
+.item.is-new::after {
+  content: "";
+  position: absolute;
+  left: 6px; top: 50%;
+  width: 4px; height: 4px;
+  margin-top: -2px;
+  border-radius: 50%;
+  background: var(--gold-400);
+  box-shadow: 0 0 10px var(--gold-400);
+  animation: blip 3s var(--ease) infinite;
+}
+@keyframes blip { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+.item.is-urgent { background: rgba(207, 90, 65, .06); }
+.item.is-urgent .item__src { color: var(--coral-300); }
+.item.is-urgent::before { background: var(--coral-500); transform: scaleY(1); }
+
+.item.is-read .item__title { color: var(--tx-400); }
+
+.item__flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 7px;
+  padding: 1px 7px;
+  border-radius: 3px;
+  background: rgba(207, 90, 65, .16);
+  color: var(--coral-300);
+  font-family: var(--f-ui);
+  font-size: var(--t-xs);
+  letter-spacing: .1em;
+  vertical-align: 2px;
+}
+
+.feed__more { display: grid; place-items: center; padding-top: var(--s-5); }
+.feed__more[hidden] { display: none; }
+
+/* 비었을 때 / 부르는 중 */
+.feed__state {
+  padding: var(--s-7) var(--s-4);
+  text-align: center;
+  color: var(--tx-500);
+  font-size: var(--t-sm);
+  display: grid;
+  gap: var(--s-3);
+  justify-items: center;
+}
+.feed__state .spin {
+  width: 26px; height: 26px;
+  border: 1px solid var(--line);
+  border-top-color: var(--gold-400);
+  border-radius: 50%;
+  animation: spin 1.1s linear infinite;
+}
+.feed__state code {
+  font-family: var(--f-num);
+  font-size: var(--t-xs);
+  color: var(--tx-600);
+}
+
+/* 뼈대 */
+.skel {
+  display: grid;
+  grid-template-columns: 4.6em minmax(0, 1fr);
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-3);
+  border-bottom: 1px solid var(--line-soft);
+}
+.skel i {
+  display: block;
+  height: .78em;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--ink-700), var(--ink-600), var(--ink-700));
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+.skel i + i { margin-top: 8px; width: 68%; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ─────────────── 읽기 판 ─────────────── */
+
+.reader {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  justify-items: end;
+}
+.reader[hidden] { display: none; }
+
+.reader__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 3, 10, .68);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  animation: fadeIn var(--dur) var(--ease) both;
+}
+@keyframes fadeIn { from { opacity: 0; } }
+
+.reader__body {
+  position: relative;
+  width: min(720px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--s-5) var(--s-6) var(--s-8);
+  border-left: 1px solid var(--line);
+  background: linear-gradient(to bottom, rgba(19, 16, 40, .98), rgba(9, 7, 20, .99));
+  box-shadow: -30px 0 80px -20px rgba(0, 0, 0, .8);
+  animation: slideIn .42s var(--ease) both;
+}
+@keyframes slideIn { from { transform: translateX(34px); opacity: 0; } }
+.reader.is-out .reader__body { animation: slideOut .3s var(--ease) both; }
+.reader.is-out .reader__scrim { animation: fadeOut .3s var(--ease) both; }
+@keyframes slideOut { to { transform: translateX(34px); opacity: 0; } }
+@keyframes fadeOut  { to { opacity: 0; } }
+
+.reader__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-bottom: var(--s-4);
+}
+.reader__src { display: flex; align-items: center; gap: var(--s-3); }
+.reader__src time {
+  font-family: var(--f-num);
+  font-size: var(--t-xs);
+  color: var(--tx-600);
+}
+
+.reader__title {
+  font-family: var(--f-read);
+  font-size: clamp(1.32rem, 3.4vw, 1.86rem);
+  font-weight: 600;
+  line-height: 1.42;
+  color: var(--tx-100);
+  letter-spacing: -.01em;
+}
+
+.reader__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  margin: var(--s-5) 0;
+  padding: var(--s-4) 0;
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+}
+.reader__actions #readerLink { margin-left: auto; }
+
+.reader__text {
+  font-family: var(--f-read);
+  font-size: 1.03rem;
+  line-height: 1.95;
+  color: var(--tx-300);
+}
+.reader__text p + p { margin-top: 1.15em; }
+.reader__text p.is-said { color: var(--tx-100); }
+.reader__text p.is-now {
+  color: var(--gold-100);
+  text-shadow: 0 0 22px rgba(224, 196, 137, .22);
+}
+.reader__text .lead {
+  font-size: 1.1rem;
+  color: var(--tx-200);
+  padding-left: var(--s-4);
+  border-left: 2px solid var(--gold-700);
+}
+
+.reader__note {
+  margin-top: var(--s-6);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--line-soft);
+  font-size: var(--t-xs);
+  color: var(--tx-600);
+  line-height: 1.7;
+}
+
+@media (max-width: 640px) {
+  .reader__body { padding: var(--s-4) var(--s-4) var(--s-8); border-left: 0; }
+  .reader__actions #readerLink { margin-left: 0; }
+}
