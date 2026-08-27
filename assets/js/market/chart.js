@@ -12,7 +12,7 @@
    올릴 수 있다. 견줄 수 있는 것은 값이 아니라 움직인 정도다.
    ═══════════════════════════════════════════════════════════════ */
 
-import { px, num, big, dayStamp } from '../core/fmt.js';
+import { px, num, big } from '../core/fmt.js';
 import { computeAll, colorVar } from './indicators.js';
 
 const PAD = { top: 16, right: 64, bottom: 28, left: 10 };

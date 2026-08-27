@@ -34,7 +34,7 @@ import { DEFAULT_WATCH, RANGES, nameOf } from './market/symbols.js';
 import { Veil, gateFilm } from './ui/ambience.js';
 import { Settings } from './ui/settings.js';
 import { Nav } from './ui/nav.js';
-import { Picker, looksLikeSymbol } from './ui/picker.js';
+import { Picker } from './ui/picker.js';
 import { WatchList } from './ui/watch.js';
 import { MacroPanel, FinPanel, FxSwitch, ScoreCard } from './ui/extras.js';
 import * as filings from './market/filings.js';
@@ -64,12 +64,11 @@ async function loadNews({ quiet = false, force = false } = {}) {
 
   try {
     const { items, at } = await feed.load(app.news.cat, { force });
-    app.news.set(items, at);
 
     // 공시를 같은 목록에 섞는다. 기사는 남이 회사에 대해 쓴 글이고
     // 공시는 회사가 스스로 낸 글인데, 읽는 사람에게는 둘 다 소식이다.
     const withFilings = await mixFilings(items);
-    if (withFilings !== items) app.news.set(withFilings, at);
+    app.news.set(withFilings, at);
 
     if (!quiet) {
       const fresh = withFilings.filter((x) => x.isNew).length;
@@ -96,6 +95,8 @@ async function loadNews({ quiet = false, force = false } = {}) {
 
    열쇠가 없으면 아무 일도 하지 않고 조용히 지나간다. 이것 하나 없다고
    소식 화면이 반쪽이 되어서는 안 된다. */
+const FILINGS_TTL = 15 * 60_000;
+
 async function mixFilings(items) {
   if (!filings.hasDartKey()) return items;
 
@@ -103,8 +104,18 @@ async function mixFilings(items) {
   const codes = watch.map((w) => filings.codeOf(w.symbol)).filter(Boolean);
   if (!codes.length) return items;
 
+  /* 소식은 3분마다 스스로 갱신된다. 공시까지 그때마다 물으면 종목
+     열 개에 한 시간이면 이백 번이다. 한도에 걸릴 양은 아니지만 그럴
+     까닭도 없다 — 공시는 3분에 한 번 바뀌는 것이 아니다.
+     받아 둔 것은 15분 동안 그대로 쓴다. */
+  if (app.filings && Date.now() - app.filingsAt < FILINGS_TTL) {
+    return [...app.filings, ...items].sort((a, b) => (b.time || 0) - (a.time || 0));
+  }
+
   try {
     const list = await filings.recent({ codes, days: 3, max: 30 });
+    app.filings = list;
+    app.filingsAt = Date.now();
     if (!list.length) return items;
 
     // 급한 것은 속보로도 외친다
@@ -330,6 +341,12 @@ function build() {
 
   /* ── 설정 ── */
   app.settings = new Settings({
+    // 열쇠를 넣자마자 그 기능이 살아나야 한다. 설정을 닫고 화면을
+    // 옮겨 다녀야 비로소 뜨면, 사람은 열쇠가 틀린 줄 안다.
+    onKeys: (key) => {
+      if (key === 'keyFred') app.macro?.load({ force: true });
+      if (key === 'keyDart') { app.filingsAt = 0; loadNews({ quiet: true, force: true }); }
+    },
     onAutoRefresh: () => scheduleRefresh(),
     onRefresh: () => loadNews(),
     onMotion: (v) => (v ? app.veil.start() : app.veil.pause()),
@@ -512,7 +529,9 @@ function buildBtTabs() {
     }
     // '보기 전략'과 '시험한다'는 규칙 갈래의 것이다
     $('#btTools').hidden = id !== 'rules';
-    if (id === 'map') app.map.paint();          // 규칙이 바뀌었을 수 있다
+    // 규칙이 그새 바뀌었으면 다시 짓고, 안 바뀌었으면 돌려 둔 지도를
+    // 그대로 둔다. 이십 초 걸린 것이 갈래를 오갔다고 사라지면 안 된다.
+    if (id === 'map') app.map.refresh();
   };
 
   host.replaceChildren(...BT_TABS.map((t) => el('button', {

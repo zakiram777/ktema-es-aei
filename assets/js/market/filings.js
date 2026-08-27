@@ -78,7 +78,7 @@ export async function recent({ codes = [], days = 2, max = 40 } = {}) {
   for (const code of targets) {
     const url = `${DART}/list.json?crtfc_key=${encodeURIComponent(key)}`
               + `&bgn_de=${ymd(start)}&end_de=${ymd(end)}`
-              + (code ? `&corp_code=&stock_code=${code}` : '')
+              + (code ? `&stock_code=${code}` : '')
               + `&page_count=${Math.min(100, max)}`;
     try {
       const { data } = await fetchJSON(url, { timeout: 12_000 });

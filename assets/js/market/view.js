@@ -217,6 +217,7 @@ export class MarketView {
       ]),
     );
 
+    this.won = false;                  // 새 종목은 늘 제 돈으로 시작한다
     const intraday = range === '5d';
     this.chart.set(q.bars, {
       intraday,
@@ -259,6 +260,8 @@ export class MarketView {
   swapBars(bars, suffix = '') {
     const q = this.q;
     if (!q) return;
+
+    this.won = !!bars;      // 범례가 어느 돈인지 말할 수 있게
 
     const use = bars || q.bars;
     this.chart.set(use, {
@@ -321,7 +324,7 @@ export class MarketView {
       const other = this.compare[0];
       this.legendEl.appendChild(el('b.legend--mode', { text: '비율 눈금' }));
       this.legendEl.appendChild(el('b', {
-        text: `${this.q?.ko || this.symbol} ÷ ${other?.ko || ''}`,
+        text: `${this.q?.ko || this.symbol}${this.won ? '(원)' : ''} ÷ ${other?.ko || ''}`,
       }));
       this.legendEl.appendChild(el('b', {
         class: 'legend--dim',
@@ -334,7 +337,7 @@ export class MarketView {
       this.legendEl.appendChild(el('b.legend--mode', { text: '백분율 눈금' }));
       this.legendEl.appendChild(el('b', [
         el('i', { style: { background: 'var(--tx-100)' } }),
-        document.createTextNode(this.q?.ko || this.symbol),
+        document.createTextNode((this.q?.ko || this.symbol) + (this.won ? ' (원)' : '')),
       ]));
       this.chart.cmp.forEach((c) => {
         this.legendEl.appendChild(el('b', [

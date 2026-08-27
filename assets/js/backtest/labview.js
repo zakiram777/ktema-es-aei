@@ -13,7 +13,8 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { $, el, clear, ico, wait } from '../core/dom.js';
-import { px, pct, num, dir, big } from '../core/fmt.js';
+import { pct, num, dir, big } from '../core/fmt.js';
+import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { DEFAULT_WATCH, RANGES, nameOf } from '../market/symbols.js';
 import { rebalance, dcaVsLump, PERIODS } from './portfolio.js';
@@ -31,11 +32,20 @@ export class MixView {
     this.dca = null;
     this.busy = false;
     this.#build();
+
+    /* 담을 것은 관심종목에서 고른다. 그러니 관심종목이 바뀌면 이 목록도
+       따라와야 한다 — 안 그러면 방금 더한 것이 여기에는 없다. */
+    on('settings:changed', ({ key }) => {
+      if (key === 'watch') this.#build();
+    });
   }
 
   #build() {
     clear(this.host);
     this.host.append(this.#form(), this.#out());
+    // 이미 돌려 본 것이 있으면 그대로 다시 걸어 준다. 목록 하나 바뀌었다고
+    // 방금 본 성적이 사라지면 성가시다.
+    if (this.result) this.#paint(this.result, this.dca, this.lastSeries || []);
   }
 
   #form() {
@@ -48,9 +58,9 @@ export class MixView {
     const paintRows = () => {
       clear(rows);
       for (const w of watch) {
-        const on = this.cfg.picks[w.symbol] != null;
+        const picked = this.cfg.picks[w.symbol] != null;
         const box = el('input', { type: 'checkbox' });
-        box.checked = on;
+        box.checked = picked;
         box.addEventListener('change', () => {
           if (box.checked) this.cfg.picks[w.symbol] = 10;
           else delete this.cfg.picks[w.symbol];
@@ -59,10 +69,11 @@ export class MixView {
           paintSum();
         });
 
-        const num = el('input.mix__w', {
+        // 이름을 num 으로 두면 fmt 의 num() 을 가린다. 한 번 데었다.
+        const wIn = el('input.mix__w', {
           type: 'number', min: '0', max: '100', step: '1',
           value: String(this.cfg.picks[w.symbol] ?? ''),
-          disabled: !on,
+          disabled: !picked,
           oninput: (e) => {
             this.cfg.picks[w.symbol] = Number(e.target.value) || 0;
             save(this.cfg);
@@ -70,11 +81,11 @@ export class MixView {
           },
         });
 
-        rows.appendChild(el('label.mix__row', { class: on ? 'is-on' : '' }, [
+        rows.appendChild(el('label.mix__row', { class: picked ? 'is-on' : '' }, [
           el('span.switch.switch--bare', [box, el('span.switch__track', [el('span.switch__dot')])]),
           el('span.mix__ko', { text: w.ko || nameOf(w.symbol) }),
           el('code', { text: w.symbol }),
-          num,
+          wIn,
           el('span.mix__pctsign', { text: '%' }),
         ]));
       }
@@ -189,6 +200,7 @@ export class MixView {
 
       this.result = got;
       this.dca = dca;
+      this.lastSeries = series;
       this.#paint(got, dca, series);
     } catch (err) {
       clear(this.outEl);
@@ -307,6 +319,16 @@ export class MapView {
     this.paint();
   }
 
+  /* 갈래로 돌아왔을 때. 규칙이 그대로면 아무것도 하지 않는다 —
+     스무 초 걸려 그린 지도가 갈래를 한 번 오갔다고 사라지면
+     사람은 그 기능을 다시 안 쓴다. */
+  refresh() {
+    const sig = JSON.stringify(this.hooks.strategy());
+    if (sig === this.sig && this.host.children.length) return;
+    this.sig = sig;
+    this.paint();
+  }
+
   paint() {
     clear(this.host);
 
@@ -394,6 +416,7 @@ export class MapView {
     try {
       const map = grid(st, bars, plan);
       const wf = walkForward(st, bars, plan, this.cfg.split / 100);
+      this.sig = JSON.stringify(st);      // 이 지도가 어느 규칙의 것인지
       this.#paintOut(map, wf, plan);
     } catch (err) {
       this.#say('돌리다 넘어졌습니다: ' + err.message, true);

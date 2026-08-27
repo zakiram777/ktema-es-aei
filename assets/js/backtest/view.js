@@ -11,8 +11,8 @@
 
 import { $, el, clear, ico } from '../core/dom.js';
 import * as store from '../core/store.js';
-import { KINDS, kindById, blank, nameOf, COLORS } from '../market/indicators.js';
-import { run, SAMPLE, OPS, opById, normalize } from './engine.js';
+import { KINDS, kindById, blank, nameOf } from '../market/indicators.js';
+import { run, SAMPLE, OPS, normalize } from './engine.js';
 import { QUICK, nameOf as symName, RANGES } from '../market/symbols.js';
 
 const STORE_KEY = 'strategy';

@@ -227,12 +227,13 @@ export class AnalysisView {
       return el('div.tbl__c.num', { text: Number.isFinite(v) ? px(v) : '—' });
     }
     if (c.kind === 'bar') {
-      const on = Number.isFinite(v);
+      // 이름을 on 으로 두면 bus 의 on() 을 가린다
+      const has = Number.isFinite(v);
       return el('div.tbl__c.num', [
         el('span.posbar', [
-          el('i', { style: { left: `${on ? Math.max(0, Math.min(100, v)) : 0}%` } }),
+          el('i', { style: { left: `${has ? Math.max(0, Math.min(100, v)) : 0}%` } }),
         ]),
-        el('span.posbar__v', { text: on ? Math.round(v) : '—' }),
+        el('span.posbar__v', { text: has ? Math.round(v) : '—' }),
       ]);
     }
     if (c.kind === 'ratio') {
