@@ -17,6 +17,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { evaluate } from './formula.js';
+import { underwater } from './analysis.js';
 
 /* ─────────────── 밑감 ─────────────── */
 
@@ -189,6 +190,42 @@ export const KINDS = [
       return {
         lines: [{ key: 'avg', label: '평균 ' + c.period, values: sma(v, c.period) }],
         histogram: { key: 'vol', label: '거래량', values: v, positive: true },
+      };
+    },
+  },
+  {
+    id: 'uw', ko: '물에 잠긴 깊이', gr: 'Βυθός', pane: 'lower',
+    fields: [],
+    note: '꼭대기를 새로 칠 때마다 0으로 돌아가고 그 아래로만 자란다. '
+        + '최대 낙폭은 깊이만 말하지만 이 줄은 길이까지 말한다 — '
+        + '38%가 한 달이었는지 열한 달이었는지는 전혀 다른 이야기다.',
+    calc: (bars) => {
+      const uw = underwater(bars);
+      const months = uw.worstDays > 40 ? ` (가장 길게 ${Math.round(uw.worstDays / 21)}달)` : '';
+      return {
+        lines: [{ key: 'uw', label: '물에 잠긴 깊이' + months, values: uw.values }],
+        histogram: { key: 'uwh', label: '깊이', values: uw.values },
+        levels: [0],
+      };
+    },
+  },
+  {
+    id: 'atr', ko: '평균 진폭', gr: 'Εὖρος', pane: 'lower',
+    fields: [{ key: 'period', label: '기간', min: 2, max: 100, def: 14 }],
+    note: '하루에 오르내린 폭의 평균. 손절 자리를 값이 아니라 '
+        + '진폭의 몇 배로 잡을 때 쓴다 — 잔잔한 것과 널뛰는 것에 '
+        + '같은 3%를 걸면 하나는 너무 좁고 하나는 너무 넓다.',
+    calc: (bars, c) => {
+      // 참진폭: 오늘 고저폭, 어제 종가에서 오늘 고가까지, 어제 종가에서
+      // 오늘 저가까지 — 셋 중 가장 큰 것. 갭이 열려도 놓치지 않는다.
+      const tr = bars.map((b, i) => {
+        if (!i) return b.h - b.l;
+        const pc = bars[i - 1].c;
+        return Math.max(b.h - b.l, Math.abs(b.h - pc), Math.abs(b.l - pc));
+      });
+      const line = ema(tr, c.period);
+      return {
+        lines: [{ key: 'atr', label: 'ATR' + c.period, values: line }],
       };
     },
   },

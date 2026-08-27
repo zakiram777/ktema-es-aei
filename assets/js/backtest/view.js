@@ -308,6 +308,9 @@ export class BacktestView {
       const res = run(this.strategy, bars);
       if (!res.ok) throw new Error(res.why);
 
+      // 지도 갈래가 이 봉을 그대로 쓴다. 백스물한 번 돌리자고 백스물한 번
+      // 부를 까닭이 없다.
+      this.bars = bars;
       this.result = { ...res, bars, name: q.ko || q.name || this.symbol };
       this.#paintResult();
     } catch (err) {

@@ -504,3 +504,28 @@ body {
   .pick__name { display: none; }
   .view { padding: var(--s-3); }
 }
+
+/* ── 시장 폭 ──
+   지수 옆에 놓지 않고 시계 옆에 둔다. 이것은 값이 아니라 상태이고,
+   상태는 값과 섞이면 값으로 읽힌다. */
+.breadth {
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--tx-300);
+  font-family: var(--f-num);
+  font-size: var(--t-xxs);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.breadth::before {
+  content: "폭 ";
+  color: var(--tx-500);
+}
+.breadth:hover { border-color: var(--line-hard); color: var(--tx-100); }
+.breadth.is-wide   { color: var(--up); border-color: var(--up-line); }
+.breadth.is-narrow { color: var(--down); border-color: var(--down-line); }
+.breadth[hidden] { display: none; }

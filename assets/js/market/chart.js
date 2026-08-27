@@ -33,6 +33,8 @@ export class Chart {
     this.view = null;        // { from, to } — null 이면 전부
     this.inds = [];          // 겹쳐 그릴 지표들 (셈은 indicators.js 가 한다)
     this.cmp = [];           // 견주어 그릴 것들 — 있으면 눈금이 백분율로 바뀐다
+    this.profile = false;    // 값대별 거래량을 옆으로 눕혀 그릴지
+    this.ratio = false;      // 견주는 것이 하나일 때 비율 한 줄로 볼지
     this.hover = -1;
     this.intraday = false;
 
@@ -132,7 +134,16 @@ export class Chart {
   }
 
   /** 지금 백분율 눈금인가 */
-  get pctMode() { return this.cmp.length > 0; }
+  get pctMode() { return this.cmp.length > 0 && !this.ratioMode; }
+
+  /** 지금 비율 한 줄인가 — 견줄 것이 딱 하나일 때만 뜻이 있다 */
+  get ratioMode() { return this.ratio && this.cmp.length === 1; }
+
+  /** 값대별 거래량을 켜고 끈다 */
+  setProfile(on) { this.profile = !!on; this.draw(); }
+
+  /** 비율 눈금을 켜고 끈다 */
+  setRatio(on) { this.ratio = !!on; this.draw(); }
 
   /** 지표 목록이 바뀌었을 때 — 봉은 그대로 두고 줄만 다시 셈한다 */
   setIndicators(list) {
@@ -380,6 +391,7 @@ export class Chart {
     const cGold = this.#css('--key-500', '#2962ff');
     const cJade = this.#css('--ok', '#26a69a');
 
+    if (this.ratioMode) { this.#drawRatio(g, x0, step, cLine, cText); return; }
     if (this.pctMode) { this.#drawPct(g, x0, step, cUp, cDown, cLine, cText); return; }
 
     /* ── 가로 눈금과 오른쪽 값 ── */
@@ -419,6 +431,9 @@ export class Chart {
         this.#line(g, s, x0, step, ln.values, color, ln.dash ? 1 : 1.35, ln.dash);
       }
     }
+
+    /* ── 값대별 거래량 ── */
+    if (this.profile) this.#volumeProfile(g, s);
 
     /* ── 십자선 ── */
     if (this.hover >= 0 && this.shown[this.hover]) {
@@ -569,6 +584,171 @@ export class Chart {
         : new Intl.DateTimeFormat('ko-KR', { year: '2-digit', month: 'numeric' }).format(new Date(b.t));
       g.fillStyle = cText;
       g.fillText(label, Math.max(20, Math.min(this.w - PAD.right - 20, x)), this.h - PAD.bottom + 8);
+    }
+  }
+
+  /* ═══════════════ 값대별 거래량 ═══════════════
+
+     시간축 거래량은 "언제 많았나" 를 말한다. 이것은 "어느 값에서
+     많았나" 를 말한다. 둘은 다른 물음이고, 뒤엣것이 대개 더 쓸모
+     있다 — 사람들이 실제로 사고판 값은 다시 왔을 때 걸리는 자리가
+     되기 때문이다.
+
+     한 봉의 거래량을 종가 한 점에 몰아넣지 않고 그 봉의 고저 사이에
+     고르게 편다. 하루에 값이 3% 움직였다면 그 3% 구간 어디에서든
+     거래가 있었을 것이고, 종가에 다 몰아넣으면 없는 봉우리가 생긴다.
+
+     가장 두꺼운 칸(POC, point of control)만 색을 달리해 짚어 준다. */
+
+  #volumeProfile(g, s) {
+    const bins = 48;
+    const lo = s.lo, hi = s.hi;
+    if (!(hi > lo)) return;
+
+    const step = (hi - lo) / bins;
+    const buckets = new Array(bins).fill(0);
+    let any = false;
+
+    for (const b of this.shown) {
+      const v = b.v || 0;
+      if (!v) continue;
+      any = true;
+      const top = Math.max(b.h, b.c, b.o);
+      const bot = Math.min(b.l, b.c, b.o);
+      const a = Math.max(0, Math.min(bins - 1, Math.floor((bot - lo) / step)));
+      const z = Math.max(0, Math.min(bins - 1, Math.floor((top - lo) / step)));
+      const share = v / (z - a + 1);
+      for (let k = a; k <= z; k++) buckets[k] += share;
+    }
+    if (!any) return;
+
+    const max = Math.max(...buckets);
+    if (!(max > 0)) return;
+    const poc = buckets.indexOf(max);
+
+    // 오른쪽 값 눈금을 가리지 않게 왼쪽에서 자란다. 너비는 판의 1/4까지.
+    const wide = (this.w - PAD.left - PAD.right) * 0.26;
+    const base = PAD.left;
+
+    g.save();
+    for (let k = 0; k < bins; k++) {
+      if (!buckets[k]) continue;
+      const yTop = s.y(lo + step * (k + 1));
+      const yBot = s.y(lo + step * k);
+      const h = Math.max(1, yBot - yTop - 1);
+      const w = (buckets[k] / max) * wide;
+      g.fillStyle = k === poc
+        ? this.#css('--key-500', '#2962ff')
+        : this.#css('--tx-400', '#6b7688');
+      g.globalAlpha = k === poc ? 0.5 : 0.22;
+      g.fillRect(base, yTop, w, h);
+    }
+    g.restore();
+  }
+
+  /* ═══════════════ 비율 한 줄 ═══════════════
+
+     견줄 것이 딱 하나일 때만 뜻이 있다. 두 값을 나눈 줄 하나를 그린다.
+
+     "둘 다 올랐는데 무엇이 더 올랐나" 를 두 줄이 아니라 한 줄로 본다.
+     두 줄을 겹쳐 놓으면 눈이 그 사이를 재야 하는데, 사람은 두 곡선
+     사이의 간격을 잘 못 잰다. 나눠 놓으면 잴 필요가 없다 — 올라가면
+     이쪽이 이기는 중이고 내려가면 지는 중이다.
+
+     띠는 그 줄의 평균에서 표준편차만큼 떨어진 자리다. 밖으로 나가면
+     둘 사이가 드물게 벌어진 것이고, 대개는 되돌아온다. 대개는. */
+
+  #drawRatio(g, x0, step, cLine, cText) {
+    const other = this.cmpShown[0];
+    if (!other) return;
+
+    const vals = this.shown.map((b, i) => {
+      const o = other.shown[i];
+      return (o == null || !(o > 0)) ? null : b.c / o;
+    });
+
+    const good = vals.filter((v) => v != null);
+    if (good.length < 5) return;
+
+    let lo = Math.min(...good), hi = Math.max(...good);
+    const pad = (hi - lo) * 0.12 || Math.abs(hi) * 0.02 || 1;
+    lo -= pad; hi += pad;
+
+    const top = PAD.top, bot = this.h - PAD.bottom;
+    const y = (v) => bot - ((v - lo) / (hi - lo)) * (bot - top);
+
+    // 평균과 표준편차 — 지금 보이는 구간 안에서만 잰다
+    const m = good.reduce((a, b) => a + b, 0) / good.length;
+    const sd = Math.sqrt(good.reduce((a, v) => a + (v - m) ** 2, 0) / Math.max(1, good.length - 1));
+
+    /* ── 눈금 ── */
+    g.font = '11px "IBM Plex Mono", monospace';
+    g.textBaseline = 'middle';
+    for (let i = 0; i <= 5; i++) {
+      const v = lo + ((hi - lo) * i) / 5;
+      const yy = Math.round(y(v)) + 0.5;
+      g.strokeStyle = cLine;
+      g.lineWidth = 1;
+      g.beginPath(); g.moveTo(PAD.left, yy); g.lineTo(this.w - PAD.right, yy); g.stroke();
+      g.fillStyle = cText;
+      g.textAlign = 'left';
+      g.fillText(v < 1 ? v.toFixed(3) : v.toFixed(v < 100 ? 2 : 0), this.w - PAD.right + 8, yy);
+    }
+
+    /* ── 평균과 그 둘레 띠 ── */
+    if (sd > 0) {
+      const yUp = y(m + sd), yDn = y(m - sd);
+      g.fillStyle = this.#css('--key-dim', 'rgba(41,98,255,.14)');
+      g.fillRect(PAD.left, Math.min(yUp, yDn), this.w - PAD.left - PAD.right, Math.abs(yDn - yUp));
+
+      g.strokeStyle = this.#css('--tx-500', '#4e586a');
+      g.setLineDash([4, 4]);
+      g.lineWidth = 1;
+      const ym = Math.round(y(m)) + 0.5;
+      g.beginPath(); g.moveTo(PAD.left, ym); g.lineTo(this.w - PAD.right, ym); g.stroke();
+      g.setLineDash([]);
+    }
+
+    this.#dates(g, x0, step, cText);
+
+    /* ── 줄 ── */
+    g.strokeStyle = this.#css('--key-300', '#6b9bff');
+    g.lineWidth = 1.8;
+    g.lineJoin = 'round';
+    g.beginPath();
+    let pen = false;
+    vals.forEach((v, i) => {
+      if (v == null) { pen = false; return; }
+      const xx = x0 + i * step, yy = y(v);
+      if (pen) g.lineTo(xx, yy); else { g.moveTo(xx, yy); pen = true; }
+    });
+    g.stroke();
+
+    /* ── 지금 몇 시그마인가 ──
+       숫자 하나로 "얼마나 드문 자리인가" 를 말해 준다. */
+    const last = [...vals].reverse().find((v) => v != null);
+    if (last != null && sd > 0) {
+      const z = (last - m) / sd;
+      const label = `${last < 1 ? last.toFixed(3) : last.toFixed(2)}  ${z > 0 ? '+' : ''}${z.toFixed(1)}σ`;
+      const yy = Math.round(y(last));
+      g.font = '600 11px "IBM Plex Mono", monospace';
+      g.fillStyle = Math.abs(z) > 2
+        ? this.#css('--warn', '#e8a33d')
+        : this.#css('--key-300', '#6b9bff');
+      g.textAlign = 'left';
+      g.textBaseline = 'middle';
+      g.fillText(label, this.w - PAD.right + 8, yy);
+    }
+
+    /* ── 십자선 ── */
+    if (this.hover >= 0 && this.shown[this.hover]) {
+      const x = Math.round(x0 + this.hover * step) + 0.5;
+      g.save();
+      g.strokeStyle = 'rgba(255,255,255,.26)';
+      g.setLineDash([3, 4]);
+      g.lineWidth = 1;
+      g.beginPath(); g.moveTo(x, PAD.top); g.lineTo(x, bot); g.stroke();
+      g.restore();
     }
   }
 

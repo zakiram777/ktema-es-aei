@@ -228,6 +228,29 @@ export class MarketView {
     this.#renderStats(q);
   }
 
+  /* ── 값대별 거래량과 비율 ──
+     둘 다 차트를 읽는 방식을 바꾸는 것이라 머리에 둔다. 서랍에 넣으면
+     켜 놓은 줄 모르고 다른 그림을 보게 된다. */
+
+  toggleProfile() {
+    this.chart.setProfile(!this.chart.profile);
+    $('#btnProfile')?.classList.toggle('is-on', this.chart.profile);
+  }
+
+  toggleRatio() {
+    this.chart.setRatio(!this.chart.ratio);
+    $('#btnRatio')?.classList.toggle('is-on', this.chart.ratioMode);
+    this.#paintLegend();
+  }
+
+  /** 비율은 견줄 것이 딱 하나일 때만 뜻이 있다 */
+  #paintRatioBtn() {
+    const btn = $('#btnRatio');
+    if (!btn) return;
+    btn.hidden = this.compare.length !== 1;
+    btn.classList.toggle('is-on', this.chart.ratioMode);
+  }
+
   /** 지금 며칠치를 보고 있는지 — 전부를 보고 있으면 아무 말도 하지 않는다 */
   #paintZoom() {
     if (!this.zoomEl) return;
@@ -270,6 +293,19 @@ export class MarketView {
 
   #paintLegend() {
     clear(this.legendEl);
+
+    if (this.chart.ratioMode) {
+      const other = this.compare[0];
+      this.legendEl.appendChild(el('b.legend--mode', { text: '비율 눈금' }));
+      this.legendEl.appendChild(el('b', {
+        text: `${this.q?.ko || this.symbol} ÷ ${other?.ko || ''}`,
+      }));
+      this.legendEl.appendChild(el('b', {
+        class: 'legend--dim',
+        text: '띠는 평균에서 표준편차만큼 · 밖으로 나가면 드물게 벌어진 것',
+      }));
+      return;
+    }
 
     if (this.chart.pctMode) {
       this.legendEl.appendChild(el('b.legend--mode', { text: '백분율 눈금' }));
@@ -663,6 +699,7 @@ export class MarketView {
       ...c,
       color: css.getPropertyValue(CMP_COLORS[i % CMP_COLORS.length]).trim() || '#6b9bff',
     })));
+    this.#paintRatioBtn();
     this.#paintLegend();
   }
 
@@ -671,7 +708,9 @@ export class MarketView {
     if (!this.compare.length) return;
     this.compare = [];
     this.chart.setCompare([]);
+    this.chart.setRatio(false);
     this.#paintCompare();
+    this.#paintRatioBtn();
     this.#paintLegend();
   }
 }

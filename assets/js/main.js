@@ -28,6 +28,7 @@ import { Breaking } from './news/breaking.js';
 import * as quotes from './market/quotes.js';
 import { MarketView } from './market/view.js';
 import { AnalysisView } from './market/anaview.js';
+import { breadth } from './market/analysis.js';
 import { DEFAULT_WATCH, RANGES, nameOf } from './market/symbols.js';
 
 import { Veil, gateFilm } from './ui/ambience.js';
@@ -38,6 +39,7 @@ import { WatchList } from './ui/watch.js';
 
 import { JournalView } from './journal/view.js';
 import { BacktestView } from './backtest/view.js';
+import { MixView, MapView } from './backtest/labview.js';
 
 /* ═══════════════════ 상태 ═══════════════════ */
 
@@ -105,10 +107,15 @@ async function loadQuotes({ quiet = false } = {}) {
   btn?.classList.add('is-busy');
   try {
     const watch = store.get('watch') || DEFAULT_WATCH;
-    const { quotes: qs, at } = await quotes.fetchWatch(watch, { fresh: !quiet });
+    // 석 달치를 부른다. 묶음 부름은 어차피 한 번이라 닷새치와 값이 같은데,
+    // 석 달이면 20일선을 셈할 수 있어 시장 폭이 살고 판의 잔선도 길어진다.
+    const { quotes: qs, at } = await quotes.fetchWatch(watch, {
+      fresh: !quiet, range: '3mo', interval: '1d',
+    });
     app.quotes = qs;
     app.market.setQuotes(qs, at);
     app.watch.set(qs, at);
+    paintBreadth(qs);
   } catch (err) {
     console.warn('[quotes]', err);
     if (!app.quotes.length) {
@@ -117,6 +124,24 @@ async function loadQuotes({ quiet = false } = {}) {
   } finally {
     btn?.classList.remove('is-busy');
   }
+}
+
+/* ── 시장 폭 ──
+
+   지수는 큰 것 몇에 끌려간다. 이 숫자는 안 끌려간다. 지수는 오르는데
+   이것이 내려가고 있으면 몇 개가 전체를 끌고 있는 것이고, 그런 오름은
+   대개 오래가지 않는다. 부름은 0이다 — 관심종목의 봉이 이미 있다. */
+function paintBreadth(quotes) {
+  const box = $('#breadth');
+  if (!box) return;
+  const b = breadth(quotes, 20);
+  if (!b) { box.hidden = true; return; }
+
+  box.hidden = false;
+  box.textContent = `${b.above}/${b.total}`;
+  box.title = `지켜보는 ${b.total} 가운데 ${b.above}이 20일선 위에 있습니다`
+            + ` (${b.pct.toFixed(0)}%). 오늘 오른 것은 ${b.up}개입니다.`;
+  box.className = 'breadth ' + (b.pct >= 60 ? 'is-wide' : b.pct <= 35 ? 'is-narrow' : '');
 }
 
 /* 차트는 시세를 부른 뒤에 나가는 부름이라, 공개 프록시가 잠깐 문턱을
@@ -175,7 +200,9 @@ async function loadAnalysis({ force = false } = {}) {
   app.ana.loading();
   try {
     const watch = store.get('watch') || DEFAULT_WATCH;
-    const series = await quotes.fetchSeries(watch, { range: '1y', interval: '1d', fresh: force });
+    // 두 해치를 부른다. 한 해치로는 "아무 날에나 들어갔다면 1년 뒤" 를
+    // 셈할 시작점이 없다 — 250봉으로 250봉 뒤를 보려면 시작점이 하나뿐이다.
+    const series = await quotes.fetchSeries(watch, { range: '2y', interval: '1d', fresh: force });
     app.anaAt = Date.now();
     app.ana.set(series, app.anaAt);
   } catch (err) {
@@ -294,6 +321,27 @@ function build() {
     },
   });
 
+  /* ── 시험 화면의 나머지 두 갈래 ──
+     비중은 여럿을 한 번에 부르고(spark), 지도는 규칙 갈래가 이미
+     받아 둔 봉을 그대로 쓴다. 백스물한 번 돌리자고 백스물한 번
+     부를 까닭이 없다. */
+  app.mix = new MixView({
+    /* 눈금은 늘 하루로 고정한다.
+
+       주간봉은 거래소마다 주가 시작하는 요일이 다르게 찍혀 나온다.
+       서울과 뉴욕의 주간봉을 날짜로 짝지으면 하나도 안 맞아서, 여럿을
+       섞는 이 갈래에서는 쓸 수 없다. 일봉은 장 여는 시각이 달라도
+       같은 날짜에 찍히므로 짝이 맞는다. */
+    fetchSeries: (syms, range) => quotes.fetchSeries(syms, { range, interval: '1d' }),
+  });
+
+  app.map = new MapView({
+    strategy: () => app.backtest.strategy,
+    bars: () => app.backtest.bars || [],
+  });
+
+  buildBtTabs();
+
   wireButtons();
   wireBus();
 
@@ -325,6 +373,9 @@ function wireButtons() {
 
   $('#btnSettings').addEventListener('click', () => app.settings.open());
 
+  // 시장 폭을 누르면 그 숫자가 나온 자리로 간다
+  $('#breadth')?.addEventListener('click', () => app.nav.show('market'));
+
   /* 지표·비교 서랍 — 둘 다 차트 아래에 있고, 한 번에 하나만 편다.
      둘 다 펴면 차트가 화면 밖으로 밀려난다. */
   const drawer = (mine, other) => {
@@ -335,6 +386,8 @@ function wireButtons() {
   };
   $('#btnIndicators').addEventListener('click', () => drawer('#inds', '#cmp'));
   $('#btnCompare').addEventListener('click', () => drawer('#cmp', '#inds'));
+  $('#btnProfile').addEventListener('click', () => app.market.toggleProfile());
+  $('#btnRatio').addEventListener('click', () => app.market.toggleRatio());
 
   /* 관심종목에 더하기 — 머리띠의 고르개를 그대로 쓴다.
      찾는 자리를 두 곳에 두면 둘 다 반쯤만 좋아진다. */
@@ -372,6 +425,50 @@ function wireButtons() {
     const jump = { c: 'chart', m: 'market', a: 'analysis', n: 'news', j: 'journal', b: 'backtest' };
     if (jump[e.key]) app.nav.show(jump[e.key]);
   });
+}
+
+/* ═══════════════════ 시험 화면의 갈래 ═══════════════════
+
+   규칙·비중·지도는 묻는 것이 서로 다르다. 한 쪽에 다 쌓으면 아래로
+   끝없이 길어지고, 지도는 규칙이 짜 놓은 것을 받아야 하므로 순서도
+   있다. 그래서 갈래로 나누되 왼쪽부터 오른쪽으로 읽히게 두었다. */
+
+const BT_TABS = [
+  { id: 'rules', gr: 'Κανών',   ko: '규칙', pane: '#btPaneRules',
+    note: '언제 사고 언제 파나' },
+  { id: 'mix',   gr: 'Μερίς',   ko: '비중', pane: '#btPaneMix',
+    note: '무엇을 얼마나, 얼마 만에 되돌리나' },
+  { id: 'map',   gr: 'Χάρτης',  ko: '지도', pane: '#btPaneMap',
+    note: '그 좋아 보이는 숫자가 우연인가' },
+];
+
+function buildBtTabs() {
+  const host = $('#btTabs');
+  if (!host) return;
+
+  const show = (id) => {
+    store.set('btTab', id);
+    for (const t of BT_TABS) {
+      $(t.pane).hidden = t.id !== id;
+      host.querySelector(`[data-tab="${t.id}"]`)?.classList.toggle('is-on', t.id === id);
+    }
+    // '보기 전략'과 '시험한다'는 규칙 갈래의 것이다
+    $('#btTools').hidden = id !== 'rules';
+    if (id === 'map') app.map.paint();          // 규칙이 바뀌었을 수 있다
+  };
+
+  host.replaceChildren(...BT_TABS.map((t) => el('button', {
+    type: 'button',
+    role: 'tab',
+    title: t.note,
+    data: { tab: t.id },
+    onclick: () => show(t.id),
+  }, [
+    el('span.tab__gr', { text: t.gr }),
+    el('span.tab__ko', { text: t.ko }),
+  ])));
+
+  show(store.get('btTab') || 'rules');
 }
 
 function wireBus() {

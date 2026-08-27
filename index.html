@@ -111,6 +111,9 @@
 
     <div class="top__spacer"></div>
 
+    <!-- 시장 폭 — 지수는 큰 것 몇에 끌려가지만 이 숫자는 안 끌려간다 -->
+    <button class="breadth" id="breadth" type="button" hidden></button>
+
     <div class="top__clocks" id="clocks"></div>
 
     <div class="top__actions">
@@ -150,6 +153,14 @@
               </button>
               <button class="btn btn--ghost btn--tiny" id="btnCompare" type="button">
                 <span class="ico" data-ico="chart"></span><span class="btn__label">비교</span>
+              </button>
+              <button class="btn btn--ghost btn--tiny" id="btnProfile" type="button"
+                      title="값대별 거래량 — 사람들이 실제로 사고판 자리">
+                <span class="ico" data-ico="grid"></span><span class="btn__label">값대별</span>
+              </button>
+              <button class="btn btn--ghost btn--tiny" id="btnRatio" type="button" hidden
+                      title="견주는 것과 나눈 한 줄로 본다">
+                <span class="ico" data-ico="sigma"></span><span class="btn__label">비율</span>
               </button>
             </div>
           </div>
@@ -300,7 +311,7 @@
           <h2 class="panel__title">
             <span class="panel__gr">Δοκιμή</span><span class="panel__ko">전략 시험</span>
           </h2>
-          <div class="panel__tools">
+          <div class="panel__tools" id="btTools">
             <button class="btn btn--ghost btn--tiny" id="btSample" type="button">
               <span class="btn__label">보기 전략</span>
             </button>
@@ -309,6 +320,11 @@
             </button>
           </div>
         </div>
+
+        <nav class="tabs" id="btTabs" role="tablist"></nav>
+
+        <!-- ═══ 규칙 — 언제 사고 언제 파나 ═══ -->
+        <div class="btpane" id="btPaneRules">
 
         <p class="hint hint--warn">
           지난 시세에서 잘 들었다는 것은 앞으로도 그러리라는 뜻이 아닙니다.
@@ -347,6 +363,28 @@
             <div class="bt__chart"><canvas id="btCanvas"></canvas></div>
             <div class="bt__trades" id="btTrades"></div>
           </div>
+        </div>
+        </div><!-- /btPaneRules -->
+
+        <!-- ═══ 비중 — 무엇을 얼마나, 얼마 만에 되돌리나 ═══ -->
+        <div class="btpane" id="btPaneMix" hidden>
+          <p class="hint">
+            종목을 고르는 대신 <b>비중</b>을 고릅니다. 개인에게는 이쪽이
+            성과를 더 많이 정하는데, 화면은 늘 종목 고르기 쪽에만 있습니다.
+            규칙을 스무 번 고치는 것보다 비중을 한 번 정하는 것이 대개 더 큰
+            차이를 냅니다.
+          </p>
+          <div class="mix" id="mix"></div>
+        </div>
+
+        <!-- ═══ 지도 — 좋아 보이는 숫자가 우연인가 ═══ -->
+        <div class="btpane" id="btPaneMap" hidden>
+          <p class="hint hint--warn">
+            규칙 갈래에서 짠 전략의 숫자 <b>둘</b>을 격자로 돌려 성적을 색으로
+            칠합니다. 봉우리가 넓고 완만하면 쓸 만하고, <b>뾰족하면 우연입니다</b> —
+            그 값에서만 되고 한 칸 옆에서는 안 된다는 뜻이기 때문입니다.
+          </p>
+          <div class="map" id="map"></div>
         </div>
       </section>
     </main>

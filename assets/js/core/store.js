@@ -35,10 +35,25 @@ export const DEFAULTS = {
   /* ── 차트의 지표 ── 만든 것이 여기 남는다 (market/indicators.js) ── */
   indicators:   null,    // null 이면 기본값(MA20·MA60)
 
+  /* ── 분석 ──
+     무위험 이자율은 샤프·소르티노를 셈할 때 쓴다. 이 숫자에 소수점
+     아래까지 매달릴 일은 없어서, 바깥에 묻지 않고 손으로 둔다. */
+  riskFree:     3,       // 연 %
+  anaMarket:    '^KS11', // 베타를 무엇에 대고 잴 것인가
+  fxOn:         false,   // 차트를 원화로 환산해 볼지
+  fxBase:       'KRW',   // 무엇으로 환산할지
+
+  /* ── 바깥 열쇠 ──
+     전부 공짜로 발급되지만 이 브라우저에만 남는다. 내보내지 않는다. */
+  keyFred:      '',
+  keyDart:      '',
+
   /* ── 전략 시험 ── */
   strategy:     null,    // null 이면 보기 전략(골든크로스)
   btSymbol:     '^KS11',
   btRange:      '5y',
+  btTab:        'rules', // rules | mix | map
+  mix:          null,    // 비중 갈래에 고른 것 (backtest/labview.js)
 
   /* ── 모습 ── */
   motion:       true,    // 배경 움직임
@@ -140,11 +155,17 @@ export const EXPORT_VERSION = 1;
    ── 마지막으로 보던 화면 ──
    옮겨 봐야 쓸모가 없다. 새 기기에서는 그 기기의 첫 화면이 맞다.
 
+   ── keyFred · keyDart ──
+   공짜로 발급되는 열쇠지만 그래도 열쇠다. 이 파일은 settings.json 이라는
+   이름으로 받아지고, README 는 그것을 폴더에 넣거나 웹호스팅에 올려도
+   된다고 적어 두었다. 열쇠가 그 안에 있으면 올리는 순간 아무나 읽는다.
+   옮길 때는 새 기기에서 다시 넣는 편이 옳다.
+
    ── chatKey* / chatUrl ──
    지금은 쓰이지 않는 이름이다. 그래도 자를 마름은 남겨 둔다. 예전에
    내보낸 settings.json 을 다시 들여올 수 있고, 그 안에 열쇠가 들어
    있다면 이 파일을 거쳐 다시 밖으로 나가서는 안 되기 때문이다. */
-const NEVER_EXPORT = /^chatKey|^chatUrl$|^view$/;   /* chat* 은 남은 파일을 위해 남겨 둔다 */
+const NEVER_EXPORT = /^chatKey|^chatUrl$|^view$|^key[A-Z]/;
 
 export function exportAll() {
   const settings = {};
