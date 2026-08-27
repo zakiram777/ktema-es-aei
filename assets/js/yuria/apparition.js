@@ -37,8 +37,8 @@ import * as store from '../core/store.js';
 import { ALL, FULL, STILL, forMood, WARM_ORDER, byId } from './clips.js';
 
 /** 머무는 시간 (ms) */
-const STAY_MIN = 7000;
-const STAY_MAX = 13_000;
+const STAY_MIN = 9000;
+const STAY_MAX = 16_000;
 
 /** 손이 이만큼 멈춰 있으면 사라진다 */
 const IDLE_MS = 20_000;
@@ -51,8 +51,10 @@ const WANDER_MAX = 70_000;
 const FADE_IN = 900;
 const FADE_OUT = 1200;
 
-/** 전신으로 나타날 확률 — 드물어야 반갑다 */
-const FULL_CHANCE = 0.09;
+/** 전신으로 나타날 확률.
+    전신이 가장 유리아답다 — 검은 옷과 부츠까지 다 보인다.
+    다만 자리를 많이 먹으므로 넷에 하나쯤. */
+const FULL_CHANCE = 0.24;
 
 export class Apparition {
   /**
@@ -67,6 +69,7 @@ export class Apparition {
     this.lastMove = Date.now();
     this.wanderTimer = 0;
     this.stayTimer = 0;
+    this.settleTimer = 0;
     this.recent = [];          // 방금 쓴 낯빛들 — 곧바로 다시 쓰지 않으려고
 
     this.#wire();
@@ -133,9 +136,14 @@ export class Apparition {
     const video = node.querySelector('video');
     this.here = { clip, node, video, spot };
 
-    // 그림이 실제로 나오기 시작한 뒤에 드러낸다 — 빈 네모가 먼저
-    // 떠올랐다가 채워지면 유령이 아니라 고장으로 보인다
+    /* 먹이 번지듯 드러난다.
+       번지는 동안에는 가장자리가 종이 결을 따라 삐뚤고(#inkBleed),
+       다 번진 뒤에는 마스크를 걷어 또렷하게 둔다. 가장자리가 계속
+       흐릿하면 그림이 아니라 안개가 된다. */
     requestAnimationFrame(() => node.classList.add('is-in'));
+    this.settleTimer = setTimeout(() => {
+      if (this.here?.node === node) node.classList.add('is-settled');
+    }, 1250);
 
     video?.play?.().catch(() => {
       // 자동 재생이 막혔다. 포스터만으로도 그림은 보인다.
@@ -152,6 +160,7 @@ export class Apparition {
     const gone = this.here;
     this.here = null;
     clearTimeout(this.stayTimer);
+    clearTimeout(this.settleTimer);
     this.#remove(gone, FADE_OUT);
     this.hooks.onHide?.();
     emit('yuria:hidden', {});

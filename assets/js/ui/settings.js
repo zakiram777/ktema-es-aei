@@ -276,6 +276,19 @@ export class Settings {
           text: '머리의 “유리아” 단추를 누르면 기다리지 않고 지금 부를 수 있습니다. '
               + '나타난 유리아를 누르면 물러납니다.',
         }),
+        el('div.danger', [
+          el('button.btn.btn--quiet', {
+            type: 'button',
+            onclick: (e) => {
+              this.hooks.onForgetGuide?.();
+              e.target.closest('.btn').querySelector('.btn__label').textContent = '다시 안내합니다';
+            },
+          }, el('span.btn__label', { text: '안내를 처음부터 다시' })),
+        ]),
+        el('p.row__note', {
+          text: '유리아는 화면마다 한 번씩만 안내합니다 — 같은 말을 두 번 들으면 '
+              + '안내가 아니라 잔소리이기 때문입니다. 처음부터 다시 듣고 싶으면 위를 누르십시오.',
+        }),
       ],
     );
   }

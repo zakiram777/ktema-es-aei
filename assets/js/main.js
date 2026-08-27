@@ -29,9 +29,10 @@ import * as tts from './voice/tts.js';
 import * as script from './voice/script.js';
 
 import { Apparition } from './yuria/apparition.js';
+import { Guide } from './yuria/guide.js';
 import * as mood from './yuria/mood.js';
 
-import { Ambience, drawSealTicks } from './ui/ambience.js';
+import { Ambience, drawSealTicks, drawGateSpiral } from './ui/ambience.js';
 import { Settings } from './ui/settings.js';
 import { Nav } from './ui/nav.js';
 import { Bubble } from './ui/bubble.js';
@@ -45,6 +46,7 @@ import { BacktestView } from './backtest/view.js';
 
 const app = {
   yuria: null,
+  guide: null,
   bubble: null,
   nav: null,
   chat: null,
@@ -281,7 +283,6 @@ function build() {
   document.documentElement.dataset.tint = store.get('tint') || 'kr';
 
   /* ── 배경 ── */
-  drawSealTicks($('#sealTicks'));
   app.ambience = new Ambience($('#sky'));
   if (store.get('motion') && !calmly()) app.ambience.start();
 
@@ -392,6 +393,7 @@ function build() {
     onRefresh: () => loadNews(),
     onMotion: (v) => (v ? app.ambience.start() : app.ambience.pause()),
     onYuriaOff: () => app.yuria?.hide(),
+    onForgetGuide: () => app.guide?.forget(),
     onTint: () => { app.market.chart.draw(); app.market.setQuotes(app.quotes); },
     // 대화를 어디에 이었는지 바뀌면 입력칸 아래의 말도 바뀐다
     onChat: () => app.chat?.paintHint(),
@@ -450,6 +452,17 @@ function build() {
         },
       });
     },
+  });
+
+  /* ── 길잡이 ──
+     나타났다 사라지기만 하면 장식이다. 처음 온 사람에게 무엇이
+     어디 있는지 알려 주고, 오래 머물면 이따금 거든다. */
+  app.guide = new Guide({
+    yuria: app.yuria,
+    view: () => app.nav?.current,
+    speak: (lines, opts) => speak(lines, opts),
+    bubble: (brief, opts) => app.bubble?.show(brief, opts),
+    busy: () => tts.speaking() || !document.querySelector('#reader')?.hidden,
   });
 
   /* ── 차트의 지표 서랍 ── */
@@ -734,7 +747,7 @@ async function enter() {
       );
     }
 
-    // 소식과 시세를 먼저 부른다. 유리아이 늦게 깨어나더라도
+    // 소식과 시세를 먼저 부른다. 유리아가 늦게 나타나더라도
     // 글과 숫자는 그동안 채워진다.
     loadNews({ quiet: true });
     loadQuotes({ quiet: true }).then(() => {
@@ -742,14 +755,16 @@ async function enter() {
     });
     setInterval(() => loadQuotes({ quiet: true }), 90_000);
 
-    // 들어오자마자 유리아가 한 번 인사한다. 그다음부터는 스스로
-    // 나타났다 사라진다.
-    setTimeout(() => app.yuria?.show({ reason: 'greet' }), 1400);
-
     await tts.warm();
+    await wait(1100);
 
-    await wait(900);
-    if (!store.get('muted')) speak([script.greeting('ko')], { lang: 'ko' });
+    /* 들어오자마자 유리아가 인사한다.
+
+       인사는 길잡이가 맡는다 — 처음 온 사람에게는 자기가 누구인지
+       말하고, 두 번째부터는 말없이 나타나기만 한다. 예전에는 여기서
+       따로 한 마디 하고 길잡이가 또 한 마디 했는데, 그러면 둘이
+       겹쳐 뒤엣것이 통째로 묻혔다. 입은 하나여야 한다. */
+    app.guide?.greet();
   } catch (err) {
     console.error('[enter]', err);
     fail(err);
@@ -773,6 +788,11 @@ function fail(err) {
   // 대개 끝나 있어서 기다리는 느낌이 없다.
   app.seeding = seedSettings();
   checkSelfProxy();
+
+  // 관문의 인장은 관문이 보이는 동안 그려져 있어야 한다.
+  // 들어오기 전에 이미 홀려 있어야 하기 때문이다.
+  drawSealTicks($('#sealTicks'));
+  drawGateSpiral($('#sealSpiral'));
 
   wireGate();
 

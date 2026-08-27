@@ -32,10 +32,54 @@
 
 <body data-phase="gate">
 
+<!-- ═══════════════════ 오려 내는 자리 ═══════════════════
+     그림에는 알파 채널이 없다. 흰 종이에 그린 먹뿐이다.
+     밝기를 뒤집어 알파로 삼으면 형태만 남는다. 자세한 것은
+     assets/css/yuria.css 의 머리말에. -->
+<svg class="ink-defs" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- 유리아를 종이에서 오려 낸다 -->
+    <filter id="inkCut" x="-6%" y="-6%" width="112%" height="112%"
+            color-interpolation-filters="sRGB">
+      <!-- 색은 먹으로 고정하고, 알파는 1 − 밝기 -->
+      <feColorMatrix type="matrix" values="
+        0 0 0 0 0.055
+        0 0 0 0 0.05
+        0 0 0 0 0.047
+        -0.299 -0.587 -0.114 0 1"/>
+      <!-- 압축이 남긴 옅은 안개를 지운다. 너무 세게 깎으면 가는
+           선(머리카락)까지 사라지므로 살짝만. -->
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="1.16" intercept="-0.045"/>
+      </feComponentTransfer>
+    </filter>
+
+    <!-- 나타날 때 — 먹이 종이에 번지듯 가장자리가 불규칙하게 -->
+    <filter id="inkBleed" x="-14%" y="-14%" width="128%" height="128%"
+            color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0 0 0 0 0.055
+        0 0 0 0 0.05
+        0 0 0 0 0.047
+        -0.299 -0.587 -0.114 0 1"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="1.16" intercept="-0.045"/>
+      </feComponentTransfer>
+      <!-- 종이의 결을 따라 먹이 삐뚤게 번진다 -->
+      <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="3"
+                    seed="7" result="grain"/>
+      <feDisplacementMap in2="grain" scale="14"
+                         xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
+
 <!-- ═══════════════════ 배경 ═══════════════════ -->
 <div class="ambience" aria-hidden="true">
   <div class="ambience__wash"></div>
+  <div class="ambience__tone"></div>
   <canvas class="ambience__sky" id="sky"></canvas>
+  <div class="ambience__warp"></div>
   <div class="ambience__grain"></div>
   <div class="ambience__vignette"></div>
 </div>
@@ -68,6 +112,8 @@
           <circle cx="110" cy="110" r="34"/>
         </g>
         <g class="seal__ticks" id="sealTicks"></g>
+        <!-- 들어오기 전에 이미 홀려 있어야 한다 -->
+        <g class="seal__spiral" id="sealSpiral"></g>
       </svg>
     </div>
 
