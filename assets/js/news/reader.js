@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════
-   reader.js — 기사 하나를 펼치고, 자키람이 읽는다
+   reader.js — 기사 하나를 펼치고, 유리아가 읽는다
 
    RSS 는 제목과 요약만 준다. 본문 전체는 언론사 쪽에 있고,
    남의 글을 통째로 긁어다 이 화면에 옮겨 붙이는 것은 옳지 않다.
    그래서 여기서는 피드가 준 만큼만 보이고, 원문으로 가는 문을
-   같이 둔다. 자키람이 읽는 것도 그 범위까지다.
+   같이 둔다. 유리아가 읽는 것도 그 범위까지다.
 
    읽는 동안 지금 어느 문장인지 밝혀 준다. 소리와 글이 같이 가야
    듣는 사람이 따라오기 쉽다.
@@ -90,7 +90,7 @@ export class Reader {
       });
     } else {
       this.textEl.appendChild(el('p', {
-        text: '이 피드는 제목만 보내 왔습니다. 자키람은 제목을 읽어 드립니다.',
+        text: '이 피드는 제목만 보내 왔습니다. 유리아는 제목을 읽어 드립니다.',
         class: 'lead',
       }));
     }
@@ -159,7 +159,7 @@ export class Reader {
   #setBtn(on) {
     const label = this.btnRead.querySelector('.btn__label');
     const icon = this.btnRead.querySelector('.ico');
-    if (label) label.textContent = on ? '그만 읽기' : '자키람이 읽어 준다';
+    if (label) label.textContent = on ? '그만 읽기' : '유리아가 읽어 준다';
     if (icon) icon.dataset.ico = on ? 'stop' : 'voice';
     this.btnRead.classList.toggle('btn--gold', true);
   }

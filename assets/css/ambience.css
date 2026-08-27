@@ -1,11 +1,14 @@
 /* ═══════════════════════════════════════════════════════════════
-   ambience.css — 신비한 바탕
+   ambience.css — 종이 바탕
+
+   이토 준지의 책에는 배경이 거의 없다. 흰 종이가 그대로 배경이고,
+   가끔 가는 선이 소용돌이를 그리며 지나간다. 여기서도 그렇게 했다.
 
    네 겹이다.
-     wash      남보라 빛무리. 아주 느리게 숨쉰다
-     sky       티끌과 만다라 (canvas, ui/ambience.js 가 그린다)
-     grain     낡은 종이 결
-     vignette  가장자리를 눌러 시선을 가운데로
+     wash      종이의 미색. 아주 느리게 숨쉰다
+     sky       소용돌이와 티끌 (canvas, ui/ambience.js 가 그린다)
+     grain     종이 결. 어두운 화면에서 쓰던 overlay 대신 multiply 로
+     vignette  네 귀퉁이만 아주 옅게 눌러 종이의 가장자리처럼
    ═══════════════════════════════════════════════════════════════ */
 
 .ambience {
@@ -16,42 +19,44 @@
   overflow: hidden;
 }
 
-/* ── 빛무리 ── */
+/* ── 종이 ── 순백이 아니다. 빛이 드는 쪽이 조금 더 밝다 ── */
 .ambience__wash {
   position: absolute;
   inset: -20%;
   background:
-    radial-gradient(46% 38% at 22% 18%, rgba(78, 54, 132, .40), transparent 62%),
-    radial-gradient(40% 34% at 82% 26%, rgba(150, 106, 48, .22), transparent 60%),
-    radial-gradient(52% 44% at 62% 86%, rgba(30, 72, 92, .28), transparent 64%),
-    radial-gradient(70% 60% at 50% 50%, rgba(12, 9, 26, .0), rgba(6, 4, 16, .92) 92%),
-    var(--ink-950);
-  animation: wash 46s ease-in-out infinite alternate;
+    radial-gradient(56% 44% at 26% 14%, rgba(255, 255, 255, .95), transparent 66%),
+    radial-gradient(48% 40% at 84% 30%, rgba(255, 253, 248, .8), transparent 62%),
+    radial-gradient(60% 50% at 58% 92%, rgba(222, 215, 201, .38), transparent 68%),
+    var(--paper-100);
+  animation: wash 64s ease-in-out infinite alternate;
   will-change: transform, opacity;
 }
 @keyframes wash {
-  0%   { transform: scale(1) translate3d(0, 0, 0); opacity: .96; }
-  50%  { transform: scale(1.06) translate3d(-1.4%, 1%, 0); opacity: 1; }
-  100% { transform: scale(1.02) translate3d(1.2%, -1.2%, 0); opacity: .93; }
+  0%   { transform: scale(1) translate3d(0, 0, 0); opacity: 1; }
+  50%  { transform: scale(1.04) translate3d(-1%, .8%, 0); opacity: .97; }
+  100% { transform: scale(1.02) translate3d(.9%, -.9%, 0); opacity: 1; }
 }
 
-/* ── 티끌과 만다라 ── */
+/* ── 소용돌이와 티끌 ── */
 .ambience__sky {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: .85;
+  opacity: .5;
+  mix-blend-mode: multiply;
 }
 
-/* ── 결 ── */
+/* ── 종이 결 ──
+   어두운 화면에서는 overlay 로 얹어야 결이 보였지만, 흰 종이에서는
+   multiply 여야 한다. overlay 로 두면 결이 하얗게 떠서 얼룩이 된다. */
 .ambience__grain {
   position: absolute;
   inset: -50%;
-  opacity: .05;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
-  animation: grain 7s steps(6) infinite;
+  opacity: .16;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  animation: grain 9s steps(6) infinite;
 }
 @keyframes grain {
   0%,100% { transform: translate(0, 0); }
@@ -62,13 +67,12 @@
   83%  { transform: translate(-1%, 3%); }
 }
 
-/* ── 가장자리 ── */
+/* ── 가장자리 ── 종이의 귀퉁이가 조금 그을린 것처럼 ── */
 .ambience__vignette {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(120% 90% at 50% 45%, transparent 42%, rgba(4, 3, 10, .70) 100%),
-    linear-gradient(to bottom, rgba(4, 3, 10, .55), transparent 22%, transparent 78%, rgba(4, 3, 10, .70));
+    radial-gradient(130% 100% at 50% 45%, transparent 58%, rgba(120, 110, 96, .16) 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -122,7 +126,7 @@
   to   { opacity: 1; transform: none; }
 }
 
-/* ── 인장 ── 자키람의 후광이 되는 회전 문양 */
+/* ── 인장 ── 유리아의 자취이 되는 회전 문양 */
 .gate__seal {
   position: absolute;
   top: 50%; left: 50%;
@@ -130,15 +134,17 @@
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
   z-index: -1;
-  opacity: .5;
+  opacity: .62;
 }
 .seal { width: 100%; height: 100%; overflow: visible; }
 .seal circle, .seal path, .seal line {
   fill: none;
-  stroke: var(--gold-500);
-  stroke-width: .5;
+  stroke: var(--ink-300);
+  stroke-width: .6;
   vector-effect: non-scaling-stroke;
 }
+/* 소용돌이만 붉다. 이 화면에서 색이 있는 것은 이것 하나다. */
+.seal__spiral path { stroke: var(--blood-500); stroke-width: .9; }
 .seal__out  { opacity: .5;  transform-origin: 110px 110px; animation: turn 220s linear infinite; }
 .seal__mid  { opacity: .34; transform-origin: 110px 110px; animation: turn 150s linear infinite reverse; }
 .seal__in   { opacity: .46; transform-origin: 110px 110px; animation: turn 96s linear infinite; }

@@ -20,7 +20,7 @@
   overflow-x: auto;
   scrollbar-width: none;
   border-bottom: 1px solid var(--line-soft);
-  background: rgba(9, 7, 20, .86);
+  background: rgba(255, 255, 255, .86);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -64,7 +64,7 @@
   border-radius: 50%;
   background: var(--coral-500);
   align-self: center;
-  box-shadow: 0 0 8px rgba(207, 90, 65, .8);
+  box-shadow: 0 0 8px rgba(158, 31, 24, .8);
 }
 
 /* ─────────────── 지표 만들기 ─────────────── */
@@ -74,7 +74,7 @@
   padding: var(--s-4);
   border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
-  background: rgba(9, 7, 20, .42);
+  background: rgba(255, 255, 255, .42);
 }
 .inds__head h3 {
   display: flex;
@@ -100,7 +100,7 @@
   padding: 8px 10px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  background: rgba(18, 16, 40, .5);
+  background: rgba(255, 255, 255, .5);
 }
 .ind.is-off { opacity: .45; }
 .ind__swatch {
@@ -161,7 +161,7 @@
   border: 1px solid var(--line-soft);
   border-left: 2px solid var(--gold-700);
   border-radius: var(--r-md);
-  background: rgba(18, 16, 40, .5);
+  background: rgba(255, 255, 255, .5);
 }
 .jr__title,
 .jr__tags,
@@ -170,7 +170,7 @@
   padding: 10px 12px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  background: rgba(6, 4, 16, .6);
+  background: rgba(255, 255, 255, .6);
   color: var(--tx-100);
   font: inherit;
 }
@@ -181,7 +181,7 @@
   padding: 12px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  background: rgba(6, 4, 16, .6);
+  background: rgba(255, 255, 255, .6);
   color: var(--tx-100);
   font-family: var(--f-read);
   font-size: var(--t-sm);
@@ -191,7 +191,7 @@
 .jr__title:focus, .jr__body:focus, .jr__tags:focus, .jr__search:focus {
   outline: none;
   border-color: var(--gold-600);
-  box-shadow: 0 0 0 3px rgba(208, 171, 99, .1);
+  box-shadow: 0 0 0 3px rgba(26, 24, 23, .1);
 }
 
 .jr__moods { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -209,7 +209,7 @@
 .jr__mood:hover { border-color: var(--gold-700); color: var(--tx-300); }
 .jr__mood.is-on {
   border-color: var(--gold-500);
-  background: rgba(208, 171, 99, .1);
+  background: rgba(26, 24, 23, .1);
   color: var(--gold-200);
 }
 .jr__mood-gr { font-family: var(--f-greek); font-size: .82rem; }
@@ -234,7 +234,7 @@
 .chip--pick:hover, .chip--tag:hover { color: var(--tx-200); border-color: var(--gold-700); }
 .chip--pick.is-on, .chip--tag.is-on {
   border-color: var(--gold-500);
-  background: rgba(208, 171, 99, .12);
+  background: rgba(26, 24, 23, .12);
   color: var(--gold-200);
 }
 
@@ -251,7 +251,7 @@
   border: 1px solid var(--line-soft);
   border-left: 2px solid var(--tx-600);
   border-radius: var(--r-md);
-  background: rgba(18, 16, 40, .42);
+  background: rgba(255, 255, 255, .42);
 }
 .jr__item[data-tone="up"]    { border-left-color: var(--up); }
 .jr__item[data-tone="down"]  { border-left-color: var(--down); }
@@ -305,7 +305,7 @@
   padding: 7px 10px;
   margin-bottom: 8px;
   border-radius: var(--r-sm);
-  background: rgba(6, 4, 16, .5);
+  background: rgba(255, 255, 255, .5);
   font-size: var(--t-xs);
 }
 .jr__snaplabel { color: var(--tx-600); letter-spacing: .08em; }
@@ -338,7 +338,7 @@
   padding: var(--s-3) var(--s-4) var(--s-4);
   border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
-  background: rgba(9, 7, 20, .42);
+  background: rgba(255, 255, 255, .42);
 }
 .bt__h {
   margin: 0 0 var(--s-3);
@@ -356,7 +356,7 @@
   padding: 6px 9px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  background: rgba(6, 4, 16, .68);
+  background: rgba(255, 255, 255, .68);
   color: var(--tx-100);
   font: inherit;
   font-size: var(--t-sm);
@@ -376,7 +376,7 @@
   margin-bottom: 6px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  background: rgba(18, 16, 40, .45);
+  background: rgba(255, 255, 255, .45);
 }
 .bt__indid {
   font-family: var(--f-num);
@@ -384,7 +384,7 @@
   color: var(--gold-600);
   padding: 2px 5px;
   border-radius: 3px;
-  background: rgba(208, 171, 99, .08);
+  background: rgba(26, 24, 23, .08);
 }
 .bt__side { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 .bt__constval { width: 5.5em; font-family: var(--f-num); }
@@ -414,7 +414,7 @@
   padding: 9px 11px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  background: rgba(18, 16, 40, .5);
+  background: rgba(255, 255, 255, .5);
 }
 .bt__stat[data-tone="up"] { border-left: 2px solid var(--up); }
 .bt__stat[data-tone="down"] { border-left: 2px solid var(--down); }
@@ -448,7 +448,7 @@
   padding: var(--s-3);
   border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
-  background: rgba(6, 4, 16, .45);
+  background: rgba(255, 255, 255, .45);
 }
 .bt__chart canvas { display: block; width: 100%; height: 100%; }
 
@@ -470,7 +470,7 @@
 }
 .bt__table td {
   padding: 5px 8px;
-  border-bottom: 1px solid rgba(224, 196, 137, .05);
+  border-bottom: 1px solid rgba(26, 24, 23, .05);
   color: var(--tx-300);
   white-space: nowrap;
 }
@@ -496,3 +496,118 @@
 /* 이름표 없는 작은 스위치 — 지표를 켜고 끌 때 쓴다 */
 .switch--bare { gap: 0; }
 .switch--bare .switch__label { display: none; }
+
+/* ═══════════════════ 수식 ═══════════════════
+
+   틀에 박힌 지표만으로는 하고 싶은 셈이 늘 남는다. 직접 적을 수
+   있게 한 자리다 (js/market/formula.js). */
+
+.fx {
+  flex-basis: 100%;
+  display: grid;
+  gap: 6px;
+  padding: 8px 0 2px;
+  border-top: 1px dashed var(--line-soft);
+  margin-top: 6px;
+}
+.fx__row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.fx__label {
+  flex: 1 1 12em;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--paper-000);
+  color: var(--tx-100);
+  font: inherit;
+  font-size: var(--t-xs);
+}
+
+.fx__input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--paper-000);
+  color: var(--ink-100);
+  font-family: var(--f-num);
+  font-size: var(--t-xs);
+  line-height: 1.7;
+  resize: vertical;
+}
+.fx__input:focus {
+  outline: none;
+  border-color: var(--ink-400);
+  box-shadow: 0 0 0 3px rgba(26, 24, 23, .06);
+}
+.fx__input.is-bad { border-color: var(--blood-500); }
+
+.fx__say { margin: 0; font-size: 10px; line-height: 1.5; color: var(--tx-600); }
+.fx__say.is-ok { color: var(--jade-500); }
+.fx__say.is-bad { color: var(--blood-500); }
+
+.switch--tiny .switch__label { font-size: 10px; }
+
+/* ── 무엇을 쓸 수 있나 ── */
+.fx__help {
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--paper-050);
+  font-size: var(--t-xs);
+}
+.fx__help h5 {
+  margin: 0 0 5px;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: .12em;
+  color: var(--ink-450);
+  text-transform: uppercase;
+}
+.fx__cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--s-4);
+  margin-bottom: var(--s-3);
+}
+.fx__help ul { margin: 0 0 var(--s-3); padding: 0; list-style: none; }
+.fx__help li { line-height: 1.85; color: var(--tx-500); }
+.fx__help code {
+  font-family: var(--f-num);
+  color: var(--ink-200);
+  background: rgba(26, 24, 23, .05);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.fx__samples { display: grid; gap: 5px; margin-bottom: var(--s-3); }
+.fx__sample {
+  display: grid;
+  gap: 2px;
+  padding: 6px 9px;
+  text-align: left;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--paper-000);
+  cursor: pointer;
+}
+.fx__sample:hover { border-color: var(--ink-400); }
+.fx__sample b { font-weight: 400; color: var(--tx-200); font-size: var(--t-xs); }
+.fx__sample code {
+  font-family: var(--f-num);
+  font-size: 10px;
+  color: var(--tx-500);
+  background: none;
+  padding: 0;
+  overflow-wrap: anywhere;
+}
+
+.fx__warn {
+  margin: 0;
+  padding-left: 9px;
+  border-left: 2px solid var(--blood-700);
+  font-size: 10px;
+  line-height: 1.65;
+  color: var(--tx-500);
+}

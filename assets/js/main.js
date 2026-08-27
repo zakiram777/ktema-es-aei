@@ -5,7 +5,7 @@
    갈아 끼워도 나머지는 그대로 둘 수 있다.
 
    흐름
-     관문을 지난다 → 자키람이 깨어난다 → 소식과 시세를 부른다
+     관문을 지난다 → 유리아가 나타난다 → 소식과 시세를 부른다
      → 시세로 낯빛을 정한다 → 소식이 오면 속보를 가려 외친다
    ═══════════════════════════════════════════════════════════════ */
 
@@ -28,9 +28,8 @@ import { DEFAULT_WATCH, RANGES } from './market/symbols.js';
 import * as tts from './voice/tts.js';
 import * as script from './voice/script.js';
 
-import { Stage } from './zakiram/stage.js';
-import { Mouth } from './zakiram/mouth.js';
-import * as mood from './zakiram/mood.js';
+import { Apparition } from './yuria/apparition.js';
+import * as mood from './yuria/mood.js';
 
 import { Ambience, drawSealTicks } from './ui/ambience.js';
 import { Settings } from './ui/settings.js';
@@ -45,8 +44,7 @@ import { BacktestView } from './backtest/view.js';
 /* ═══════════════════ 상태 ═══════════════════ */
 
 const app = {
-  stage: null,
-  mouth: null,
+  yuria: null,
   bubble: null,
   nav: null,
   chat: null,
@@ -65,7 +63,7 @@ const app = {
   chartQ: null,
 };
 
-/* ═══════════════════ 자키람의 말 ═══════════════════ */
+/* ═══════════════════ 유리아의 말 ═══════════════════ */
 
 const sayEl = $('#sayText');
 const btnStop = $('#btnSpeakStop');
@@ -73,8 +71,8 @@ const btnStop = $('#btnSpeakStop');
 /**
  * 지금 하는 말을 적어 둔다 — 눈에 보이지 않는 자리에.
  *
- * 예전에는 자키람 옆에 그 말을 그대로 띄웠다. 그런데 글자가 뜨면
- * 사람의 눈이 그리로 가서, 정작 자키람의 얼굴을 보지 않게 된다.
+ * 예전에는 유리아 옆에 그 말을 그대로 띄웠다. 그런데 글자가 뜨면
+ * 사람의 눈이 그리로 가서, 정작 유리아를 보지 않게 된다.
  * 읽는 것은 귀로 듣고 얼굴로 보는 편이 낫다. 다만 화면 낭독기를
  * 쓰는 사람에게는 남겨 두어야 하므로 sr-only 자리에 적는다.
  */
@@ -83,7 +81,7 @@ function showSaying(text) {
 }
 
 /**
- * 자키람이 말하게 하는 하나뿐인 문. 어디서 부르든 여기를 지난다.
+ * 유리아가 말하게 하는 하나뿐인 문. 어디서 부르든 여기를 지난다.
  * @param {string[]|string} lines
  */
 function speak(lines, opts = {}) {
@@ -93,20 +91,20 @@ function speak(lines, opts = {}) {
   const lang = opts.lang || (isKorean(arr.join(' ')) ? 'ko' : 'en');
 
   // 말하는 동안에는 입이 살아 있는 구간으로
-  app.stage?.setMood(mood.speakingMood(opts.mood || mood.mood()));
+  app.yuria?.setMood(mood.speakingMood(opts.mood || mood.mood()));
 
   tts.speak(arr, {
     lang,
     onstart: () => {
-      app.stage?.setSpeaking(true);
+      app.yuria?.setSpeaking(true);
       btnStop.hidden = false;
     },
     onchunk: (i, text) => showSaying(text),
     onend: () => {
-      app.stage?.setSpeaking(false);
+      app.yuria?.setSpeaking(false);
       btnStop.hidden = true;
       setTimeout(() => { if (!tts.speaking()) showSaying(''); }, 2600);
-      app.stage?.setMood(mood.mood());
+      app.yuria?.setMood(mood.mood());
       opts.onend?.();
     },
   });
@@ -114,7 +112,7 @@ function speak(lines, opts = {}) {
 
 function hush() {
   tts.stop();
-  app.stage?.setSpeaking(false);
+  app.yuria?.setSpeaking(false);
   btnStop.hidden = true;
   showSaying('');
 }
@@ -225,9 +223,11 @@ async function loadChart(symbol, rangeId) {
 /* ═══════════════════ 낯빛 ═══════════════════ */
 
 function paintMood(m, score) {
-  app.stage?.setMood(m);
+  app.yuria?.setMood(m);
   const bar = $('#moodBar');
   const val = $('#moodVal');
+  const face = $('#zakMood');
+  if (face) face.textContent = mood.MOOD_KO?.[m] || '';
   if (bar) {
     const clamped = Math.max(-3, Math.min(3, score || 0));
     bar.style.left = `${50 + (clamped / 3) * 46}%`;
@@ -285,10 +285,13 @@ function build() {
   app.ambience = new Ambience($('#sky'));
   if (store.get('motion') && !calmly()) app.ambience.start();
 
-  /* ── 자키람 ── */
-  app.stage = new Stage($('#zak'));
-  // 음소를 따라 움직이는 입. 스스로 bus 를 듣고 그린다.
-  app.mouth = new Mouth($('#zak'));
+  /* ── 유리아 ──
+     붙박이가 아니다. 화면 아무 데나 나타났다 사라진다.
+     말풍선이 그를 따라다니므로 나타나고 사라질 때 알려 준다. */
+  app.yuria = new Apparition({
+    onShow: () => app.bubble?.follow(),
+    onHide: () => app.bubble?.hide(),
+  });
 
   /* ── 소식 ── */
   app.news = new NewsView({
@@ -309,23 +312,23 @@ function build() {
 
   app.reader = new Reader({
     onStart: () => {
-      app.stage?.setSpeaking(true);
-      app.stage?.setMood(mood.speakingMood());
+      app.yuria?.setSpeaking(true);
+      app.yuria?.setMood(mood.speakingMood());
       btnStop.hidden = false;
     },
     onChunk: (text) => showSaying(text),
     onEnd: () => {
-      app.stage?.setSpeaking(false);
-      app.stage?.setMood(mood.mood());
+      app.yuria?.setSpeaking(false);
+      app.yuria?.setMood(mood.mood());
       btnStop.hidden = true;
       setTimeout(() => { if (!tts.speaking()) showSaying(''); }, 2600);
     },
   });
 
-  app.bubble = new Bubble($('#zakBubble'));
+  app.bubble = new Bubble($('#yuriaSay'), app.yuria);
 
   app.breaking = new Breaking({
-    stage: app.stage,
+    stage: app.yuria,
     onOpen: (item) => { if (item?.id && item.title) app.reader.open(item); },
     onSpeak: (lines) => showSaying(lines.join(' ')),
 
@@ -388,14 +391,7 @@ function build() {
     onAutoRefresh: () => scheduleRefresh(),
     onRefresh: () => loadNews(),
     onMotion: (v) => (v ? app.ambience.start() : app.ambience.pause()),
-    // 입 자리를 맞추는 동안에는 얼굴 위를 눌러 옮길 수 있다
-    onAlign: (on) => {
-      app.mouth?.setAlign(on);
-      if (on) {
-        $('#zak').scrollIntoView({ block: 'center', behavior: 'smooth' });
-        app.breaking.notice('자키람의 입 위를 눌러 자리를 잡아 주십시오.', { kind: '입 맞추기', ms: 9000 });
-      }
-    },
+    onYuriaOff: () => app.yuria?.hide(),
     onTint: () => { app.market.chart.draw(); app.market.setQuotes(app.quotes); },
     // 대화를 어디에 이었는지 바뀌면 입력칸 아래의 말도 바뀐다
     onChat: () => app.chat?.paintHint(),
@@ -446,7 +442,7 @@ function build() {
     onSpeak: (text) => speak([text], { lang: isKorean(text) ? 'ko' : 'en' }),
     onBubble: (brief) => {
       app.bubble?.show(brief, {
-        kind: 'Ζακιράμ',
+        kind: 'Ὑρία',
         hint: '전문은 대화창에',
         onClick: () => {
           app.bubble.hide();
@@ -517,6 +513,12 @@ function wireButtons() {
   });
   paintMute();
 
+  // 기다리지 않고 지금 부른다
+  $('#btnYuria')?.addEventListener('click', () => {
+    if (app.yuria?.visible) app.yuria.hide();
+    else app.yuria?.show({ reason: 'called', force: true });
+  });
+
   $('#btnVoice').addEventListener('click', () => app.settings.open('voice'));
   $('#btnSettings').addEventListener('click', () => app.settings.open());
 
@@ -543,7 +545,7 @@ function wireBus() {
   // 속보로 곤두선 뒤에는 시세를 다시 보고 낯빛을 되돌린다
   setInterval(() => {
     const m = mood.settle(app.quotes);
-    if (m !== app.stage?.mood) paintMood(m, mood.moodScore());
+    if (m !== app.yuria?.mood) paintMood(m, mood.moodScore());
   }, 8000);
 
   on('settings:changed', ({ key }) => {
@@ -732,7 +734,7 @@ async function enter() {
       );
     }
 
-    // 소식과 시세를 먼저 부른다. 자키람이 늦게 깨어나더라도
+    // 소식과 시세를 먼저 부른다. 유리아이 늦게 깨어나더라도
     // 글과 숫자는 그동안 채워진다.
     loadNews({ quiet: true });
     loadQuotes({ quiet: true }).then(() => {
@@ -740,9 +742,9 @@ async function enter() {
     });
     setInterval(() => loadQuotes({ quiet: true }), 90_000);
 
-    // 자키람을 세운다. 여기서 넘어져도 나머지는 이미 살아 있다.
-    try { await app.stage.start(); }
-    catch (err) { console.error('[zakiram]', err); }
+    // 들어오자마자 유리아가 한 번 인사한다. 그다음부터는 스스로
+    // 나타났다 사라진다.
+    setTimeout(() => app.yuria?.show({ reason: 'greet' }), 1400);
 
     await tts.warm();
 

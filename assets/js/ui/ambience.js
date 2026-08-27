@@ -1,9 +1,12 @@
 /* ═══════════════════════════════════════════════════════════════
-   ambience.js — 배경의 티끌과 만다라
+   ambience.js — 종이 위의 소용돌이
 
-   금가루가 아주 느리게 떠다니고, 그 뒤로 커다란 문양 두 겹이
-   서로 반대로 돈다. 자키람의 후광이 화면 전체로 번진 것처럼
-   보이게 하려는 것이다.
+   이토 준지의 『소용돌이』에서 마을 사람들은 소용돌이에 홀린다.
+   벽의 무늬에서, 연기에서, 사람의 귀에서 그것을 본다. 처음에는
+   아무도 알아채지 못하고, 알아챈 뒤에는 그것밖에 보이지 않는다.
+
+   그 결을 배경에 두었다. 종이 위에 아주 옅은 소용돌이 둘이 서로
+   반대로 감기고, 먹 티끌이 그 결을 따라 아주 느리게 흐른다.
 
    눈에 띄면 실패다. 알아채기 직전에서 멈춘다.
    ═══════════════════════════════════════════════════════════════ */
@@ -129,66 +132,74 @@ export class Ambience {
 
       g.beginPath();
       g.arc(x, y, m.r, 0, Math.PI * 2);
+      // 먹 티끌. 아주 가끔 하나가 붉다 — 종이에 떨어진 한 방울.
       g.fillStyle = m.warm
-        ? `rgba(228, 198, 140, ${a})`
-        : `rgba(158, 176, 226, ${a * 0.8})`;
+        ? `rgba(158, 31, 24, ${a * 0.5})`
+        : `rgba(26, 24, 23, ${a * 0.62})`;
       g.fill();
-
-      // 가장 가까운 것 몇에만 빛무리
-      if (m.depth > 0.86) {
-        g.beginPath();
-        g.arc(x, y, m.r * 5, 0, Math.PI * 2);
-        g.fillStyle = `rgba(228, 198, 140, ${a * 0.07})`;
-        g.fill();
-      }
     }
   }
 
-  /** 아주 옅은 문양 두 겹 — 서로 반대로 돈다 */
+  /**
+   * 소용돌이 둘 — 서로 반대로 감긴다.
+   *
+   * 로그 나선(logarithmic spiral)이다. r = a·e^(bθ). 조개껍데기와
+   * 은하와 태풍이 같은 셈으로 감긴다. 이토 준지가 그린 소용돌이도
+   * 이 결이다 — 아르키메데스 나선(간격이 일정한 것)으로 그리면
+   * 용수철처럼 보여 홀리지 않는다.
+   */
   #mandala(g, w, h, px, py) {
     const cx = w * 0.5 + px * 26;
     const cy = h * 0.46 + py * 18;
-    const R = Math.min(w, h) * 0.62;
+    const R = Math.min(w, h) * 0.66;
 
     g.save();
     g.translate(cx, cy);
     g.lineWidth = 1;
 
-    // 바깥 — 눈금 고리
-    g.save();
-    g.rotate(this.t * 0.0072);
-    g.strokeStyle = 'rgba(208, 171, 99, .052)';
-    g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.stroke();
-    g.beginPath(); g.arc(0, 0, R * 0.965, 0, Math.PI * 2); g.stroke();
-    for (let i = 0; i < 72; i++) {
-      const a = (i / 72) * Math.PI * 2;
-      const long = i % 6 === 0;
-      const r1 = R * 0.965, r2 = R * (long ? 0.925 : 0.947);
-      g.beginPath();
-      g.moveTo(Math.cos(a) * r1, Math.sin(a) * r1);
-      g.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
-      g.stroke();
-    }
-    g.restore();
+    this.#spiral(g, R, this.t * 0.0062, 1, 'rgba(26, 24, 23, .085)', 5);
+    this.#spiral(g, R * 0.74, -this.t * 0.0094, -1, 'rgba(26, 24, 23, .055)', 4);
 
-    // 안쪽 — 겹친 삼각형
+    // 한가운데 — 여기서 모든 것이 시작한다
+    g.strokeStyle = 'rgba(158, 31, 24, .12)';
+    g.beginPath();
+    g.arc(0, 0, R * 0.035, 0, Math.PI * 2);
+    g.stroke();
+
+    g.restore();
+  }
+
+  /**
+   * @param {number} R      바깥 반지름
+   * @param {number} rot    지금 얼마나 돌아갔나
+   * @param {number} dir    감기는 방향
+   * @param {string} color
+   * @param {number} arms   팔이 몇 개인가
+   */
+  #spiral(g, R, rot, dir, color, arms) {
     g.save();
-    g.rotate(-this.t * 0.0115);
-    g.strokeStyle = 'rgba(208, 171, 99, .038)';
-    const r = R * 0.58;
-    for (const flip of [0, Math.PI]) {
+    g.rotate(rot);
+    g.strokeStyle = color;
+
+    const b = 0.19;                       // 감기는 정도. 크면 성기고 작으면 촘촘하다
+    const turns = 3.4;
+    const steps = 260;
+    const thetaMax = turns * Math.PI * 2;
+    const a = R / Math.exp(b * thetaMax);
+
+    for (let arm = 0; arm < arms; arm++) {
+      const off = (arm / arms) * Math.PI * 2;
       g.beginPath();
-      for (let i = 0; i < 3; i++) {
-        const a = flip + (i / 3) * Math.PI * 2 - Math.PI / 2;
-        const x = Math.cos(a) * r, y = Math.sin(a) * r;
+      for (let i = 0; i <= steps; i++) {
+        const th = (i / steps) * thetaMax;
+        const r = a * Math.exp(b * th);
+        const ang = off + th * dir;
+        const x = Math.cos(ang) * r;
+        const y = Math.sin(ang) * r;
         i ? g.lineTo(x, y) : g.moveTo(x, y);
       }
-      g.closePath(); g.stroke();
+      g.stroke();
     }
-    g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke();
-    g.beginPath(); g.arc(0, 0, r * 0.62, 0, Math.PI * 2); g.stroke();
-    g.restore();
-
     g.restore();
   }
 

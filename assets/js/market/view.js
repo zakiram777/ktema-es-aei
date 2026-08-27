@@ -2,7 +2,7 @@
    view.js — 시세판·띠·차트 판을 그리고, 숫자에 목소리를 붙인다
 
    여기가 8번 요구가 사는 곳이다. 화면에 뜬 숫자는 전부 누를 수
-   있고, 누르면 자키람이 그 숫자를 읽는다. 값마다 .val 단추를 씌우고
+   있고, 누르면 유리아가 그 숫자를 읽는다. 값마다 .val 단추를 씌우고
    무엇을 읽어야 하는지 dataset 에 적어 둔다. 실제로 읽는 일은
    한곳(main.js 의 speak)에서 맡아, 어느 숫자를 눌러도 같은 방식으로
    말한다.
@@ -16,6 +16,7 @@ import {
   KINDS, kindById, blank, sane, nameOf as indName, COLORS, colorVar,
   DEFAULT_INDICATORS,
 } from './indicators.js';
+import { check as checkFormula, HELP as FX_HELP } from './formula.js';
 import { ma, extremes } from './quotes.js';
 import * as store from '../core/store.js';
 import { clock } from '../core/fmt.js';
@@ -48,10 +49,13 @@ export class MarketView {
     this.lower = new LowerChart($('#chartLowerCanvas'));
     this.legendEl = $('#chartLegend');
 
+    this.zoomEl = $('#chartZoom');
     this.chart = new Chart($('#chartCanvas'), {
       tip: $('#chartTip'),
       onPick: (bar, i, bars) => this.hooks.onSpeakBar?.(bar, i, bars, this.symbol),
     });
+    // 굴려서 들여다본 만큼을 머리에 적고, 아래 칸도 같이 따라가게 한다
+    this.chart.onView = () => { this.#paintZoom(); this.#paintLower(); };
 
     this.#buildRanges();
     this.#buildPicker();
@@ -295,6 +299,31 @@ export class MarketView {
     this.#renderStats(q);
   }
 
+  /** 지금 며칠치를 보고 있는지 — 전부를 보고 있으면 아무 말도 하지 않는다 */
+  #paintZoom() {
+    if (!this.zoomEl) return;
+    const r = this.chart.range();
+    const all = this.chart.bars.length;
+
+    if (!all || r.count >= all) { this.zoomEl.hidden = true; clear(this.zoomEl); return; }
+
+    const a = this.chart.bars[r.from];
+    const b = this.chart.bars[r.to];
+    const day = (x) => (x ? new Date(x.t).toLocaleDateString('ko-KR', { year: '2-digit', month: 'numeric', day: 'numeric' }) : '');
+
+    clear(this.zoomEl);
+    this.zoomEl.hidden = false;
+    this.zoomEl.append(
+      el('b', { text: r.count + '개' }),
+      el('span', { text: day(a) + ' – ' + day(b) }),
+      el('button', {
+        type: 'button',
+        title: '두 번 눌러도 됩니다',
+        onclick: () => this.chart.resetView(),
+      }, '전부 보기'),
+    );
+  }
+
   /* ─────────────── 지표 ─────────────── */
 
   /** 아래 칸 — 그릴 것이 없으면 칸 자체를 접는다 */
@@ -306,7 +335,7 @@ export class MarketView {
     this.lowerHost.style.height = Math.min(360, 96 + list.length * 46) + 'px';
     requestAnimationFrame(() => {
       this.lower.fit?.();
-      this.lower.set(this.chart.bars, list);
+      this.lower.set(this.chart.shown, list);
     });
   }
 
@@ -371,6 +400,11 @@ export class MarketView {
       }),
     ]));
 
+    // 수식 틀은 값이 아니라 글을 받는다
+    const fxBox = k.free ? this.#formulaBox(ind, () => {
+      row.querySelector('.ind__name').textContent = indName(sane(ind) || ind);
+    }) : null;
+
     const colorSel = el('select.sel.sel--sm', {
       onchange: () => {
         ind.color = colorSel.value;
@@ -408,9 +442,144 @@ export class MarketView {
           this.#refreshIndicators();
         },
       }, '×'),
-      el('span.ind__note', { text: k.note }),
+      fxBox,
+      fxBox ? null : el('span.ind__note', { text: k.note }),
     ]);
     return row;
+  }
+
+  /* ─────────────── 수식 칸 ───────────────
+
+     적는 대로 곧바로 읽어 본다. 틀렸으면 왜 틀렸는지 그 자리에서
+     말해 주고 차트는 건드리지 않는다 — 반쯤 적다 만 수식 때문에
+     보고 있던 줄이 사라지면 성가시다. */
+
+  #formulaBox(ind, onName) {
+    const say = el('p.fx__say');
+
+    const name = el('input.fx__label', {
+      type: 'text',
+      placeholder: '이름 (예: 20일선 이격도)',
+      value: ind.cfg.label || '',
+      maxlength: '40',
+      oninput: (e) => {
+        ind.cfg.label = e.target.value;
+        this.#saveIndicators();
+        onName?.();
+      },
+    });
+
+    const box = el('textarea.fx__input', {
+      rows: '2',
+      spellcheck: 'false',
+      placeholder: '(close - ma(close, 20)) / ma(close, 20) * 100',
+    });
+    // textarea 는 value 를 속성으로 주면 비어 있는 채로 뜬다.
+    // 안에 든 글은 프로퍼티로 넣어야 한다.
+    box.value = ind.cfg.expr || '';
+
+    const paint = (apply) => {
+      const src = box.value.trim();
+      if (!src) {
+        say.textContent = '수식을 적어 주십시오.';
+        say.className = 'fx__say';
+        return;
+      }
+      const got = checkFormula(src);
+      if (got.ok) {
+        say.textContent = '읽었습니다.';
+        say.className = 'fx__say is-ok';
+        box.classList.remove('is-bad');
+        if (apply) {
+          ind.cfg.expr = src;
+          this.#saveIndicators();
+          this.#refreshIndicators();
+          // 셈해 보고 값이 하나도 안 나오면 그것도 알려 준다
+          const hit = (this.chart.inds || []).find((x) => x.ind.id === ind.id);
+          if (hit?.out?.error) {
+            say.textContent = hit.out.error;
+            say.className = 'fx__say is-bad';
+          }
+        }
+      } else {
+        box.classList.add('is-bad');
+        say.className = 'fx__say is-bad';
+        say.textContent = got.why + (got.at != null ? ' (' + (got.at + 1) + '번째 글자)' : '');
+      }
+    };
+
+    box.addEventListener('input', () => paint(false));
+    box.addEventListener('change', () => paint(true));
+    box.addEventListener('blur', () => paint(true));
+    paint(false);
+
+    const zero = el('input', { type: 'checkbox' });
+    zero.checked = !!ind.cfg.zero;
+    zero.addEventListener('change', () => {
+      ind.cfg.zero = zero.checked;
+      this.#saveIndicators();
+      this.#refreshIndicators();
+    });
+
+    return el('div.fx', [
+      el('div.fx__row', [
+        name,
+        el('label.switch.switch--tiny', [
+          zero,
+          el('span.switch__track', [el('span.switch__dot')]),
+          el('span.switch__label', { text: '0선' }),
+        ]),
+        el('button.btn.btn--quiet.btn--tiny', {
+          type: 'button',
+          onclick: (e) => {
+            const help = e.target.closest('.fx').querySelector('.fx__help');
+            help.hidden = !help.hidden;
+          },
+        }, el('span.btn__label', { text: '무엇을 쓸 수 있나' })),
+      ]),
+      box,
+      say,
+      this.#formulaHelp(box, () => paint(true)),
+    ]);
+  }
+
+  /** 쓸 수 있는 이름과 함수, 그리고 흔히 쓰는 수식 몇 */
+  #formulaHelp(box, done) {
+    const put = (text) => {
+      box.value = text;
+      done();
+    };
+
+    return el('div.fx__help', { hidden: true }, [
+      el('div.fx__cols', [
+        el('div', [
+          el('h5', { text: '값' }),
+          el('ul', FX_HELP.refs.map(([a, b]) => el('li', [
+            el('code', { text: a }), document.createTextNode(' ' + b),
+          ]))),
+        ]),
+        el('div', [
+          el('h5', { text: '함수' }),
+          el('ul', FX_HELP.funcs.map(([a, b]) => el('li', [
+            el('code', { text: a }), document.createTextNode(' ' + b),
+          ]))),
+        ]),
+      ]),
+      el('h5', { text: '눌러서 넣어 보기' }),
+      el('div.fx__samples', FX_HELP.samples.map(([expr, why]) => el('button.fx__sample', {
+        type: 'button',
+        title: expr,
+        onclick: () => put(expr),
+      }, [
+        el('b', { text: why }),
+        el('code', { text: expr }),
+      ]))),
+      el('p.fx__warn', {
+        text: '여기서는 숫자와 위의 이름·함수만 읽습니다. 그 밖의 것은 읽지 않고 '
+            + '어디가 잘못됐는지 알려 줍니다 — 남이 준 설정 파일이 이 페이지에서 '
+            + '아무 코드나 돌리지 못하게 하려는 것입니다.',
+      }),
+    ]);
   }
 
   #saveIndicators() {

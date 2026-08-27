@@ -39,7 +39,7 @@
   gap: var(--s-4);
   padding: var(--s-3) var(--s-5);
   border-bottom: 1px solid var(--line-soft);
-  background: linear-gradient(to bottom, rgba(9, 7, 20, .90), rgba(9, 7, 20, .72));
+  background: linear-gradient(to bottom, rgba(255, 255, 255, .90), rgba(255, 255, 255, .72));
   backdrop-filter: blur(18px) saturate(130%);
   -webkit-backdrop-filter: blur(18px) saturate(130%);
 }
@@ -50,10 +50,10 @@
   font-size: 1.32rem;
   color: var(--gold-200);
   letter-spacing: .02em;
-  text-shadow: 0 0 22px rgba(208, 171, 99, .24);
+  text-shadow: 0 0 22px rgba(26, 24, 23, .24);
   transition: color var(--dur) var(--ease), text-shadow var(--dur) var(--ease);
 }
-.brand:hover .brand__gr { color: var(--gold-100); text-shadow: 0 0 34px rgba(208, 171, 99, .5); }
+.brand:hover .brand__gr { color: var(--gold-100); text-shadow: 0 0 34px rgba(26, 24, 23, .5); }
 
 .top__clocks {
   flex: 1 1 auto;
@@ -100,7 +100,7 @@
   position: relative;
   overflow: hidden;
   border-bottom: 1px solid var(--line-soft);
-  background: rgba(6, 4, 16, .5);
+  background: rgba(255, 255, 255, .5);
   padding: 7px 0;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
   mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
@@ -163,7 +163,7 @@
   flex-wrap: wrap;
   padding: var(--s-5);
   border-top: 1px solid var(--line-soft);
-  background: rgba(6, 4, 16, .55);
+  background: rgba(255, 255, 255, .55);
 }
 .foot__gr {
   font-family: var(--f-greek);
@@ -188,7 +188,7 @@
   padding: var(--s-4);
   border: 1px solid var(--coral-500);
   border-radius: var(--r-md);
-  background: rgba(18, 16, 40, .97);
+  background: rgba(255, 255, 255, .97);
   box-shadow: var(--lift);
   font-size: var(--t-sm);
 }
@@ -223,7 +223,7 @@
   border: 1px solid var(--line-hard);
   border-left: 2px solid var(--gold-400);
   border-radius: var(--r-md);
-  background: rgba(18, 16, 40, .94);
+  background: rgba(255, 255, 255, .94);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: var(--lift);
@@ -236,7 +236,7 @@
 
 .alert--urgent {
   border-left-color: var(--coral-500);
-  box-shadow: var(--lift), 0 0 40px -12px rgba(207, 90, 65, .6);
+  box-shadow: var(--lift), 0 0 40px -12px rgba(158, 31, 24, .6);
 }
 .alert__ico {
   color: var(--gold-300);
@@ -279,7 +279,7 @@
     padding: var(--s-5) var(--s-4) var(--s-8);
     gap: var(--s-5);
   }
-  /* 자키람이 위로 올라와 화면 위에 붙는다 */
+  /* 유리아가 위로 올라와 화면 위에 붙는다 */
   .rail { order: -1; }
   .rail__sticky {
     position: sticky;
@@ -290,7 +290,7 @@
     padding: var(--s-3);
     border: 1px solid var(--line-soft);
     border-radius: var(--r-lg);
-    background: rgba(9, 7, 20, .88);
+    background: rgba(255, 255, 255, .88);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
   }
@@ -305,7 +305,7 @@
   .shell { padding: var(--s-4) var(--s-3) var(--s-7); }
   .panel { padding: var(--s-4) var(--s-3) var(--s-5); border-radius: var(--r-md); }
 
-  /* 좁은 화면에서는 자키람 자리가 화면을 다 먹지 않게 줄인다.
+  /* 좁은 화면에서는 유리아 자리가 화면을 다 먹지 않게 줄인다.
      기분 눈금은 접어 두고, 두 단추는 나란히 세운다. */
   .rail__sticky { grid-template-columns: 104px minmax(0, 1fr); gap: var(--s-3); }
   .rail__meta { display: none; }

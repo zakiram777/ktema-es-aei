@@ -6,7 +6,7 @@
    색은 CSS 변수에서 읽어 오므로, 설정에서 오름·내림 색을 뒤집으면
    차트도 따라 바뀐다.
 
-   봉 하나를 누르면 onPick(bar) 이 불린다 — 자키람이 그 날을 읽는다.
+   봉 하나를 누르면 onPick(bar) 이 불린다 — 유리아가 그 날을 읽는다.
    ═══════════════════════════════════════════════════════════════ */
 
 import { px, num, big, dayStamp } from '../core/fmt.js';
@@ -25,7 +25,9 @@ export class Chart {
     this.tip = opts.tip || null;
     this.onPick = opts.onPick || (() => {});
 
-    this.bars = [];
+    this.bars = [];          // 받아 온 것 전부
+    this.shown = [];         // 그중 지금 보이는 것
+    this.view = null;        // { from, to } — null 이면 전부
     this.inds = [];          // 겹쳐 그릴 지표들 (셈은 indicators.js 가 한다)
     this.hover = -1;
     this.intraday = false;
@@ -36,13 +38,68 @@ export class Chart {
 
   /* ─────────────── 자료 ─────────────── */
 
-  set(bars, { intraday = false, indicators = null } = {}) {
+  set(bars, { intraday = false, indicators = null, keepView = false } = {}) {
     this.bars = bars || [];
     this.intraday = intraday;
     if (indicators) this.list = indicators;
+    if (!keepView) this.view = null;      // 새 종목이면 처음부터 다시 본다
     this.recompute();
     this.hover = -1;
     this.draw();
+  }
+
+  /* ═══════════════ 보이는 구간 ═══════════════
+
+     차트에 손을 얹고 굴리면 그 자리를 중심으로 당겨지고 밀린다.
+     밀고 끌면 옆으로 흐른다. 두 번 누르면 처음으로 돌아간다.
+
+     기간 단추(5일·1개월…)는 서버에 다시 묻는 일이고, 이것은 이미
+     받아 둔 봉 안에서 들여다보는 일이다. 둘은 다르다 — 5년치를
+     받아 놓고 그 안의 한 달을 확대해 볼 수 있다. */
+
+  /** 지금 보이는 자리 — 늘 성한 값으로 돌려준다 */
+  range() {
+    const n = this.bars.length;
+    if (!n) return { from: 0, to: 0, count: 0 };
+    if (!this.view) return { from: 0, to: n - 1, count: n };
+    const from = Math.max(0, Math.min(n - 1, Math.round(this.view.from)));
+    const to = Math.max(from + 1, Math.min(n - 1, Math.round(this.view.to)));
+    return { from, to, count: to - from + 1 };
+  }
+
+  /** 보이는 구간을 새로 정한다 */
+  setRange(from, to) {
+    const n = this.bars.length;
+    if (n < 2) return;
+
+    let a = Math.round(from);
+    let b = Math.round(to);
+
+    // 너무 좁으면 봉 하나가 화면을 다 먹는다. 너무 넓으면 전부다.
+    const MIN = Math.min(12, n);
+    if (b - a + 1 < MIN) {
+      const mid = (a + b) / 2;
+      a = Math.round(mid - MIN / 2);
+      b = a + MIN - 1;
+    }
+
+    if (a < 0) { b -= a; a = 0; }
+    if (b > n - 1) { a -= (b - (n - 1)); b = n - 1; }
+    a = Math.max(0, a);
+
+    this.view = (a === 0 && b === n - 1) ? null : { from: a, to: b };
+    this.recompute();
+    this.draw();
+    this.onView?.(this.range());
+  }
+
+  /** 처음으로 — 받아 온 것 전부를 다시 본다 */
+  resetView() {
+    if (!this.view) return;
+    this.view = null;
+    this.recompute();
+    this.draw();
+    this.onView?.(this.range());
   }
 
   /** 지표 목록이 바뀌었을 때 — 봉은 그대로 두고 줄만 다시 셈한다 */
@@ -53,8 +110,30 @@ export class Chart {
   }
 
   recompute() {
-    this.inds = computeAll(this.list || [], this.bars);
-    // 가격 칸에 겹칠 것과 아래 칸에 따로 그릴 것을 가른다
+    // 지표는 늘 '전체' 봉으로 셈한다. 보이는 구간만으로 셈하면 창
+    // 왼쪽 끝의 예순 날 평균이 틀린다 — 그 앞 예순 날이 없으니까.
+    const full = computeAll(this.list || [], this.bars);
+
+    const { from, to } = this.range();
+    this.shown = this.bars.slice(from, to + 1);
+
+    // 셈은 전체로 하고, 그린 줄에서 보이는 자리만 오려 낸다
+    const cut = (vals) => (Array.isArray(vals) ? vals.slice(from, to + 1) : vals);
+    this.inds = full.map((ind) => ({
+      ...ind,
+      out: {
+        ...ind.out,
+        lines: (ind.out.lines || []).map((l) => ({ ...l, values: cut(l.values) })),
+        histogram: ind.out.histogram
+          ? { ...ind.out.histogram, values: cut(ind.out.histogram.values) }
+          : null,
+        band: ind.out.band
+          ? { upper: cut(ind.out.band.upper), lower: cut(ind.out.band.lower) }
+          : null,
+      },
+      full: ind.out,          // 범례는 마지막 값을 전체에서 읽는다
+    }));
+
     this.overlay = this.inds.filter((i) => i.pane === 'price');
     this.lower = this.inds.filter((i) => i.pane === 'lower');
   }
@@ -65,7 +144,7 @@ export class Chart {
       name: i.name,
       color: this.#css(colorVar(i.ind.color), '#d0ab63'),
       pane: i.pane,
-      last: lastOf(i.out.lines[0]?.values),
+      last: lastOf((i.full || i.out).lines[0]?.values),
     }));
   }
 
@@ -94,11 +173,73 @@ export class Chart {
     const at = (e) => {
       const r = this.cv.getBoundingClientRect();
       const x = e.clientX - r.left;
-      if (!this.bars.length) return -1;
+      if (!this.shown.length) return -1;
       const { x0, step } = this.#geom();
       const i = Math.round((x - x0) / step);
-      return Math.max(0, Math.min(this.bars.length - 1, i));
+      return Math.max(0, Math.min(this.shown.length - 1, i));
     };
+
+    /* ── 굴려서 당기고 밀기 ──
+
+       손이 얹힌 자리를 붙들어 둔 채 창을 좁히거나 넓힌다. 그래야
+       "보고 있던 그 자리" 가 손끝에 남는다. 가운데를 기준으로 하면
+       들여다보려던 것이 자꾸 화면 밖으로 밀려난다.
+
+       ctrl 을 누른 채 굴리는 것은 브라우저의 확대다. 그것까지
+       가로채면 화면 전체를 키우려는 사람이 차트에 갇힌다. */
+    this.cv.addEventListener('wheel', (e) => {
+      if (e.ctrlKey) return;
+      if (this.bars.length < 3) return;
+      e.preventDefault();
+
+      const { from, to, count } = this.range();
+      const { x0, step } = this.#geom();
+      const rect = this.cv.getBoundingClientRect();
+
+      // 손끝이 지금 몇 번째 봉 위에 있나 (전체 기준)
+      const local = (e.clientX - rect.left - x0) / (step || 1);
+      const at = from + Math.max(0, Math.min(count - 1, local));
+
+      // 아래로 굴리면 넓어지고(멀어지고), 위로 굴리면 좁아진다(가까워진다)
+      const dir = e.deltaY > 0 ? 1 : -1;
+      const factor = dir > 0 ? 1.18 : 1 / 1.18;
+      const want = Math.max(12, Math.round(count * factor));
+
+      // 손끝의 자리를 창 안에서 그대로 붙들어 둔다
+      const ratio = count > 1 ? (at - from) / (count - 1) : 0.5;
+      const a = at - ratio * (want - 1);
+      this.setRange(a, a + want - 1);
+    }, { passive: false });
+
+    /* ── 끌어서 옆으로 ──
+       확대해 놓고 나면 옆을 보고 싶어진다. 손으로 종이를 미는 것과
+       같게 두었다 — 오른쪽으로 끌면 왼쪽(옛날)이 나온다. */
+    let drag = null;
+    this.cv.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      const r = this.range();
+      drag = { x: e.clientX, from: r.from, to: r.to, moved: false };
+      this.cv.setPointerCapture?.(e.pointerId);
+    });
+
+    const endDrag = () => {
+      if (drag?.moved) this.cv.classList.remove('is-dragging');
+      drag = null;
+    };
+    this.cv.addEventListener('pointerup', endDrag);
+    this.cv.addEventListener('pointercancel', endDrag);
+
+    this.cv.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const { step } = this.#geom();
+      const shift = Math.round((e.clientX - drag.x) / (step || 1));
+      if (!shift) return;
+      if (!drag.moved) { drag.moved = true; this.cv.classList.add('is-dragging'); this.cv.dataset.dragged = '1'; }
+      this.setRange(drag.from - shift, drag.to - shift);
+    });
+
+    // 두 번 누르면 처음으로
+    this.cv.addEventListener('dblclick', () => this.resetView());
 
     this.cv.addEventListener('pointermove', (e) => {
       const i = at(e);
@@ -113,17 +254,18 @@ export class Chart {
     });
 
     this.cv.addEventListener('click', (e) => {
+      if (this.cv.dataset.dragged === '1') { this.cv.dataset.dragged = ''; return; }
       const i = at(e);
-      if (i >= 0 && this.bars[i]) this.onPick(this.bars[i], i, this.bars);
+      if (i >= 0 && this.shown[i]) this.onPick(this.shown[i], i, this.shown);
     });
   }
 
   #showTip(e) {
     if (!this.tip || this.hover < 0) return;
-    const b = this.bars[this.hover];
+    const b = this.shown[this.hover];
     if (!b) return;
 
-    const prev = this.bars[this.hover - 1];
+    const prev = this.shown[this.hover - 1];
     const ch = prev ? ((b.c - prev.c) / prev.c) * 100 : null;
     const when = this.intraday
       ? new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(b.t))
@@ -153,7 +295,7 @@ export class Chart {
   /* ─────────────── 자리 셈 ─────────────── */
 
   #geom() {
-    const n = this.bars.length;
+    const n = this.shown.length;
     const w = this.w - PAD.left - PAD.right;
     const step = n > 1 ? w / (n - 1) : w;
     return { x0: PAD.left, step, w };
@@ -161,7 +303,7 @@ export class Chart {
 
   #scale() {
     let lo = Infinity, hi = -Infinity;
-    for (const b of this.bars) { if (b.l < lo) lo = b.l; if (b.h > hi) hi = b.h; }
+    for (const b of this.shown) { if (b.l < lo) lo = b.l; if (b.h > hi) hi = b.h; }
     // 겹쳐 그릴 지표도 눈금 안에 들어와야 한다. 볼린저 상단이 값의
     // 꼭대기를 넘는 일이 흔한데, 넣지 않으면 그 줄만 잘려 나간다.
     for (const ind of this.overlay || []) {
@@ -191,7 +333,7 @@ export class Chart {
     const g = this.ctx;
     if (!g || !this.w) return;
     g.clearRect(0, 0, this.w, this.h);
-    if (!this.bars.length) return;
+    if (!this.shown.length) return;
 
     const s = this.#scale();
     if (!s) return;
@@ -199,7 +341,7 @@ export class Chart {
 
     const cUp   = this.#css('--up', '#e2564a');
     const cDown = this.#css('--down', '#4f92e6');
-    const cLine = this.#css('--line-soft', 'rgba(224,196,137,.07)');
+    const cLine = this.#css('--line-soft', 'rgba(26,24,23,.08)');
     const cText = this.#css('--tx-600', '#4c4763');
     const cGold = this.#css('--gold-500', '#b98f45');
     const cJade = this.#css('--jade-500', '#5f9481');
@@ -222,10 +364,10 @@ export class Chart {
     /* ── 아래 날짜 ── */
     g.textAlign = 'center';
     g.textBaseline = 'top';
-    const marks = Math.min(6, this.bars.length);
+    const marks = Math.min(6, this.shown.length);
     for (let i = 0; i < marks; i++) {
-      const idx = Math.round((this.bars.length - 1) * (i / (marks - 1 || 1)));
-      const b = this.bars[idx];
+      const idx = Math.round((this.shown.length - 1) * (i / (marks - 1 || 1)));
+      const b = this.shown[idx];
       if (!b) continue;
       const x = x0 + idx * step;
       const label = this.intraday
@@ -256,11 +398,11 @@ export class Chart {
     }
 
     /* ── 십자선 ── */
-    if (this.hover >= 0 && this.bars[this.hover]) {
-      const b = this.bars[this.hover];
+    if (this.hover >= 0 && this.shown[this.hover]) {
+      const b = this.shown[this.hover];
       const x = Math.round(x0 + this.hover * step) + 0.5;
       g.save();
-      g.strokeStyle = 'rgba(224,196,137,.34)';
+      g.strokeStyle = 'rgba(26,24,23,.34)';
       g.setLineDash([3, 4]);
       g.lineWidth = 1;
       g.beginPath(); g.moveTo(x, PAD.top); g.lineTo(x, this.h - PAD.bottom); g.stroke();
@@ -270,7 +412,7 @@ export class Chart {
 
       // 오른쪽에 지금 값을 못박아 둔다
       g.fillStyle = 'rgba(9,7,20,.94)';
-      g.strokeStyle = 'rgba(224,196,137,.4)';
+      g.strokeStyle = 'rgba(26,24,23,.4)';
       g.lineWidth = 1;
       const label = px(b.c);
       g.font = '11px "IBM Plex Mono", monospace';
@@ -285,9 +427,9 @@ export class Chart {
   }
 
   #candles(g, s, x0, step, bw, cUp, cDown) {
-    for (let i = 0; i < this.bars.length; i++) {
-      const b = this.bars[i];
-      const prev = this.bars[i - 1];
+    for (let i = 0; i < this.shown.length; i++) {
+      const b = this.shown[i];
+      const prev = this.shown[i - 1];
       // 한국 관행대로: 전일 종가보다 높으면 오름색
       const up = prev ? b.c >= prev.c : b.c >= b.o;
       const col = up ? cUp : cDown;
@@ -311,12 +453,12 @@ export class Chart {
   }
 
   #area(g, s, x0, step, cUp, cDown) {
-    const first = this.bars[0].c;
-    const last = this.bars[this.bars.length - 1].c;
+    const first = this.shown[0].c;
+    const last = this.shown[this.shown.length - 1].c;
     const col = last >= first ? cUp : cDown;
 
     g.beginPath();
-    this.bars.forEach((b, i) => {
+    this.shown.forEach((b, i) => {
       const x = x0 + i * step, y = s.y(b.c);
       i ? g.lineTo(x, y) : g.moveTo(x, y);
     });
@@ -326,7 +468,7 @@ export class Chart {
     fill.addColorStop(0, this.#alpha(col, 0.26));
     fill.addColorStop(1, this.#alpha(col, 0));
     g.save();
-    g.lineTo(x0 + (this.bars.length - 1) * step, s.bot);
+    g.lineTo(x0 + (this.shown.length - 1) * step, s.bot);
     g.lineTo(x0, s.bot);
     g.closePath();
     g.fillStyle = fill;
@@ -334,7 +476,7 @@ export class Chart {
     g.restore();
 
     g.beginPath();
-    this.bars.forEach((b, i) => {
+    this.shown.forEach((b, i) => {
       const x = x0 + i * step, y = s.y(b.c);
       i ? g.lineTo(x, y) : g.moveTo(x, y);
     });
@@ -522,7 +664,7 @@ export class LowerChart {
 
     const css = (n, f) => (getComputedStyle(document.documentElement).getPropertyValue(n).trim() || f);
     const color = css(colorVar(ind.ind.color), '#d0ab63');
-    const faint = css('--line-soft', 'rgba(224,196,137,.07)');
+    const faint = css('--line-soft', 'rgba(26,24,23,.08)');
     const dim = css('--tx-600', '#4c4763');
 
     /* 눈금선 — 상대강도의 30·70 처럼 뜻이 있는 자리 */

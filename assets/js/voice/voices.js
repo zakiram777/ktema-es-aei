@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    voices.js — 브라우저가 가진 목소리를 고르는 눈
 
-   자키람은 여성의 목소리로 말한다. 그런데 Web Speech 규격에는
+   유리아는 여성의 목소리로 말한다. 그런데 Web Speech 규격에는
    성별 항목이 없다. 남는 단서는 이름뿐이라, 이름표를 들고 가른다.
    플랫폼마다 부르는 이름이 정해져 있어서 실제로는 잘 맞는다.
 
@@ -131,7 +131,7 @@ export async function best(langBase = 'ko', opts = {}) {
   const mine = all.filter((v) => v.base === langBase);
   let pool = mine.length ? mine : all;
 
-  // 자키람은 여성의 목소리로 말한다. 여성으로 짚이는 것이 하나라도
+  // 유리아는 여성의 목소리로 말한다. 여성으로 짚이는 것이 하나라도
   // 있으면 남성으로 짚이는 것은 아예 후보에서 뺀다. (성별을 못 가린
   // 것은 남긴다 — 이름만으로는 모를 뿐 여성일 수 있다)
   if (opts.femaleOnly !== false) {
@@ -238,6 +238,6 @@ export const presetById = (id) => PRESETS.find((p) => p.id === id) || PRESETS[0]
 
 /** 목소리를 시험할 때 읽는 말 */
 export const SAMPLE = {
-  ko: '자키람입니다. 오늘의 시장을 읽어 드리겠습니다.',
+  ko: '유리아입니다. 오늘의 시장을 읽어 드리겠습니다.',
   en: 'I am Zakiram. Let me read you the market.',
 };

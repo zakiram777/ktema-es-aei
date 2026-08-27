@@ -13,7 +13,6 @@ import { catalogue, forLang, PRESETS, presetById, SAMPLE, reload } from '../voic
 import { SOURCES } from '../news/sources.js';
 import { routeReport, forgetRoutes } from '../net/proxy.js';
 import { PROVIDERS, byId as providerById } from '../chat/providers.js';
-import { report as paceReport, forget as forgetPace } from '../voice/pace.js';
 
 export class Settings {
   constructor(hooks = {}) {
@@ -45,7 +44,7 @@ export class Settings {
   async build() {
     clear(this.body);
     this.body.appendChild(await this.#voiceGroup());
-    this.body.appendChild(this.#mouthGroup());
+    this.body.appendChild(this.#yuriaGroup());
     this.body.appendChild(this.#chatGroup());
     this.body.appendChild(this.#readingGroup());
     this.body.appendChild(this.#newsGroup());
@@ -208,7 +207,7 @@ export class Settings {
 
     return this.#group(
       'Φωνή', '목소리',
-      '자키람은 여성의 목소리로 말합니다. 브라우저에 깔린 목소리를 쓰므로 기기마다 '
+      '유리아는 여성의 목소리로 말합니다. 브라우저에 깔린 목소리를 쓰므로 기기마다 '
       + '고를 수 있는 것이 다릅니다. 아래에서 목소리를 고르고, 그 위에 결(말투)을 '
       + '얹습니다 — 같은 목소리라도 결에 따라 다른 사람처럼 들립니다.',
       [
@@ -248,62 +247,7 @@ export class Settings {
     );
   }
 
-  /* ─────────────── 입 모양 ─────────────── */
-
-  #mouthGroup() {
-    const alignBtn = el('button.btn.btn--quiet', {
-      type: 'button',
-      onclick: () => {
-        const on = !alignBtn.classList.contains('btn--gold');
-        alignBtn.classList.toggle('btn--gold', on);
-        alignBtn.querySelector('.btn__label').textContent = on ? '맞추기 끝내기' : '입 자리 맞추기';
-        this.hooks.onAlign?.(on);
-        if (on) this.close();
-      },
-    }, [ico('voice'), el('span.btn__label', { text: '입 자리 맞추기' })]);
-
-    return this.#group(
-      'Χείλη', '입 모양',
-      '읽는 말을 음소로 풀어, 그 입 모양을 얼굴 위에 겹쳐 그립니다. 영상 속 입은 정해진 '
-      + '열세 편이라 말을 따라 움직이지 못합니다 — 그 자리를 이 획이 대신합니다.',
-      [
-        this.#toggle({ key: 'lipsync', label: '말을 따라 입이 움직이게' }),
-        this.#slider({
-          key: 'mouthStrength', label: '벌어지는 정도', min: 0.3, max: 1.6, step: 0.05,
-          fmt: (v) => `${Math.round(v * 100)}%`,
-        }),
-        this.#slider({
-          key: 'mouthSize', label: '입 크기', min: 5, max: 22, step: 0.5,
-          fmt: (v) => `${v.toFixed(1)}%`,
-        }),
-        el('p.row__note', {
-          text: '자리가 얼굴과 어긋나면 아래를 누른 뒤 자키람의 입 위를 누르십시오. '
-              + '누른 자리로 옮겨 갑니다. 한 번 맞추면 그대로 남습니다.',
-        }),
-        alignBtn,
-
-        /* 배운 말 속도 —
-           합성기의 실제 빠르기는 목소리마다 다르다. 어림만으로 입을
-           움직이면 문장 뒤로 갈수록 밀리므로, 목소리마다 그 배수를
-           재어 두고 다음 마디부터 맞춘다. 여기 그 값이 보인다. */
-        el('div.row', [
-          el('div.row__top', [el('span.row__label', { text: '배운 말 속도' })]),
-          el('p.row__note', {
-            text: paceLines(),
-            style: { whiteSpace: 'pre-line' },
-          }),
-          el('button.btn.btn--quiet.btn--tiny', {
-            type: 'button',
-            onclick: (e) => {
-              forgetPace();
-              e.target.closest('.row').querySelector('.row__note').textContent = paceLines();
-            },
-          }, el('span.btn__label', { text: '다시 배우게 하기' })),
-        ]),
-      ],
-    );
-  }
-
+  /** 결을 고르면 빠르기·높낮이 손잡이도 그 자리로 옮겨 간다 */
   #repaintSliders() {
     for (const row of [this.rateRow, this.pitchRow]) {
       const input = row?.querySelector('input');
@@ -312,6 +256,28 @@ export class Settings {
       input.value = String(store.get(key));
       input.dispatchEvent(new Event('input'));
     }
+  }
+
+  /* ─────────────── 유리아 ─────────────── */
+
+  #yuriaGroup() {
+    return this.#group(
+      'Ὑρία', '유리아',
+      '유리아는 한자리에 있지 않습니다. 화면을 누를 때, 말할 때, 그리고 이따금 '
+      + '문득 나타났다가 잠시 뒤에 사라집니다. 나타날 때마다 다른 낯빛입니다.',
+      [
+        this.#toggle({
+          key: 'yuria',
+          label: '유리아가 나타나게',
+          note: '꺼 두면 소리로만 말합니다. 소식과 시세는 그대로입니다.',
+          onChange: (on) => { if (!on) this.hooks.onYuriaOff?.(); },
+        }),
+        el('p.row__note', {
+          text: '머리의 “유리아” 단추를 누르면 기다리지 않고 지금 부를 수 있습니다. '
+              + '나타난 유리아를 누르면 물러납니다.',
+        }),
+      ],
+    );
   }
 
   /* ─────────────── 대화 ─────────────── */
@@ -402,9 +368,9 @@ export class Settings {
 
     return this.#group(
       'Διάλογος', '대화',
-      '자키람은 지금 스스로 생각하지 않습니다 — 시세와 소식을 보고 정해진 말을 할 뿐입니다. '
+      '유리아는 지금 스스로 생각하지 않습니다 — 시세와 소식을 보고 정해진 말을 할 뿐입니다. '
       + '그 뒤에 큰 모형을 이어 붙이면 진짜로 묻고 답할 수 있습니다. 답은 대화창에 전문으로, '
-      + '얼굴 곁 말풍선에는 요지만, 그리고 자키람의 목소리로 나갑니다.',
+      + '얼굴 곁 말풍선에는 요지만, 그리고 유리아의 목소리로 나갑니다.',
       [
         el('div.row', [el('div.row__top', [el('span.row__label', { text: '어디에 잇나' })]), pickRow]),
         body,
@@ -463,7 +429,7 @@ export class Settings {
 
   #alertGroup() {
     return this.#group('Κῆρυξ', '속보',
-      '새로 온 소식 가운데 급한 것을 자키람이 스스로 읽습니다. '
+      '새로 온 소식 가운데 급한 것을 유리아가 스스로 읽습니다. '
       + '무엇을 급하다고 볼지는 제목의 낱말로 가릅니다 — 속보·긴급·서킷브레이커·급락 같은 것들입니다.',
       [
         this.#toggle({ key: 'breaking', label: '속보를 스스로 읽어 준다' }),
@@ -641,7 +607,7 @@ export class Settings {
           '<b>Κτῆμα ἐς Ἀεί</b> — 투키디데스가 자기 역사서를 두고 한 말입니다. '
           + '당대의 갈채가 아니라 오래 남을 것을 위해 쓴다는 뜻입니다.<br><br>'
           + '소식은 각 언론사의 공개 피드에서, 시세는 야후 파이낸스에서 옵니다. '
-          + '시세는 지연될 수 있고 참고용입니다. 자키람은 보이는 것을 읽을 뿐, '
+          + '시세는 지연될 수 있고 참고용입니다. 유리아는 보이는 것을 읽을 뿐, '
           + '사거나 팔라고 말하지 않습니다.<br><br>'
           + '<b>지금 쓰고 있는 길</b><br><code>' + escapeHtml(routeText).replace(/\n/g, '<br>') + '</code>',
       }),
@@ -651,22 +617,4 @@ export class Settings {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-}
-
-/** 목소리마다 배운 말 속도를 사람이 읽는 줄로 */
-function paceLines() {
-  const rows = paceReport();
-  if (!rows.length) {
-    return '아직 배운 것이 없습니다. 자키람이 몇 마디 하고 나면 이 목소리가 어림보다 '
-         + '얼마나 빠른지 재어 둡니다. 그 뒤로는 첫 마디부터 입이 맞습니다.';
-  }
-  return rows
-    .map((r) => {
-      const pct = Math.round((r.scale - 1) * 100);
-      const how = pct === 0 ? '어림과 같음'
-        : pct > 0 ? '어림보다 ' + pct + '% 느림'
-        : '어림보다 ' + Math.abs(pct) + '% 빠름';
-      return r.voice + ' (' + r.lang + ') — ' + how + ' · ' + r.n + '번 재어 봄';
-    })
-    .join('\n');
 }

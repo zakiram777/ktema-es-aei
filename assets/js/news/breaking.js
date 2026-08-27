@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
-   breaking.js — 자키람이 먼저 입을 여는 자리
+   breaking.js — 유리아이 먼저 입을 여는 자리
 
-   속보가 오면 알림이 뜨고, 자키람이 낯빛을 바꾸고, 제목을 읽는다.
+   속보가 오면 알림이 뜨고, 유리아이 낯빛을 바꾸고, 제목을 읽는다.
    이것은 사람이 시키지 않은 소리다. 그러니 조심스러워야 한다.
 
      · 지금 다른 것을 읽고 있으면 끼어들지 않고 기다린다
@@ -15,7 +15,7 @@ import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import * as tts from '../voice/tts.js';
 import { forBreaking } from '../voice/script.js';
-import * as mood from '../zakiram/mood.js';
+import * as mood from '../yuria/mood.js';
 
 /** 알림이 스스로 사라지는 데 걸리는 시간 */
 const LIVE_MS = 22_000;

@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    chat.css — 말풍선과 대화
 
-   둘 다 자키람의 얼굴에 딸린 것이라 한자리에 모아 두었다.
+   둘 다 유리아의 얼굴에 딸린 것이라 한자리에 모아 두었다.
    말풍선은 얼굴 바로 아래에서 위를 향해 꼬리를 낸다 — 그 말이
    얼굴에서 나왔다는 것이 한눈에 보여야 한다.
    ═══════════════════════════════════════════════════════════════ */
@@ -21,9 +21,9 @@
   padding: 11px 13px 12px;
   border: 1px solid var(--gold-700);
   border-radius: var(--r-md);
-  background: linear-gradient(180deg, rgba(34, 28, 69, .92), rgba(18, 16, 40, .92));
+  background: linear-gradient(180deg, rgba(250, 248, 244, .92), rgba(255, 255, 255, .92));
   color: var(--tx-200);
-  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, .8);
+  box-shadow: 0 10px 30px -12px rgba(26, 24, 23, .8);
   opacity: 0;
   transform: translateY(-5px) scale(.985);
   transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
@@ -48,20 +48,20 @@
 }
 .bubble::after {
   top: -8px;
-  border-bottom: 9px solid rgba(34, 28, 69, .96);
+  border-bottom: 9px solid rgba(250, 248, 244, .96);
 }
 
 .bubble--urgent {
   border-color: var(--coral-700);
-  background: linear-gradient(180deg, rgba(70, 26, 22, .94), rgba(30, 14, 20, .94));
+  background: linear-gradient(180deg, rgba(255, 240, 238, .94), rgba(252, 236, 234, .94));
 }
 .bubble--urgent::before { border-bottom-color: var(--coral-700); }
-.bubble--urgent::after { border-bottom-color: rgba(70, 26, 22, .96); }
+.bubble--urgent::after { border-bottom-color: rgba(255, 240, 238, .96); }
 
 .bubble--link { cursor: pointer; }
 .bubble--link:hover {
   border-color: var(--gold-400);
-  background: linear-gradient(180deg, rgba(44, 36, 84, .96), rgba(24, 20, 52, .96));
+  background: linear-gradient(180deg, rgba(244, 241, 234, .96), rgba(250, 248, 244, .96));
 }
 .bubble--link:hover .bubble__hint { color: var(--gold-300); }
 
@@ -99,7 +99,7 @@
   padding: var(--s-3);
   border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
-  background: rgba(9, 7, 20, .5);
+  background: rgba(255, 255, 255, .5);
 }
 
 .chat__head {
@@ -146,13 +146,13 @@
 
 .msg--me {
   justify-self: end;
-  background: rgba(208, 171, 99, .12);
-  border: 1px solid rgba(208, 171, 99, .2);
+  background: rgba(26, 24, 23, .12);
+  border: 1px solid rgba(26, 24, 23, .2);
   color: var(--gold-100);
 }
 .msg--zak {
   justify-self: start;
-  background: rgba(34, 28, 69, .6);
+  background: rgba(250, 248, 244, .6);
   border: 1px solid var(--line-soft);
   color: var(--tx-200);
 }
@@ -184,7 +184,7 @@
   padding: 8px 10px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
-  background: rgba(6, 4, 16, .68);
+  background: rgba(255, 255, 255, .68);
   color: var(--tx-100);
   font-family: var(--f-read);
   font-size: var(--t-xs);
@@ -195,7 +195,7 @@
 .chat__input:focus {
   outline: none;
   border-color: var(--gold-600);
-  box-shadow: 0 0 0 3px rgba(208, 171, 99, .09);
+  box-shadow: 0 0 0 3px rgba(26, 24, 23, .09);
 }
 .chat__send {
   flex: none;

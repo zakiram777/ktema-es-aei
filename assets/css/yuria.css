@@ -1,0 +1,216 @@
+/* ═══════════════════════════════════════════════════════════════
+   yuria.css — 문득 거기 있는 사람
+
+   ── 어떻게 종이에 스미나 ──
+   원본은 흰 종이에 그린 그림이고 이 사이트도 흰 종이다. 그래서
+   오려 낼 것이 없다. mix-blend-mode: multiply 한 줄이면 흰 바탕은
+   사라지고 먹만 남는다. 알파 채널도, 마스크도, 크로마키도 필요
+   없다 — 종이 위에 종이를 겹치는 것과 같다.
+
+   ── 어떻게 나타나나 ──
+   스르르 밝아지지 않는다. 그것은 유령이 아니라 슬라이드다.
+   아주 살짝 위로 떠오르며 초점이 맞듯 흐림이 걷힌다. 그리고
+   나타나는 순간 한 번, 아주 짧게 어긋난다 (필름이 튀듯).
+
+   ── 왜 커서가 바뀌나 ──
+   유리아를 누르면 사라진다. 성가실 때 치울 수 있어야 한다.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 유리아가 사는 층 — 화면 전체를 덮되 아무것도 가로막지 않는다 */
+.yuria-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.yuria {
+  position: absolute;
+  margin: 0;
+  pointer-events: auto;
+  cursor: pointer;
+
+  /* 종이에 스미는 자리 */
+  mix-blend-mode: multiply;
+
+  opacity: 0;
+  transform: translateY(10px) scale(.985);
+  filter: blur(6px) contrast(1.02);
+  transition:
+    opacity var(--dur-slow) var(--ease),
+    transform var(--dur-slow) var(--ease),
+    filter var(--dur-slow) var(--ease);
+  will-change: opacity, transform, filter;
+}
+
+.yuria.is-in {
+  opacity: 1;
+  transform: none;
+  filter: blur(0) contrast(1.02);
+  animation: yuria-jitter 5.5s steps(1) infinite;
+}
+
+.yuria.is-out {
+  opacity: 0;
+  transform: translateY(-6px) scale(1.01);
+  filter: blur(9px);
+  transition-duration: 1.2s;
+}
+
+.yuria video,
+.yuria__still {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* 원본의 흰 바탕이 조금 회색일 때가 있다. 밝은 쪽을 조금 더
+     밀어 올려 종이와 같은 흰색으로 맞춘다. */
+  filter: contrast(1.06) brightness(1.03);
+}
+
+.yuria video {
+  position: relative;
+  z-index: 1;
+}
+
+/* 영상이 오기 전, 또는 자동 재생이 막혔을 때 남는 그림 */
+.yuria__still {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.yuria.is-still video { opacity: 0; }
+
+/* 발밑의 그늘 — 종이에서 떠 있지 않고 놓여 있게 보이도록 */
+.yuria__mark {
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: -2px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(50% 100% at 50% 100%, rgba(26, 24, 23, .22), transparent 72%);
+  pointer-events: none;
+}
+
+/* 말하는 동안 — 아주 옅은 테두리 하나. 소리가 어디서 나는지 알려 준다 */
+.yuria-layer.is-speaking .yuria::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border: 1px solid rgba(158, 31, 24, .28);
+  border-radius: 2px;
+  animation: yuria-breathe 2.6s var(--ease-in-out) infinite;
+  pointer-events: none;
+}
+
+/* 필름이 튀듯, 아주 가끔 한 프레임만 어긋난다.
+   늘 흔들리면 멀미가 나고, 전혀 안 흔들리면 사진이 된다. */
+@keyframes yuria-jitter {
+  0%, 96%   { transform: translate(0, 0); }
+  96.4%     { transform: translate(-1.5px, 1px); }
+  96.8%     { transform: translate(1px, -1px); }
+  97.2%     { transform: translate(0, 0); }
+}
+
+@keyframes yuria-breathe {
+  0%, 100% { opacity: .25; inset: -10px; }
+  50%      { opacity: .6;  inset: -14px; }
+}
+
+/* ── 말풍선이 유리아를 따라간다 ──
+   붙박이 자리가 없어졌으니 말풍선도 떠다녀야 한다. */
+.yuria-say {
+  position: fixed;
+  z-index: 61;
+  max-width: 290px;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yuria { transition-duration: .2s; filter: none; }
+  .yuria.is-in { animation: none; filter: none; }
+  .yuria.is-out { filter: none; }
+  .yuria-layer.is-speaking .yuria::after { animation: none; opacity: .4; }
+}
+
+/* 좁은 화면에서는 더 작게, 그리고 글에서 더 멀리 */
+@media (max-width: 640px) {
+  :root { --yuria-face: 148px; --yuria-full: 210px; }
+}
+
+/* ── 유리아를 부르는 단추 ──
+   기다리지 않고 지금 보고 싶을 때. 머리에 있다. */
+.btn--yuria .ico { transform: translateY(-1px); }
+
+/* ═══════════════════ 곁칸에 남은 것들 ═══════════════════
+
+   유리아가 떠난 자리다. 예전에는 그의 얼굴이 이 위를 다 채우고
+   있었다. 이제 이름표와 시장의 낯빛, 조종 단추, 대화가 그 자리를
+   나누어 쓴다. */
+
+/* ── 이름표 ── 유리아가 지금 어떤 낯빛인지 여기 적힌다 ── */
+.who {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: 0 2px var(--s-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+.who__name {
+  font-family: var(--f-greek);
+  font-size: 1.3rem;
+  letter-spacing: .1em;
+  color: var(--ink-100);
+}
+.who__ko {
+  font-size: var(--t-xs);
+  letter-spacing: .12em;
+  color: var(--tx-500);
+}
+.who__mood {
+  margin-left: auto;
+  font-size: var(--t-xs);
+  letter-spacing: .16em;
+  color: var(--blood-500);
+  transition: color var(--dur-slow) var(--ease);
+}
+
+.rail__controls { display: grid; gap: var(--s-2); }
+
+.rail__meta { padding: 0 2px; }
+
+.meter {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--s-3);
+  font-size: var(--t-xs);
+  color: var(--tx-500);
+}
+.meter__label { letter-spacing: .1em; }
+.meter__bar {
+  position: relative;
+  height: 3px;
+  border-radius: 99px;
+  background: linear-gradient(to right, var(--down), var(--paper-300) 50%, var(--up));
+  opacity: .8;
+}
+.meter__bar i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 9px; height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: var(--ink-200);
+  box-shadow: 0 0 0 2px var(--paper-050);
+  transition: left 1.4s var(--ease);
+}
+.meter__val {
+  font-family: var(--f-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-300);
+  min-width: 3.4em;
+  text-align: right;
+}

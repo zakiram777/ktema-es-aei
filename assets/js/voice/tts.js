@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   tts.js — 자키람의 목
+   tts.js — 유리아의 목
 
    Web Speech 의 speechSynthesis 를 쓴다. 브라우저에 이미 들어 있어
    열쇠도 서버도 필요 없고, 기기에 깔린 목소리를 그대로 고를 수 있다.
@@ -86,7 +86,7 @@ export async function refreshVoices() {
  * @returns {{stop:()=>void, done:Promise<boolean>}}
  */
 export function speak(text, opts = {}) {
-  stop();   // 앞말은 끊는다. 자키람은 한 번에 한 가지만 말한다.
+  stop();   // 앞말은 끊는다. 유리아은 한 번에 한 가지만 말한다.
 
   if (!supported || store.get('muted')) {
     opts.onend?.(false);
@@ -172,8 +172,7 @@ function next(me) {
   u.onstart = () => {
     if (!me.alive || job !== me) return;
     me.opts.onchunk?.(chunk.line ?? idx, line);
-    // 입 모양을 만드는 쪽(zakiram/mouth.js)이 이것을 듣는다.
-    // 무엇을, 어느 말로, 얼마나 빠르게 읽는지가 있어야 음소를 풀 수 있다.
+    // 지금 무엇을 읽고 있는지 — 읽기 판이 문단을 짚을 때 듣는다
     emit('speak:chunk', {
       index: idx, text: line, lang: chunk.lang, rate: u.rate,
       voice: v ? v.name : '',
@@ -201,8 +200,6 @@ function next(me) {
   u.onend = () => {
     clearInterval(guess);
     if (!me.alive || job !== me) return;
-    // 이 마디를 읽는 데 실제로 걸린 시간. 입 쪽(zakiram/mouth.js)이
-    // 이것으로 이 목소리의 참 속도를 배운다.
     emit('speak:chunkend', { index: idx, ms: Date.now() - t0, lang: chunk.lang });
     me.at += 1;
     // 문장과 문장 사이의 숨

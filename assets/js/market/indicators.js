@@ -16,6 +16,8 @@
    가격과 달라 같이 그리면 둘 다 못 읽는다).
    ═══════════════════════════════════════════════════════════════ */
 
+import { evaluate } from './formula.js';
+
 /* ─────────────── 밑감 ─────────────── */
 
 const closes = (bars) => bars.map((b) => b.c);
@@ -190,6 +192,28 @@ export const KINDS = [
       };
     },
   },
+  {
+    id: 'fx', ko: '수식', gr: 'Λόγος', pane: 'lower',
+    fields: [],
+    free: true,                          // 값이 아니라 글을 받는다
+    note: '직접 적은 수식. close, ma(close,20) 같은 것을 쓸 수 있습니다. '
+        + '예: (close - ma(close, 20)) / ma(close, 20) * 100',
+    calc: (bars, c) => {
+      const got = evaluate(c.expr || '', bars);
+      if (!got.ok) {
+        // 틀린 수식 때문에 차트가 통째로 멎으면 안 된다.
+        // 빈 줄을 돌려주고, 왜 틀렸는지는 이름표에 적어 둔다.
+        return {
+          lines: [{ key: 'fx', label: '수식', values: new Array(bars.length).fill(null) }],
+          error: got.why,
+        };
+      }
+      return {
+        lines: [{ key: 'fx', label: c.label || '수식', values: got.values }],
+        levels: c.zero ? [0] : [],
+      };
+    },
+  },
 ];
 
 export const kindById = (id) => KINDS.find((k) => k.id === id) || null;
@@ -207,6 +231,13 @@ export function blank(kindId) {
   const k = kindById(kindId) || KINDS[0];
   const cfg = {};
   for (const f of k.fields) cfg[f.key] = f.def;
+  // 수식 틀은 값이 아니라 글을 받는다. 처음에는 흔히 쓰는 것 하나를
+  // 넣어 둔다 — 빈 칸을 마주하면 무엇을 적어야 할지 알기 어렵다.
+  if (k.free) {
+    cfg.expr = '(close - ma(close, 20)) / ma(close, 20) * 100';
+    cfg.label = '20일선 이격도';
+    cfg.zero = true;
+  }
   return {
     id: k.id + '-' + Date.now().toString(36),
     kind: k.id,
@@ -220,6 +251,7 @@ export function blank(kindId) {
 export function nameOf(ind) {
   const k = kindById(ind.kind);
   if (!k) return ind.id;
+  if (k.free) return (ind.cfg && ind.cfg.label) || k.ko;
   const vals = k.fields.map((f) => ind.cfg[f.key]).join('·');
   return vals ? k.ko + ' ' + vals : k.ko;
 }
@@ -233,6 +265,13 @@ export function sane(ind) {
     let v = Number(ind.cfg ? ind.cfg[f.key] : NaN);
     if (!Number.isFinite(v)) v = f.def;
     cfg[f.key] = Math.max(f.min, Math.min(f.max, v));
+  }
+  if (k.free) {
+    // 수식은 글이다. 길이만 막아 두고 내용은 formula.js 가 가린다 —
+    // 거기서는 숫자와 정해진 함수 말고는 아무것도 읽지 않는다.
+    cfg.expr = String((ind.cfg && ind.cfg.expr) || '').slice(0, 600);
+    cfg.label = String((ind.cfg && ind.cfg.label) || '').slice(0, 40);
+    cfg.zero = !!(ind.cfg && ind.cfg.zero);
   }
   return {
     id: ind.id || blank(k.id).id,

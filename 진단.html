@@ -46,15 +46,15 @@
   <div class="bar"><i id="bar"></i></div>
 
   <section><h2>1. 어디서 열었나</h2><div id="env"></div></section>
-  <section><h2>2. 자키람 영상 파일</h2><div id="files"></div></section>
+  <section><h2>2. 유리아의 낯빛</h2><div id="files"></div></section>
   <section>
     <h2>3. 영상이 실제로 그려지나</h2>
     <div id="video"></div>
     <div class="stage" style="margin-top:12px">
       <video id="probe" muted playsinline preload="auto"></video>
       <canvas id="shot" width="150" height="203"></canvas>
-      <div class="detail">왼쪽이 살아 움직이고 오른쪽에 얼굴이 잡히면 정상입니다.<br>
-        둘 다 검으면 영상이 그려지지 않는 것입니다.</div>
+      <div class="detail">왼쪽이 살아 움직이고 오른쪽에 검은 그림이 잡히면 정상입니다.<br>
+        오른쪽이 온통 희면 그림이 그려지지 않는 것입니다.</div>
     </div>
   </section>
   <section><h2>4. 목소리</h2><div id="voice"></div></section>
@@ -128,7 +128,7 @@ function render() {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduce) {
     put('env', 'warn', '"동작 줄이기"가 켜져 있습니다',
-        '윈도우 설정 → 접근성 → 시각 효과 → 애니메이션 효과. 켜져 있으면 배경과 전환이 멈춥니다. 자키람 영상 자체는 나옵니다.');
+        '윈도우 설정 → 접근성 → 시각 효과 → 애니메이션 효과. 켜져 있으면 배경과 전환이 멈춥니다. 유리아 영상 자체는 나옵니다.');
   } else {
     put('env', 'ok', '동작 줄이기 꺼짐');
   }
@@ -137,20 +137,30 @@ function render() {
 
 /* ── 2. 파일 ── */
 (async function () {
-  let ok = 0, bad = [];
-  for (let i = 1; i <= 13; i++) {
-    const n = String(i).padStart(2, '0');
+  // 전신 하나 + 고요한 낯빛 열둘 + 격한 낯빛 열둘
+  const want = ['full'];
+  for (let i = 1; i <= 12; i++) want.push('calm-' + String(i).padStart(2, '0'));
+  for (let i = 1; i <= 12; i++) want.push('wild-' + String(i).padStart(2, '0'));
+
+  let ok = 0;
+  const bad = [];
+  for (const name of want) {
     try {
-      const r = await fetch('assets/media/zakiram/' + n + '.mp4', { method: 'HEAD' });
-      if (r.ok) ok++; else bad.push(n + ' (' + r.status + ')');
-    } catch (e) { bad.push(n + ' (못 받음)'); }
+      const r = await fetch('assets/media/yuria/' + name + '.mp4', { method: 'HEAD' });
+      if (r.ok) ok++; else bad.push(name + ' (' + r.status + ')');
+    } catch (e) { bad.push(name + ' (못 받음)'); }
   }
-  if (ok === 13) put('files', 'ok', '영상 13편 모두 있습니다');
-  else put('files', 'bad', '영상 ' + ok + '편만 있습니다', '없는 것: ' + bad.join(', ') +
-       ' — 압축을 다시 풀어 보십시오.');
+
+  if (ok === want.length) {
+    put('files', 'ok', '유리아의 낯빛 ' + want.length + '가지가 모두 있습니다',
+        '전신 하나, 고요한 낯빛 열둘, 격한 낯빛 열둘.');
+  } else {
+    put('files', 'bad', '낯빛 ' + ok + '가지만 있습니다',
+        '없는 것: ' + bad.join(', ') + ' — 압축을 다시 풀어 보십시오.');
+  }
 
   try {
-    const r = await fetch('assets/media/zakiram/13.mp4', { method: 'HEAD' });
+    const r = await fetch('assets/media/yuria/full.mp4', { method: 'HEAD' });
     const type = r.headers.get('content-type') || '(없음)';
     if (/video\/mp4/i.test(type)) put('files', 'ok', '서버가 형식을 바르게 알려 줍니다 — ' + type);
     else put('files', 'warn', '서버가 형식을 이상하게 알려 줍니다 — ' + type,
@@ -163,7 +173,7 @@ function render() {
 (async function () {
   const v = document.getElementById('probe');
   const shot = document.getElementById('shot');
-  v.src = 'assets/media/zakiram/13.mp4';
+  v.src = 'assets/media/yuria/calm-04.mp4';
 
   const loaded = await new Promise((res) => {
     v.onloadeddata = () => res(true);
@@ -179,39 +189,56 @@ function render() {
   put('video', 'ok', '영상을 읽었습니다 — ' + v.videoWidth + '×' + v.videoHeight +
       ', ' + v.duration.toFixed(1) + '초');
 
-  v.currentTime = 8;
+  v.currentTime = 2;
   await new Promise((r) => { v.onseeked = r; setTimeout(r, 3000); });
 
-  // 픽셀이 실제로 나오나
+  /* 유리아는 흰 종이에 그린 그림이라, 그림이 나오는지를 '밝은가'로
+     묻는 것은 뜻이 없다 — 배경이 온통 희기 때문이다. 대신 종이 위에
+     multiply 로 겹쳐 놓고, 배경은 종이 그대로인지 · 가운데는 먹빛인지
+     둘 다 본다. 이것이 실제로 화면에서 벌어지는 일과 같다. */
   try {
     const g = shot.getContext('2d');
+    g.fillStyle = '#faf8f4';
+    g.fillRect(0, 0, shot.width, shot.height);
+    g.globalCompositeOperation = 'multiply';
     g.drawImage(v, 0, 0, shot.width, shot.height);
+
     const d = g.getImageData(0, 0, shot.width, shot.height).data;
-    let mx = 0, sum = 0;
+    const lum = (i) => d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11;
+
+    let dark = 0, total = 0, cornerSum = 0;
     for (let i = 0; i < d.length; i += 4) {
-      const l = (d[i] + d[i + 1] + d[i + 2]) / 3;
-      sum += l; if (l > mx) mx = l;
+      const l = lum(i);
+      total += 1;
+      if (l < 90) dark += 1;
     }
-    const avg = Math.round(sum / (d.length / 4));
-    if (mx > 30) put('video', 'ok', '그림이 나옵니다 (밝기 평균 ' + avg + ', 최대 ' + Math.round(mx) + ')');
-    else put('video', 'bad', '영상이 검게 나옵니다 (밝기 최대 ' + Math.round(mx) + ')',
-             '그래픽 드라이버나 하드웨어 가속 문제일 수 있습니다. 브라우저 설정에서 하드웨어 가속을 꺼 보십시오.');
+    for (const [x, y] of [[2, 2], [shot.width - 3, 2], [2, shot.height - 3]]) {
+      cornerSum += lum((y * shot.width + x) * 4);
+    }
+    const corner = Math.round(cornerSum / 3);
+    const inkPct = Math.round((dark / total) * 100);
+
+    if (inkPct < 3) {
+      put('video', 'bad', '그림이 나오지 않습니다 (먹빛 ' + inkPct + '%)',
+          '그래픽 드라이버나 하드웨어 가속 문제일 수 있습니다. 브라우저 설정에서 하드웨어 가속을 꺼 보십시오.');
+    } else if (corner < 235) {
+      put('video', 'warn', '배경이 종이색보다 어둡습니다 (귀퉁이 밝기 ' + corner + ')',
+          '유리아 둘레에 네모난 자국이 보일 수 있습니다.');
+    } else {
+      put('video', 'ok', '종이에 잘 스밉니다 — 먹빛 ' + inkPct + '%, 귀퉁이 ' + corner,
+          '배경은 종이 그대로이고 그림만 남는다는 뜻입니다.');
+    }
   } catch (e) {
     put('video', 'warn', '그림을 확인하지 못했습니다', e.message);
   }
 
-  // 자동 재생이 되나
-  v.currentTime = 0;
   try {
     await v.play();
-    await new Promise((r) => setTimeout(r, 900));
-    if (v.currentTime > 0.1 && !v.paused) {
-      put('video', 'ok', '자동 재생이 됩니다 — 자키람이 움직입니다');
-    } else {
-      put('video', 'bad', '재생이 시작되지 않습니다 (멈춘 그림처럼 보입니다)');
-    }
+    put('video', 'ok', '자동 재생이 됩니다 — 유리아가 움직입니다');
+    v.pause();
   } catch (e) {
-    put('video', 'bad', '자동 재생이 막혔습니다', '주소창 왼쪽 자물쇠 → 사이트 설정에서 허용하거나, 화면을 한 번 눌러 주십시오.');
+    put('video', 'warn', '자동 재생이 막혀 있습니다',
+        '유리아가 정지 그림으로 나타납니다. 화면을 한 번 누르면 움직입니다.');
   }
   step();
 })();
@@ -251,7 +278,7 @@ function render() {
 
     put('voice', 'ok', '목소리 ' + all.length + '개를 찾았습니다');
 
-    // 자키람은 한국어와 영어를 둘 다 읽는다. 두 쪽 다 있어야 온전하다.
+    // 유리아는 한국어와 영어를 둘 다 읽는다. 두 쪽 다 있어야 온전하다.
     if (ko.length) put('voice', 'ok', '한국어 목소리 ' + ko.length + '개',
                        ko.map((x) => x.name).join(', ').slice(0, 200));
     else put('voice', 'bad', '한국어 목소리가 없습니다',
@@ -360,7 +387,7 @@ function render() {
     } else {
       put('net', 'bad', label + ' — 어느 길로도 못 받았습니다',
           '두드려 본 길: ' + tried.join(', ') + '. 회사 방화벽이나 백신이 막고 있거나, '
-          + '공개 프록시가 다 같이 멎었을 수 있습니다. 소식과 시세만 안 나오고 자키람은 정상입니다.');
+          + '공개 프록시가 다 같이 멎었을 수 있습니다. 소식과 시세만 안 나오고 유리아는 정상입니다.');
     }
   }
   step();

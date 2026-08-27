@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Κτῆμα ἐς Ἀεί</title>
-<meta name="description" content="Κτῆμα ἐς Ἀεί — 시장의 소식을 모으고, 자키람이 읽어 준다.">
-<meta name="theme-color" content="#08060e">
+<meta name="description" content="Κτῆμα ἐς Ἀεί — 시장의 소식을 모으고, 유리아가 읽어 준다.">
+<meta name="theme-color" content="#f4f1ea">
 <link rel="icon" href="assets/media/sigil.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="assets/media/zakiram/poster/11.jpg">
+<link rel="apple-touch-icon" href="assets/media/yuria/still.jpg">
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="Κτῆμα ἐς Ἀεί">
 <meta property="og:description" content="Κτῆμα ἐς Ἀεί">
-<meta property="og:image" content="assets/media/zakiram/poster/11.jpg">
+<meta property="og:image" content="assets/media/yuria/still.jpg">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="assets/css/base.css">
 <link rel="stylesheet" href="assets/css/ambience.css">
 <link rel="stylesheet" href="assets/css/shell.css">
-<link rel="stylesheet" href="assets/css/zakiram.css">
+<link rel="stylesheet" href="assets/css/yuria.css">
 <link rel="stylesheet" href="assets/css/news.css">
 <link rel="stylesheet" href="assets/css/market.css">
 <link rel="stylesheet" href="assets/css/views.css">
@@ -113,6 +113,9 @@
       <button class="btn btn--ghost" id="btnMute" type="button" aria-pressed="false" title="소리 끄기 / 켜기">
         <span class="ico" data-ico="sound"></span><span class="btn__label">소리</span>
       </button>
+      <button class="btn btn--ghost btn--yuria" id="btnYuria" type="button" title="유리아를 부른다">
+        <span class="ico" data-ico="eye"></span><span class="btn__label">유리아</span>
+      </button>
       <button class="btn btn--ghost" id="btnVoice" type="button" title="목소리 고르기">
         <span class="ico" data-ico="voice"></span><span class="btn__label">목소리</span>
       </button>
@@ -180,7 +183,7 @@
           </div>
         </div>
 
-        <p class="hint hint--speak">숫자를 누르면 자키람이 읽어 줍니다.</p>
+        <p class="hint hint--speak">숫자를 누르면 유리아가 읽어 줍니다.</p>
 
         <div class="board" id="board"></div>
       </section>
@@ -209,6 +212,8 @@
             </div>
             <div class="chart__price" id="chartPrice"></div>
             <div class="chart__ranges" id="chartRanges"></div>
+            <!-- 굴려서 당긴 만큼 여기 적힌다. 누르면 처음으로 돌아간다. -->
+            <div class="chart__zoom" id="chartZoom" hidden></div>
           </div>
 
           <div class="chart__stage" id="chartStage">
@@ -330,42 +335,23 @@
 
     </div>
 
-    <!-- ─────── 자키람 ─────── -->
+    <!-- ─────── 유리아 ─────── -->
     <aside class="rail" id="rail">
       <div class="rail__sticky">
 
-        <figure class="zak" id="zak" data-mood="serene">
-          <div class="zak__halo" aria-hidden="true"></div>
-          <div class="zak__frame">
-            <!-- 바닥에 깔린 정지 초상.
-                 영상이 못 뜨거나 코덱이 없거나 자동 재생이 막혀도
-                 자키람의 모습만은 반드시 보이게 하는 마지막 바닥이다.
-                 영상이 뜨면 그 위에 덮인다. -->
-            <img class="zak__still" src="assets/media/zakiram/poster/13.jpg"
-                 alt="자키람" decoding="async" fetchpriority="high">
-            <video class="zak__layer is-on" data-layer="a" muted playsinline preload="auto" disablepictureinpicture></video>
-            <video class="zak__layer" data-layer="b" muted playsinline preload="auto" disablepictureinpicture></video>
-            <div class="zak__tone" aria-hidden="true"></div>
-            <div class="zak__scrim" aria-hidden="true"></div>
-            <div class="zak__wave" id="zakWave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-            <div class="zak__wake" id="zakWake">
-              <span><b>Ἔγειρε</b>화면을 한 번 눌러<br>자키람을 깨워 주십시오</span>
-            </div>
-          </div>
-          <figcaption class="zak__id">
-            <span class="zak__name">Ζακιράμ</span>
-            <span class="zak__mood" id="zakMood"></span>
-          </figcaption>
-        </figure>
+        <!-- 유리아는 여기 붙박이로 서 있지 않다.
+             화면 아무 데나 나타났다 사라진다 (js/yuria/apparition.js).
+             그가 서 있던 자리는 이제 시장의 낯빛과 대화가 쓴다. -->
+        <div class="who" id="who">
+          <span class="who__name">Ὑρία</span>
+          <span class="who__ko">유리아</span>
+          <span class="who__mood" id="zakMood"></span>
+        </div>
 
-        <!-- 말풍선 — 속보와 대화의 '요지'가 여기 뜬다.
-             전문은 넣지 않는다. 속보 말풍선은 누르면 그 기사로 간다. -->
-        <div class="zak__bubble" id="zakBubble" hidden></div>
-
-        <!-- 자키람이 지금 하는 말(전문).
-             화면에는 내지 않는다 — 얼굴 옆에 글자가 길게 흐르면 눈이
-             그리로 가서 정작 자키람을 보지 않게 된다. 다만 화면
-             낭독기에게는 남겨 두어야 하므로 보이지 않는 자리에 적는다. -->
+        <!-- 유리아가 지금 하는 말(전문).
+             화면에는 내지 않는다 — 글자가 길게 흐르면 눈이 그리로 가서
+             정작 유리아를 보지 않게 된다. 다만 화면 낭독기에게는 남겨
+             두어야 하므로 보이지 않는 자리에 적는다. -->
         <p class="sr-only" id="sayText" aria-live="polite"></p>
 
         <div class="rail__controls">
@@ -378,9 +364,8 @@
         </div>
 
         <!-- ─────── 대화 ───────
-             얼굴 바로 아래에 둔다. 묻는 사람은 얼굴을 보면서 묻고,
-             자키람은 답하면서 입이 움직인다. 창을 따로 띄우면 그
-             이어짐이 끊긴다. -->
+             물으면 유리아가 나타나 답한다. 답하는 동안에는 사라지지
+             않는다 — 말하다 사라지면 그것은 고장이다. -->
         <section class="chat" id="chat" aria-labelledby="chatTitle">
           <header class="chat__head">
             <h3 class="chat__title" id="chatTitle">
@@ -394,7 +379,7 @@
 
           <form class="chat__form" id="chatForm">
             <textarea class="chat__input" id="chatInput" rows="1"
-                      placeholder="자키람에게 묻습니다"></textarea>
+                      placeholder="유리아에게 묻습니다"></textarea>
             <button class="btn btn--gold chat__send" id="chatSend" type="submit"
                     aria-label="묻는다">
               <span class="ico" data-ico="send"></span>
@@ -434,7 +419,7 @@
 
     <div class="reader__actions">
       <button class="btn btn--gold" id="btnRead" type="button">
-        <span class="ico" data-ico="voice"></span><span class="btn__label">자키람이 읽어 준다</span>
+        <span class="ico" data-ico="voice"></span><span class="btn__label">유리아가 읽어 준다</span>
       </button>
       <div class="seg" id="readLang" role="group" aria-label="읽을 언어">
         <button type="button" data-lang="ko" class="is-on">한국어</button>
@@ -461,6 +446,12 @@
     <div class="sheet__scroll" id="settingsBody"></div>
   </div>
 </div>
+
+<!-- ═══════════════════ 유리아 ═══════════════════
+     화면 전체를 덮는 층. 아무것도 가로막지 않고, 유리아가 나타날 때만
+     그 자리에 그가 생긴다. 말풍선도 그를 따라다닌다. -->
+<div class="yuria-layer" id="yuria" aria-hidden="true"></div>
+<div class="yuria-say" id="yuriaSay" hidden></div>
 
 <div class="alerts" id="alerts" aria-live="polite"></div>
 
