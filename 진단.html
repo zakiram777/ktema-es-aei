@@ -66,6 +66,15 @@
     </p>
   </section>
   <section>
+    <h2>2-3. 표를 읽을 수 있나</h2>
+    <div id="sheet"></div>
+    <p class="detail" style="margin-top:10px">
+      「자료」 화면은 엑셀 파일을 브라우저 안에서 직접 풉니다. 라이브러리를
+      쓰지 않고 브라우저에 이미 든 기계를 쓰므로, 아주 오래된 브라우저에서는
+      그 기계가 없을 수 있습니다. 그때도 CSV 는 그대로 읽힙니다.
+    </p>
+  </section>
+  <section>
     <h2>3. 바깥 열쇠</h2>
     <div id="keys"></div>
     <p class="detail" style="margin-top:10px">
@@ -98,10 +107,10 @@
 /* 검사들이 저마다 다른 속도로 끝나므로, 끝난 순서대로 적으면
    결과가 엉뚱한 제목 아래로 들어간다. 항목별로 담아 두었다가
    마지막에 순서대로 펴 낸다. */
-const GROUPS = { env: '환경', net: '바깥 연결', live: '실시간', keys: '바깥 열쇠', files: '영상 파일', video: '영상 재생' };
-const bucket = { env: [], net: [], live: [], keys: [], files: [], video: [] };
+const GROUPS = { env: '환경', net: '바깥 연결', live: '실시간', sheet: '표 읽기', keys: '바깥 열쇠', files: '영상 파일', video: '영상 재생' };
+const bucket = { env: [], net: [], live: [], sheet: [], keys: [], files: [], video: [] };
 let done = 0;
-const TOTAL = 6;
+const TOTAL = 7;
 
 function step() { document.getElementById('bar').style.width = (++done / TOTAL * 100) + '%'; }
 
@@ -480,6 +489,44 @@ function render() {
            '12초를 기다렸습니다. 방화벽이 조용히 삼키는 모양입니다.');
     }
   }, 12000);
+})();
+
+/* ── 7. 표 읽기 ──
+   엑셀(.xlsx)은 zip 이고 안에 든 것은 XML 이다. 브라우저에 압축 푸는
+   기계(DecompressionStream)가 있으면 라이브러리 없이 읽을 수 있다.
+
+   있다고 말만 하고 끝내지 않는다. 진짜로 눌렀다 풀어 보고, 나온 글자가
+   넣은 글자와 같은지까지 본다 — 있다고 해 놓고 안 되는 것이 가장 나쁘다. */
+(async function () {
+  const put1 = (state, label, detail) => { put('sheet', state, label, detail); step(); };
+
+  if (typeof DecompressionStream !== 'function') {
+    return put1('warn', '이 브라우저는 압축을 풀지 못합니다',
+      '엑셀(.xlsx)은 못 읽고 CSV 는 그대로 읽힙니다. '
+      + '엑셀에서 「다른 이름으로 저장 → CSV」로 바꿔 올리십시오.');
+  }
+
+  try {
+    const src = '가나다 ABC 123 — 눌렀다 푼다';
+    const enc = new TextEncoder().encode(src);
+    const packed = await new Response(
+      new Blob([enc]).stream().pipeThrough(new CompressionStream('deflate-raw'))
+    ).arrayBuffer();
+    const back = await new Response(
+      new Blob([packed]).stream().pipeThrough(new DecompressionStream('deflate-raw'))
+    ).text();
+
+    if (back !== src) {
+      return put1('bad', '압축을 풀었는데 글자가 달라집니다',
+        '넣은 것: ' + src + ' / 나온 것: ' + back);
+    }
+    put1('ok', '엑셀(.xlsx)을 읽을 수 있습니다',
+      enc.length + '바이트를 눌러 ' + packed.byteLength + '바이트로 만들고 '
+      + '도로 풀어 같은 글자가 나오는 것까지 확인했습니다.');
+  } catch (e) {
+    put1('warn', '압축 기계가 있는데 돌지 않습니다',
+      String(e && e.message || e) + '. CSV 로 바꿔 올리면 됩니다.');
+  }
 })();
 
 /* ── 복사 ── */

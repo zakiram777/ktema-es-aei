@@ -108,17 +108,47 @@ export const TAGS = {
 
 export const voiceById = (id) => VOICES.find((v) => v.id === id);
 
-/**
- * 그 사람을 찾는 주소.
- *
- * ── 왜 따옴표로 묶나 ──
- * 묶지 않으면 'Warren' 과 'Buffett' 이 따로 걸린다. 묶으면 그 이름이
- * 통째로 든 기사만 온다. 흔한 이름일수록 이 차이가 크다.
- */
-export function feedFor(v) {
-  if (v.q) return gnews(v.q, true);
-  const name = v.en || v.ko;
-  return gnews(`"${name}" (said OR says OR told OR wrote OR warned)`, false);
+/* ═══════════════════ 묶어서 묻기 ═══════════════════
+
+   ── 왜 한 사람씩 묻지 않나 ──
+   처음에는 스물몇 사람을 각각 물었다. 그랬더니 공개 프록시가 스물몇
+   번을 한꺼번에 두들겨 맞고 문을 닫았다. 오늘 몫이 통째로 0건이 되었다.
+
+   남의 호의로 도는 프록시다. 우리가 조심하지 않으면 다음 사람이 못
+   쓴다. 그리고 실제로 한 번에 물어도 결과는 나쁘지 않다 — 다섯 이름을
+   OR 로 묶어 한 번 물으면 백 건이 오고 그중 아흔일곱 건에 따옴표가
+   있었다.
+
+   ── 왜 따옴표로 묶나 ──
+   묶지 않으면 'Warren' 과 'Buffett' 이 따로 걸린다. 묶으면 그 이름이
+   통째로 든 기사만 온다.
+
+   ── 왜 다섯씩인가 ──
+   구글 뉴스가 한 번에 백 건까지 준다. 다섯이면 한 사람당 스무 건쯤
+   돌아가고, 열이면 열 건으로 줄어 목소리가 묻힌다. */
+
+const GROUP = 5;
+
+export function groups() {
+  const out = [];
+  const kr = VOICES.filter((v) => v.q);
+  const en = VOICES.filter((v) => !v.q);
+
+  for (let i = 0; i < en.length; i += GROUP) {
+    const mine = en.slice(i, i + GROUP);
+    out.push({
+      voices: mine,
+      url: gnews(mine.map((v) => `"${v.en || v.ko}"`).join(' OR '), false),
+    });
+  }
+  for (let i = 0; i < kr.length; i += GROUP) {
+    const mine = kr.slice(i, i + GROUP);
+    out.push({
+      voices: mine,
+      url: gnews(mine.map((v) => v.q).join(' OR '), true),
+    });
+  }
+  return out;
 }
 
 /* ═══════════════════ 원문 ═══════════════════

@@ -33,7 +33,9 @@ export class SayingsView {
     this.btn = $('#btnSay');
 
     this.tab = 'today';
-    this.items = w.saved();
+    const had = w.saved();
+    this.items = had.items;
+    this.papers = had.papers;
     this.busy = false;
 
     this.btn?.addEventListener('click', () => this.load({ fresh: true }));
@@ -73,6 +75,7 @@ export class SayingsView {
         onEach: (done, total) => this.#say(`묻는 중… ${done}/${total}`),
       });
       this.items = r.items;
+      this.papers = r.papers || [];
       this.#say(r.items.length
         ? `${dayStamp(new Date())} · ${r.items.length}건`
         + (r.cached ? ' · 오늘 이미 골라 둔 것' : ` · ${r.found}개에서 골랐습니다`)
@@ -125,11 +128,42 @@ export class SayingsView {
     const keptIds = new Set(w.kept().map((x) => x.id));
     for (const q of this.items) this.host.appendChild(this.#card(q, keptIds.has(q.id)));
 
+    this.#renderPapers();
+
     this.host.appendChild(el('p.say__foot', {
       text: '여기 실린 말은 그 사람들의 판단이지 이 사이트의 권유가 아닙니다. '
           + '유명한 사람이 한 말이라는 것은 그 말이 맞다는 뜻이 아닙니다 — '
           + '가장 크게 틀린 예측도 대개 가장 유명한 사람이 했습니다.',
     }));
+  }
+
+  /* 오늘 나온 원문.
+
+     ── 왜 격언과 갈라 두나 ──
+     연설문 목록의 제목은 말이 아니라 문서 이름이다. 'Cook, Outlook
+     for the U.S. and Alaskan Economies' 를 격언 자리에 앉히면 그
+     화면은 격언 화면이 아니게 된다. 값진 것이므로 버리지는 않되,
+     제 이름을 달아 아래에 둔다. */
+  #renderPapers() {
+    if (!this.papers?.length) return;
+
+    this.host.appendChild(el('h3.say__group', [
+      el('span.say__groupgr', { text: 'Πηγαί' }),
+      el('span.say__groupko', { text: '오늘 나온 원문' }),
+    ]));
+    this.host.appendChild(el('p.say__lead', {
+      text: '중앙은행이 낸 연설문과 발표입니다. 말을 옮긴 것이 아니라 문서 이름이므로 '
+          + '격언과 갈라 두었습니다. 시장을 움직이는 문장은 대개 여기 들어 있습니다.',
+    }));
+
+    this.host.appendChild(el('ul.say__papers', this.papers.map((p) => el('li', [
+      p.link
+        ? el('a', { href: p.link, target: '_blank', rel: 'noopener noreferrer', text: p.said })
+        : el('span', { text: p.said }),
+      el('span.say__papermeta', {
+        text: p.who + (p.at ? ' · ' + dayStamp(new Date(p.at)) : ''),
+      }),
+    ]))));
   }
 
   #card(q, isKept) {
@@ -152,9 +186,7 @@ export class SayingsView {
           text: dayStamp(when) + ' · ' + ago(q.at),
         }) : el('span.say__when', { text: '날짜 미상' }),
 
-        q.kind === 'speech' ? el('span.say__kind', { text: '연설문 제목' })
-          : q.kind === 'speech-quote' ? el('span.say__kind', { text: '연설 원문' })
-          : null,
+        q.kind === 'speech-quote' ? el('span.say__kind', { text: '연설 원문' }) : null,
 
         q.link ? el('a.say__link', {
           href: q.link, target: '_blank', rel: 'noopener noreferrer',

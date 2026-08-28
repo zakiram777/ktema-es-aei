@@ -33,7 +33,11 @@
      무엇인지 알아보기 직전에서 멈추는 짙기다 — 알아보게 되면
      그때부터 그것만 보인다. (assets/js/ui/ambience.js) -->
 <div class="veil" aria-hidden="true">
-  <video class="veil__film" id="veilFilm" muted playsinline loop preload="none"
+  <!-- 둘이다. 하나가 저물면서 다른 하나가 밝아진다 — 표정이 바뀌는 것으로
+       읽히려면 사이에 검은 틈이 없어야 한다. -->
+  <video class="veil__film" id="veilFilmA" muted playsinline loop preload="none"
+         disablepictureinpicture></video>
+  <video class="veil__film" id="veilFilmB" muted playsinline loop preload="none"
          disablepictureinpicture></video>
   <div class="veil__wash"></div>
   <canvas class="veil__grid" id="veilGrid"></canvas>
@@ -45,8 +49,12 @@
      자물쇠가 아니라 문턱이다 — 답이 달력에 적혀 있으니 막을 마음이
      있는 자를 막지 못한다. -->
 <section class="gate" id="gate">
+  <!-- 반투명한 판이 아니다. 종이를 오려 낸 형체가 그대로 서 있고,
+       그 표정이 몇 초에 한 번 바뀐다. -->
   <div class="gate__art" aria-hidden="true">
-    <video id="gateFilm" muted playsinline loop preload="auto"
+    <video class="gate__film" id="gateFilmA" muted playsinline loop preload="auto"
+           disablepictureinpicture></video>
+    <video class="gate__film" id="gateFilmB" muted playsinline loop preload="auto"
            disablepictureinpicture></video>
   </div>
 

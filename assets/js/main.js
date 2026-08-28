@@ -470,7 +470,7 @@ function build() {
   document.documentElement.dataset.tint = store.get('tint') || 'kr';
 
   /* ── 바탕 ── */
-  app.veil = new Veil({ film: $('#veilFilm'), grid: $('#veilGrid') });
+  app.veil = new Veil({ films: [$('#veilFilmA'), $('#veilFilmB')], grid: $('#veilGrid') });
   if (store.get('motion') && !calmly()) app.veil.start();
   else app.veil.pause();
 
@@ -1050,6 +1050,9 @@ async function enter() {
   // 남지 않도록 시간으로 한 번 더 치운다. setTimeout 은 rAF 와 달리
   // 창이 보이지 않아도 돈다.
   setTimeout(() => { gate.hidden = true; }, 1000);
+  // 관문의 표정 바꾸기를 멈춘다 — 안 보이는 영상 둘이 계속 돌면
+  // 배터리만 축낸다
+  app.stopGateFilm?.();
 
   try {
     // 폴더에 놓인 설정 파일이 있으면 화면을 짓기 전에 먼저 심는다.
@@ -1107,6 +1110,6 @@ function fail(err) {
   app.seeding = seedSettings();
   checkSelfProxy();
 
-  gateFilm($('#gateFilm'));
+  app.stopGateFilm = gateFilm([$('#gateFilmA'), $('#gateFilmB')]);
   wireGate();
 }());

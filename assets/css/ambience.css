@@ -26,32 +26,80 @@
   background: var(--bg-000);
 }
 
+/* ── 종이를 오려 낸다 ──
+   전에는 26px 로 흐려 형체를 지웠다. 그러면 화면 전체에 옅은 얼룩이
+   깔리고, 그 얼룩은 무엇도 아니면서 자리는 다 차지했다.
+
+   지금은 흐리는 대신 종이를 오려 낸다 (#yuriaCut). 밝기를 뒤집어
+   알파로 삼으므로 흰 종이는 비어 버리고 먹만 남는다. 화면의 절반쯤이
+   아예 투명해지니, 짙기를 조금 올려도 전보다 조용하다.
+
+   흐림은 2px 만 남긴다. 0으로 두면 선이 또렷해져 눈이 그리로 간다.
+   2px 이면 '저기 누가 있다' 까지만 읽히고 '누구인지' 로는 안 넘어간다.
+
+   한쪽으로 민다. 가운데 두면 숫자와 겹치는데, 숫자가 그림 위에 얹히면
+   둘 다 못 읽는다. 오른쪽 끝에 세워 두면 읽는 자리와 겹치지 않는다. */
 .veil__film {
   position: absolute;
-  inset: -6%;
-  width: 112%;
-  height: 112%;
-  object-fit: cover;
+  top: -4%;
+  right: -3%;
+  width: min(52vw, 720px);
+  height: 108%;
+  object-fit: contain;
+  object-position: right center;
   opacity: 0;
-  /* 흐리고, 색을 뺀 뒤, 다시 아주 옅게 푸른 쪽으로 민다.
-     원본은 흑백에 가까운데 그대로 두면 회색이 도드라진다. */
-  filter: blur(26px) saturate(.2) brightness(.42) contrast(1.35);
-  transform: scale(1.06);
-  transition: opacity 2.4s var(--ease-in-out);
+  filter: url(#yuriaCut) blur(2px);
+  transition: opacity 2.6s var(--ease-in-out);
   will-change: opacity;
 }
-.veil__film.is-lit { opacity: .085; }
+.veil__film.is-lit { opacity: .13; }
 
-/* 가운데를 눌러 어둡게, 가장자리만 조금 열어 둔다 */
+/* 좁은 화면에서는 오른쪽에 세울 자리가 없다. 그때는 아래로 내리고
+   더 흐리게 둔다 — 휴대폰에서는 글이 화면을 꽉 채우기 때문이다. */
+@media (max-width: 820px) {
+  .veil__film {
+    width: 84vw;
+    height: 60%;
+    top: auto;
+    bottom: 0;
+    object-position: right bottom;
+    filter: url(#yuriaCut) blur(3px);
+  }
+  .veil__film.is-lit { opacity: .07; }
+}
+
+/* 움직임을 싫어하는 사람에게는 표정이 바뀌지 않는다 (ambience.js 가
+   한 장만 그린다). 그 한 장이 계속 떠 있으므로 조금 더 낮춘다. */
+@media (prefers-reduced-motion: reduce) {
+  .veil__film.is-lit { opacity: .07; }
+}
+
+/* 읽는 자리를 눌러 어둡게 한다.
+
+   ── 전과 무엇이 다른가 ──
+   전에는 가운데가 가장 어둡고 가장자리가 열려 있었다. 그림이 화면을
+   꽉 채웠으므로 그렇게 눌러야 했다. 지금은 그림이 오른쪽에만 있으니
+   반대로 왼쪽 — 글이 앉는 자리 — 을 눌러 두고 오른쪽은 열어 둔다. */
 .veil__wash {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(120% 90% at 50% 40%,
-      rgba(11, 14, 20, .96) 0%,
-      rgba(11, 14, 20, .82) 45%,
-      rgba(11, 14, 20, .58) 100%),
+    linear-gradient(100deg,
+      rgba(11, 14, 20, .97) 0%,
+      rgba(11, 14, 20, .94) 46%,
+      rgba(11, 14, 20, .74) 74%,
+      rgba(11, 14, 20, .45) 100%),
     linear-gradient(180deg, rgba(41, 98, 255, .05), transparent 40%);
+}
+@media (max-width: 820px) {
+  .veil__wash {
+    background:
+      linear-gradient(180deg,
+        rgba(11, 14, 20, .97) 0%,
+        rgba(11, 14, 20, .93) 46%,
+        rgba(11, 14, 20, .74) 100%),
+      linear-gradient(180deg, rgba(41, 98, 255, .05), transparent 40%);
+  }
 }
 
 /* 시세 화면의 눈금. 아주 느리게 흐른다 (ui/ambience.js) */
@@ -102,32 +150,59 @@
 }
 .gate[hidden] { display: none; }
 
-/* 그림이 화면을 다 덮는다. 여기서는 주인공이므로 흐리지 않는다. */
+/* ── 반투명한 판을 걷어 냈다 ──
+   전에는 그림을 opacity .5 로 깔고 그 위에 어두운 원을 덮었다. 그러면
+   흰 종이가 회색 판으로 남아 화면 한복판을 차지했고, 사람이 나타난
+   것이 아니라 사진 한 장이 걸린 것으로 보였다.
+
+   지금은 종이를 오려 낸다 (#yuriaCut). 흰 바닥이 통째로 비므로 덮을
+   것이 없고, 짙기를 낮출 까닭도 없다. 형체는 그대로 두고 판만 없앤
+   것이라, 오히려 전보다 또렷하면서 조용하다. */
 .gate__art {
   position: absolute;
   inset: 0;
   overflow: hidden;
 }
+
+/* 글이 앉는 자리만 눌러 둔다. 그림 위에까지 덮으면 방금 걷어 낸 판을
+   다시 씌우는 셈이 된다. */
 .gate__art::after {
   content: "";
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(75% 65% at 50% 50%, rgba(11, 14, 20, .3) 0%, rgba(11, 14, 20, .93) 78%),
-    linear-gradient(180deg, transparent 40%, var(--bg-000) 96%);
+    radial-gradient(46% 40% at 50% 48%,
+      rgba(11, 14, 20, .88) 0%,
+      rgba(11, 14, 20, .55) 62%,
+      transparent 100%),
+    linear-gradient(180deg, rgba(11, 14, 20, .55) 0%, transparent 22%,
+                    transparent 76%, var(--bg-000) 100%);
 }
-.gate__art video {
+
+.gate__film {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* cover 로 늘리면 사람이 잘린다. 관문에서는 그림이 주인공이므로
+     통째로 보이는 편이 맞다. */
+  object-fit: contain;
   opacity: 0;
-  filter: grayscale(.5) contrast(1.25) brightness(.6);
-  transform: scale(1.08);
-  transition: opacity 2.2s var(--ease-in-out), transform 16s linear;
+  filter: url(#yuriaCut);
+  transform: scale(1.04);
+  transition: opacity 1.6s var(--ease-in-out), transform 12s linear;
 }
-.gate__art video.is-lit {
-  opacity: .5;
+.gate__film.is-lit {
+  opacity: 1;
   transform: scale(1);
+}
+/* 첫 장 — 숨은 탭에서 전이가 멎어 관문이 비는 것을 막는다 */
+.gate__film.is-instant { transition: none; }
+
+/* 움직임을 싫어하는 사람에게는 표정이 천천히만 바뀐다 */
+@media (prefers-reduced-motion: reduce) {
+  .gate__film { transition: opacity .01s; transform: none; }
+  .gate__film.is-lit { transform: none; }
 }
 
 .gate__inner {

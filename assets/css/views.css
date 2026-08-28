@@ -2474,3 +2474,10 @@
 }
 .say__person b { color: var(--tx-100); font-size: var(--t-sm); }
 .say__en { font-size: var(--t-xs); color: var(--tx-400); }
+
+/* 오늘 나온 원문 — 격언이 아니므로 인용 꼴을 쓰지 않는다 */
+.say__papers { margin: 0; padding-left: var(--s-4); }
+.say__papers li { margin-bottom: 6px; font-size: var(--t-xs); line-height: 1.7; }
+.say__papers a { color: var(--tx-200); text-decoration: none; }
+.say__papers a:hover { color: var(--key-500); text-decoration: underline; }
+.say__papermeta { display: block; color: var(--tx-500); }

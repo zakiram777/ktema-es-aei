@@ -27,7 +27,12 @@
 import { calmly, throttle } from '../core/dom.js';
 
 /* ink 폴더에 있는 것들. calm 은 잔잔하고 wild 는 격하다.
-   바탕에는 잔잔한 쪽만 쓴다 — 격한 것은 관문에서 한 번만. */
+
+   ── 전에는 잔잔한 쪽만 바탕에 썼다 ──
+   그때는 필름을 26px 로 흐려 형체를 지웠으므로, 격한 그림을 쓰면
+   얼룩만 커졌다. 지금은 종이를 오려 내어 형체만 남기므로 사정이
+   다르다 — 표정이 보이는 편이 낫고, 표정이 보이려면 스물넷을 다
+   써야 한다. 잔잔한 것과 격한 것이 번갈아 오면 그것이 표정 변화다. */
 const CALM = Array.from({ length: 12 }, (_, i) => `calm-${String(i + 1).padStart(2, '0')}`);
 const WILD = Array.from({ length: 12 }, (_, i) => `wild-${String(i + 1).padStart(2, '0')}`);
 
@@ -35,7 +40,30 @@ const MEDIA = 'assets/media/ink/';
 const clip = (id) => `${MEDIA}${id}.mp4`;
 const poster = (id) => `${MEDIA}poster/${id}.jpg`;
 
+const ALL = [...CALM, ...WILD];
+
+/* 무작위로 고르면 같은 것이 잇달아 나오는 일이 잦다. 스물넷을 섞어
+   한 바퀴 다 돌린 뒤에 다시 섞는다 — 그래야 '같은 표정만 나온다' 는
+   느낌이 없다. */
+function shuffled(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+/** 한 바퀴를 다 돌고 다시 섞는 차례표 */
+function deck(arr) {
+  let rest = shuffled(arr);
+  return () => {
+    if (!rest.length) rest = shuffled(arr);
+    return rest.pop();
+  };
+}
 
 /* 한 조각을 얼마나 오래 두는가. 짧으면 갈리는 것이 보이고, 보이면
    그때부터 사람이 배경을 본다. 40초쯤이면 알아채지 못한다. */
@@ -45,10 +73,13 @@ const SWAP_MS = 42_000;
 
 export class Veil {
   /**
-   * @param {{film:HTMLVideoElement, grid:HTMLCanvasElement}} nodes
+   * @param {{films:HTMLVideoElement[], grid:HTMLCanvasElement}} nodes
    */
-  constructor({ film, grid }) {
-    this.film = film;
+  constructor({ films, grid }) {
+    this.films = (films || []).filter(Boolean);
+    this.film = this.films[0] || null;      // 지금 보이는 쪽
+    this.at = 0;
+    this.next = deck(ALL);
     this.cv = grid;
     this.g = grid?.getContext('2d', { alpha: true }) || null;
 
@@ -89,27 +120,41 @@ export class Veil {
     };
   }
 
-  /* ── 필름 ── */
+  /* ── 필름 ──
 
-  /** 영상 하나를 건다. 갈릴 때는 검게 저물었다 다시 밝아진다. */
-  async play(id = pick(CALM)) {
-    if (!this.film) return;
-    const v = this.film;
+     ── 왜 둘을 번갈아 쓰나 ──
+     하나뿐일 때는 저물었다가 다시 밝아졌다. 그 사이 900ms 동안 배경이
+     통째로 비었고, 그것이 '표정이 바뀌었다' 가 아니라 '무언가 꺼졌다'
+     로 읽혔다. 둘을 겹쳐 두고 한쪽을 올리면서 다른 쪽을 내리면 빈 틈이
+     없다. 사람의 표정이 바뀌는 것도 그렇게 바뀐다. */
 
-    v.classList.remove('is-lit');
-    await new Promise((r) => setTimeout(r, 900));
+  /** 다음 표정을 건다. 앞의 것과 겹쳐 넘어간다. */
+  async play(id = this.next()) {
+    if (!this.films.length) return;
 
-    v.poster = poster(id);
-    v.src = clip(id);
-    v.load();
-    try { await v.play(); } catch { /* 자동 재생을 막는 브라우저 — 포스터만 남는다 */ }
+    // 쓸 쪽은 지금 안 보이는 쪽
+    const to = this.films[(this.at + 1) % this.films.length];
+    const from = this.films[this.at];
+    if (this.films.length > 1) this.at = (this.at + 1) % this.films.length;
+    this.film = to;
+
+    to.poster = poster(id);
+    to.src = clip(id);
+    to.load();
+    try { await to.play(); } catch { /* 자동 재생을 막는 브라우저 — 포스터만 남는다 */ }
 
     /* 다음 그림 프레임이 아니라 시간으로 켠다. 창이 뒤에 있거나
        최소화되어 있으면 그림 프레임이 오지 않는데, 그러면 필름이
-       영영 어두운 채로 남는다. setTimeout 은 창이 안 보여도 돈다.
-       (필름은 처음부터 opacity 0 으로 놓여 있으므로 갈아 끼우기
-       전에 한 프레임을 기다릴 까닭도 없다.) */
-    setTimeout(() => v.classList.add('is-lit'), 0);
+       영영 어두운 채로 남는다. setTimeout 은 창이 안 보여도 돈다. */
+    setTimeout(() => {
+      to.classList.add('is-lit');
+      if (from && from !== to) from.classList.remove('is-lit');
+    }, 0);
+
+    // 다 저문 쪽은 내려 둔다 — 안 보이는 영상을 계속 돌릴 까닭이 없다
+    if (from && from !== to) {
+      setTimeout(() => { if (!from.classList.contains('is-lit')) from.pause(); }, 2600);
+    }
   }
 
   #scheduleSwap() {
@@ -135,8 +180,7 @@ export class Veil {
     this.on = false;
     cancelAnimationFrame(this.raf);
     clearTimeout(this.swap);
-    this.film?.pause();
-    this.film?.classList.remove('is-lit');
+    for (const v of this.films) { v.pause(); v.classList.remove('is-lit'); }
   }
 
   #loop = () => {
@@ -203,12 +247,49 @@ export class Veil {
    여기서는 격한 쪽(wild)을 쓴다. 관문은 한 번만 보는 화면이고, 한 번
    보는 화면은 세게 때려도 된다. 들어오고 나면 이 그림은 다시 없다. */
 
-export function gateFilm(video) {
-  if (!video) return;
-  const id = pick(WILD);
-  video.poster = poster(id);
-  video.src = clip(id);
-  video.load();
-  video.play().catch(() => { /* 포스터만 남아도 된다 */ });
-  setTimeout(() => video.classList.add('is-lit'), 0);
+export function gateFilm(videos) {
+  const films = [].concat(videos).filter(Boolean);
+  if (!films.length) return () => {};
+
+  const next = deck(WILD);
+  let at = -1;
+
+  const show = () => {
+    const id = next();
+    const to = films[(at + 1) % films.length];
+    const from = at >= 0 ? films[at] : null;
+    at = (at + 1) % films.length;
+
+    to.poster = poster(id);
+    to.src = clip(id);
+    to.load();
+    to.play().catch(() => { /* 포스터만 남아도 된다 */ });
+
+    setTimeout(() => {
+      /* ── 첫 장은 전이 없이 켠다 ──
+         숨어 있는 문서에서는 전이가 나아가지 않는다. 뒤쪽 탭으로 열어
+         두었다가 나중에 보면, 그 사이 시작된 전이가 0에 멈춰 있어
+         관문이 텅 빈 채로 뜬다. 첫 장만은 곧바로 켜서 그 자리를 막는다.
+         두 번째부터는 사람이 보고 있는 중이므로 전이가 돈다. */
+      if (from) {
+        to.classList.add('is-lit');
+        from.classList.remove('is-lit');
+      } else {
+        to.classList.add('is-instant', 'is-lit');
+        setTimeout(() => to.classList.remove('is-instant'), 60);
+      }
+    }, 0);
+  };
+
+  show();
+
+  /* ── 왜 여기서는 자주 바꾸나 ──
+     바탕은 40초에 한 번 갈린다. 알아채면 안 되기 때문이다.
+     관문은 반대다. 알아채라고 두는 자리이고, 넉 자를 넣는 동안만
+     머무르므로 그 사이에 두어 번은 바뀌어야 '표정이 변한다' 가 된다. */
+  const timer = setInterval(() => {
+    if (!document.hidden) show();
+  }, 5200);
+
+  return () => clearInterval(timer);
 }
