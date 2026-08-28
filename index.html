@@ -170,6 +170,10 @@
                       title="원화로 환산해 본다">
                 <span class="btn__label">원화</span>
               </button>
+              <button class="btn btn--ghost btn--tiny" id="btnDiv" type="button"
+                      title="배당 이력과 취득가 대비 배당률">
+                <span class="btn__label">배당</span>
+              </button>
             </div>
           </div>
 
@@ -231,6 +235,19 @@
           </div>
           <div class="fin__body" id="finBody"></div>
         </div>
+
+        <!-- 배당 — 오래 든 사람에게는 이 숫자가 본 숫자다 -->
+        <div class="fin" id="divs" hidden>
+          <div class="inds__head">
+            <h3><span class="panel__gr">Μέρισμα</span><span class="panel__ko">배당</span></h3>
+            <p class="inds__note">
+              값이 오르내리는 것은 내가 못 정하지만, 배당은 회사가 해마다
+              정해서 실제로 보내 줍니다. 장부에 이 종목이 있으면
+              <b>취득가 대비 배당률</b>도 함께 냅니다.
+            </p>
+          </div>
+          <div class="divs__body" id="divsBody"></div>
+        </div>
       </section>
 
       <!-- ═══ 시세 ═══ -->
@@ -265,6 +282,9 @@
         </p>
         <div class="ana" id="ana"></div>
 
+        <!-- 나쁠 때만 드러나는 것 둘 -->
+        <div class="ana" id="ana2"></div>
+
         <!-- 시세 밑에 깔린 것 — 수익률곡선·실질금리·신용스프레드 -->
         <section class="ana__block" id="macroBlock">
           <div class="ana__h">
@@ -275,6 +295,16 @@
           </div>
           <div class="macro" id="macro"></div>
         </section>
+      </section>
+
+      <!-- ═══ 장부 ═══ -->
+      <section class="view" id="book" data-view="book" aria-label="장부" hidden>
+        <div class="panel__head">
+          <h2 class="panel__title">
+            <span class="panel__gr">Κτῆσις</span><span class="panel__ko">장부</span>
+          </h2>
+        </div>
+        <div class="bookwrap" id="bookwrap"></div>
       </section>
 
       <!-- ═══ 소식 ═══ -->
@@ -334,6 +364,9 @@
 
         <!-- 고쳐지지 않은 기록으로 나를 채점한다 -->
         <div class="jscore" id="jscore"></div>
+
+        <!-- 내가 내 규칙을 지켰나 -->
+        <div class="jrules" id="jrules"></div>
 
         <div class="jr__form" id="journalForm"></div>
         <div class="jr__filter" id="journalFilter"></div>

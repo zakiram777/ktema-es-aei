@@ -159,6 +159,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .ico[data-ico="sigma"]   { -webkit-mask-image: var(--i-sigma);   mask-image: var(--i-sigma); }
 .ico[data-ico="info"]    { -webkit-mask-image: var(--i-info);    mask-image: var(--i-info); }
 .ico[data-ico="search"]  { -webkit-mask-image: var(--i-search);  mask-image: var(--i-search); }
+.ico[data-ico="wallet"]  { -webkit-mask-image: var(--i-wallet);  mask-image: var(--i-wallet); }
 
 :root {
   --i-refresh: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 12a9 9 0 1 1-2.64-6.36'/><path d='M21 3v6h-6'/></svg>");
@@ -179,6 +180,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   --i-grid:    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z'/></svg>");
   --i-sigma:   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M18 4H6l6 8-6 8h12'/></svg>");
   --i-info:    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20m-1 4h2v2h-2zm0 4h2v8h-2z'/></svg>");
+  --i-wallet:  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M3 6a2 2 0 0 1 2-2h12v2H5v12h14v-3h2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zm14 2h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a3 3 0 0 1 0-6m1 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2'/></svg>");
   --i-search:  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-4-4'/></svg>");
   --i-eye:     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M12 5C6.5 5 2.7 9.4 1.5 11.4a1.2 1.2 0 0 0 0 1.2C2.7 14.6 6.5 19 12 19s9.3-4.4 10.5-6.4a1.2 1.2 0 0 0 0-1.2C21.3 9.4 17.5 5 12 5m0 2.6a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8m0 2.2a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4'/></svg>");
 }

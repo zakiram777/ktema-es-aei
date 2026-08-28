@@ -736,3 +736,249 @@ export function breadth(quotes, n = 20) {
   if (!total) return null;
   return { above, total, pct: (above / total) * 100, up, upPct: (up / total) * 100, n };
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   무너지는 상관과 스트레스 재생
+
+   앞의 것들은 "평소에 어땠나" 를 잰다. 이 둘은 "나쁠 때 어땠나" 를
+   잰다. 평소와 나쁠 때가 다르다는 것이 요점이고, 대개 아주 다르다.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─────────────── 무너지는 상관 ───────────────
+
+   열지도는 평균 상관을 보여 준다. 그런데 상관은 폭락할 때 1로
+   수렴한다 — 분산이 필요한 바로 그 순간에.
+
+   기준이 되는 것(대개 지수)이 크게 내린 날만 골라 상관을 다시 잰다.
+   "평소 0.31, 내리는 날 0.87" 같은 숫자가 나오면 나눠 담았다는 믿음이
+   거기서 끝난다.
+
+   ── 왜 기준의 하락일로 고르나 ──
+   두 종목이 함께 내린 날만 고르면 당연히 상관이 1에 가깝게 나온다.
+   고르는 잣대가 재려는 것과 같아지면 안 된다. 그래서 제3의 것(시장)이
+   내린 날로 고르고, 그 안에서 둘의 관계를 잰다.
+
+   ── 표본이 적다 ──
+   시장이 2% 넘게 내리는 날은 두 해에 열댓 번뿐이다. 스물 미만이면
+   숫자를 내지 않고 모자라다고 말한다. */
+
+/**
+ * @param {Array} barsA
+ * @param {Array} barsB
+ * @param {Array} barsMkt  고르는 잣대가 될 것
+ * @param {{drop?:number, minN?:number}} opts  drop 은 백분율 (기본 −2%)
+ */
+export function stressCorrelation(barsA, barsB, barsMkt, opts = {}) {
+  const drop = opts.drop ?? -2;
+  const minN = opts.minN ?? 20;
+
+  // 셋을 한 날짜에 세운다
+  const mapA = new Map(barsA.map((b) => [dayKey(b.t), b.c]));
+  const mapB = new Map(barsB.map((b) => [dayKey(b.t), b.c]));
+
+  const rows = [];
+  let pa = null, pb = null, pm = null;
+  for (const m of barsMkt) {
+    const k = dayKey(m.t);
+    const a = mapA.get(k), b = mapB.get(k);
+    if (a == null || b == null) { pa = pb = pm = null; continue; }
+    if (pa != null && pa > 0 && pb > 0 && pm > 0) {
+      rows.push({
+        mkt: (m.c / pm - 1) * 100,
+        a: Math.log(a / pa),
+        b: Math.log(b / pb),
+      });
+    }
+    pa = a; pb = b; pm = m.c;
+  }
+
+  if (rows.length < 40) return null;
+
+  const corrOf = (subset) => {
+    if (subset.length < 3) return null;
+    const ma = mean(subset.map((r) => r.a));
+    const mb = mean(subset.map((r) => r.b));
+    let num = 0, da = 0, db = 0;
+    for (const r of subset) {
+      const x = r.a - ma, y = r.b - mb;
+      num += x * y; da += x * x; db += y * y;
+    }
+    return da > 0 && db > 0 ? num / Math.sqrt(da * db) : null;
+  };
+
+  const bad = rows.filter((r) => r.mkt <= drop);
+  const calm = rows.filter((r) => r.mkt > drop);
+
+  const all = corrOf(rows);
+  const inBad = bad.length >= minN ? corrOf(bad) : null;
+  const inCalm = corrOf(calm);
+
+  return {
+    all,
+    bad: inBad,
+    calm: inCalm,
+    n: rows.length,
+    nBad: bad.length,
+    thin: bad.length < minN,
+    drop,
+    // 얼마나 무너지나 — 이 숫자 하나가 이 판의 알맹이다
+    collapse: (inBad != null && inCalm != null) ? inBad - inCalm : null,
+  };
+}
+
+/**
+ * 지켜보는 것 전부에 대해 한꺼번에.
+ * 기준(시장)에 대한 각자의 관계가 나쁠 때 어떻게 바뀌는지를 낸다.
+ */
+export function stressMatrix(items, market, opts = {}) {
+  const out = [];
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const got = stressCorrelation(items[i].bars, items[j].bars, market, opts);
+      if (!got || got.collapse == null) continue;
+      out.push({
+        a: items[i].ko || items[i].symbol,
+        b: items[j].ko || items[j].symbol,
+        aSym: items[i].symbol, bSym: items[j].symbol,
+        ...got,
+      });
+    }
+  }
+  return out.sort((x, y) => y.collapse - x.collapse);
+}
+
+/* ─────────────── 스트레스 재생 ───────────────
+
+   예측이 아니라 재생이다. "그때가 다시 오면" 이 아니라 "그때를 지금
+   조합으로 겪었다면".
+
+   실제로 있었던 구간의 날마다 움직임을 지금 비중에 그대로 대어 본다.
+   최대 낙폭 한 줄보다 훨씬 구체적으로 겁을 준다 — 얼마를 잃는지가
+   금액으로 나오기 때문이다.
+
+   ── 그때 없던 것은 어떻게 하나 ──
+   2008년에 상장도 안 했던 것이 흔하다. 그런 것은 지수에 대한 베타로
+   갈음한다. 갈음한 것은 반드시 표를 달아 둔다 — 지어낸 값을 진짜처럼
+   보이게 하는 것이 이 판에서 가장 나쁜 일이다.
+
+   베타조차 못 재면 그 종목은 아예 뺀다. 모르는 것은 0으로 두지 않고
+   빼는 편이 낫다. 0으로 두면 "그 종목은 안 움직였다" 는 거짓말이 된다. */
+
+/** 되짚어 볼 구간들 */
+export const EPISODES = [
+  {
+    id: 'gfc', ko: '금융위기', gr: 'Πτῶσις',
+    from: '2008-09-01', to: '2009-03-09',
+    note: '리먼이 넘어진 뒤 반년. 주식과 회사채가 함께 무너졌고, '
+        + '"나눠 담았다" 던 것들이 한꺼번에 내렸다.',
+  },
+  {
+    id: 'covid', ko: '코로나 급락', gr: 'Λοιμός',
+    from: '2020-02-19', to: '2020-03-23',
+    note: '한 달 남짓에 끝난 대신 속도가 가장 빨랐다. 팔 틈이 없었다는 '
+        + '뜻이기도 하다.',
+  },
+  {
+    id: 'tighten', ko: '2022 긴축', gr: 'Σφίγξις',
+    from: '2022-01-03', to: '2022-10-12',
+    note: '주식과 채권이 함께 내린 드문 해. 60/40 이 안 통한다는 말이 '
+        + '나온 것이 이때다.',
+  },
+  {
+    id: 'q4-2018', ko: '2018 4분기', gr: 'Χειμών',
+    from: '2018-10-01', to: '2018-12-24',
+    note: '금리를 올리던 끝자락. 석 달 만에 났다.',
+  },
+  {
+    id: 'euro', ko: '유럽 재정위기', gr: 'Ἔρις',
+    from: '2011-07-22', to: '2011-10-03',
+    note: '미국 신용등급이 깎이고 유럽이 흔들렸다.',
+  },
+];
+
+export const episodeById = (id) => EPISODES.find((e) => e.id === id) || EPISODES[0];
+
+/**
+ * 한 구간을 지금 조합에 대어 본다.
+ *
+ * @param {Array<{symbol, ko, bars, weight}>} holdings  weight 는 비중(합 1 아니어도 됨)
+ * @param {Array} marketBars  갈음할 때 쓸 지수
+ * @param {object} episode
+ * @param {{value?:number}} opts  value 를 주면 금액으로도 낸다
+ */
+export function replay(holdings, marketBars, episode, opts = {}) {
+  const from = Date.parse(episode.from);
+  const to = Date.parse(episode.to);
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return null;
+
+  const mkt = slice(marketBars, from, to);
+  if (mkt.length < 5) {
+    return { ok: false, why: `기준 지수에 ${episode.ko} 구간의 값이 없습니다. 더 긴 이력이 필요합니다.` };
+  }
+
+  const mktRet = (mkt[mkt.length - 1].c / mkt[0].c - 1) * 100;
+
+  const rows = [];
+  for (const h of holdings) {
+    const own = slice(h.bars, from, to);
+
+    if (own.length >= 5) {
+      rows.push({
+        symbol: h.symbol, ko: h.ko, weight: h.weight,
+        ret: (own[own.length - 1].c / own[0].c - 1) * 100,
+        worst: worstDay(own),
+        how: 'real',
+      });
+      continue;
+    }
+
+    // 그때 없던 것 — 지수에 대한 베타로 갈음한다
+    const ba = betaAlpha(marketBars, h.bars);
+    if (!ba || !Number.isFinite(ba.beta)) continue;      // 못 재면 뺀다
+    rows.push({
+      symbol: h.symbol, ko: h.ko, weight: h.weight,
+      ret: mktRet * ba.beta,
+      worst: worstDay(mkt) * ba.beta,
+      how: 'beta',
+      beta: ba.beta,
+      r2: ba.r2,
+    });
+  }
+
+  if (!rows.length) return { ok: false, why: '되짚을 수 있는 것이 하나도 없습니다.' };
+
+  const wsum = rows.reduce((a, r) => a + (r.weight || 0), 0) || rows.length;
+  for (const r of rows) r.w = (r.weight || 1) / wsum;
+
+  const total = rows.reduce((a, r) => a + r.w * r.ret, 0);
+  const estimated = rows.filter((r) => r.how === 'beta');
+
+  return {
+    ok: true,
+    episode,
+    rows: rows.sort((a, b) => a.ret - b.ret),
+    total,
+    mktRet,
+    days: Math.round((to - from) / 86_400_000),
+    // 갈음한 것이 얼마나 되나. 절반을 넘으면 이 숫자는 재생이 아니라 짐작이다.
+    estimatedCount: estimated.length,
+    estimatedWeight: estimated.reduce((a, r) => a + r.w, 0) * 100,
+    amount: Number.isFinite(opts.value) ? opts.value * (total / 100) : null,
+    value: opts.value,
+  };
+}
+
+/** 구간 안의 봉만 */
+function slice(bars, from, to) {
+  return (bars || []).filter((b) => b.t >= from && b.t <= to);
+}
+
+/** 그 구간에서 가장 나빴던 하루 */
+function worstDay(bars) {
+  let worst = 0;
+  for (let i = 1; i < bars.length; i++) {
+    const r = (bars[i].c / bars[i - 1].c - 1) * 100;
+    if (r < worst) worst = r;
+  }
+  return worst;
+}

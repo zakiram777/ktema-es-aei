@@ -37,6 +37,10 @@ import { Nav } from './ui/nav.js';
 import { Picker } from './ui/picker.js';
 import { WatchList } from './ui/watch.js';
 import { MacroPanel, FinPanel, FxSwitch, ScoreCard } from './ui/extras.js';
+import { StressPanel, DivPanel, RulePanel } from './ui/extras2.js';
+import { BookView } from './portfolio/view.js';
+import * as book from './portfolio/book.js';
+import * as fx from './market/fx.js';
 import * as filings from './market/filings.js';
 
 import { JournalView } from './journal/view.js';
@@ -240,6 +244,46 @@ function goSymbol(sym, meta) {
   app.nav?.show('chart');
 }
 
+/* ── 장부에 있는데 관심종목에 없는 것 ──
+
+   장부의 종목은 시세를 알아야 평가손익이 나온다. 관심종목에 없으면
+   아무도 안 부르므로 여기서 챙긴다. 관심종목에 넣지는 않는다 —
+   판 것까지 오른쪽 칸에 쌓이면 그 칸이 장부가 되어 버린다. */
+/* ── 섞인 돈을 하나로 모으려면 ──
+   장부에 달러와 원이 함께 있으면 합계를 낼 수 없다. 지금 환율 하나면
+   되므로 가볍다. 못 받으면 합계를 아예 안 낸다 — 틀린 합계보다 없는
+   합계가 낫다. */
+async function loadBookRates() {
+  const base = store.get('bookBase') || 'KRW';
+  const curs = [...new Set(book.all().map((t) => t.currency).filter((c) => c && c !== base))];
+  if (!curs.length) return;
+
+  app.rates ||= new Map();
+  for (const c of curs) {
+    if (app.rates.has(c)) continue;
+    try { app.rates.set(c, await fx.latest(c, base)); }
+    catch { /* 못 받으면 합계를 안 낸다 */ }
+  }
+  if (app.nav?.current === 'book') app.book?.paint();
+}
+
+async function loadBookQuotes() {
+  const held = book.heldSymbols();
+  const watch = (store.get('watch') || DEFAULT_WATCH).map((w) => w.symbol);
+  const missing = held.filter((s) => !watch.includes(s));
+  if (!missing.length) return;
+
+  try {
+    const got = await quotes.fetchSeries(missing, { range: '5d', interval: '1d' });
+    // 시세판에는 안 올리고 값만 곁에 둔다
+    const seen = new Set(app.quotes.map((q) => q.symbol));
+    app.quotes = [...app.quotes, ...got.filter((q) => !seen.has(q.symbol))];
+    if (app.nav?.current === 'book') app.book?.paint();
+  } catch (err) {
+    console.warn('[book quotes]', err);
+  }
+}
+
 /* ═══════════════════ 분석 ═══════════════════
 
    한 해치 열둘을 부르는 일이라 무겁다. 그래서 분석 화면을 열 때만
@@ -257,8 +301,9 @@ async function loadAnalysis({ force = false } = {}) {
     const series = await quotes.fetchSeries(watch, { range: '2y', interval: '1d', fresh: force });
     app.anaAt = Date.now();
     app.ana.set(series, app.anaAt);
+    app.stress?.paint();
     // 성적표는 이 두 해치를 그대로 쓴다. 일지 화면에 있을 때만 다시 그린다.
-    if (app.nav?.current === 'journal') app.score?.paint();
+    if (app.nav?.current === 'journal') { app.score?.paint(); app.rules?.paint(); }
   } catch (err) {
     console.warn('[analysis]', err);
     app.ana.failed(err.message);
@@ -318,7 +363,61 @@ function build() {
   /* ── 바깥 길로 받아 오는 판들 ── */
   app.macro = new MacroPanel({ openSettings: (g) => app.settings.open(g) });
   app.fin = new FinPanel();
+  app.divs = new DivPanel();
   app.score = new ScoreCard({ series: () => app.ana?.series || [] });
+
+  /* ── 나쁠 때만 드러나는 것 ──
+     분석이 받아 둔 두 해치를 그대로 쓴다. 스트레스 재생은 더 긴 이력이
+     있으면 좋지만, 없으면 베타로 갈음하고 갈음했다고 밝힌다. */
+  app.stress = new StressPanel({
+    series: () => app.ana?.series || [],
+    marketSym: () => app.ana?.marketSym || '^KS11',
+    value: () => app.bookValue || null,
+    // 2008년까지 되짚으려면 스무 해치가 있어야 한다. 묶음 부름 한 번이다.
+    fetchLong: (syms) => quotes.fetchSeries(syms, { range: '20y', interval: '1d' }),
+    // 비중을 한 돈으로 모으려면 환율이 있어야 한다
+    rateOf: (cur) => app.rates?.get(cur) ?? null,
+    onSymbol: (sym) => goSymbol(sym),
+  });
+
+  /* ── 장부 ──
+     이것이 들어오면 나머지가 전부 진짜가 된다. 위험 기여도는 가정된
+     균등비중이 아니라 내 비중으로, 스트레스 재생은 내 조합으로. */
+  app.book = new BookView({
+    fetchSeries: (syms, range) => quotes.fetchSeries(syms, { range, interval: '1d' }),
+    rateOf: (cur) => app.rates?.get(cur) ?? null,
+    priceOf: (sym) => {
+      if (app.chartQ?.symbol === sym && Number.isFinite(app.chartQ.price)) return app.chartQ.price;
+      const q = app.quotes.find((x) => x.symbol === sym);
+      if (q && Number.isFinite(q.price)) return q.price;
+      const s = app.ana?.series?.find((x) => x.symbol === sym);
+      return s?.bars?.length ? s.bars[s.bars.length - 1].c : null;
+    },
+    onSymbol: (sym) => goSymbol(sym),
+    onChanged: () => {
+      app.bookValue = null;
+      app.stress?.paint();
+      // 장부에 있는 것은 시세를 알아야 하므로 관심종목에 없으면 챙겨 둔다
+      loadBookQuotes();
+    },
+    notice: (t) => app.breaking.notice(t, { kind: '장부', ms: 6000 }),
+  });
+
+  /* ── 규칙 감시 ── */
+  app.rules = new RulePanel({
+    barsOf: (sym) => app.ana?.series?.find((x) => x.symbol === sym)?.bars
+                  || app.quotes.find((x) => x.symbol === sym)?.bars
+                  || [],
+    symbols: () => {
+      const watch = store.get('watch') || DEFAULT_WATCH;
+      const held = book.positions().rows.filter((p) => p.open)
+        .map((p) => ({ symbol: p.symbol, ko: p.ko }));
+      const seen = new Set(held.map((h) => h.symbol));
+      return [...held, ...watch.filter((w) => !seen.has(w.symbol))];
+    },
+    onSymbol: (sym) => goSymbol(sym),
+    notice: (t) => app.breaking.notice(t, { kind: '규칙', ms: 5000 }),
+  });
 
   /* 원화 환산 — 차트의 봉만 갈아 끼우고 나머지는 그대로 둔다.
      되돌릴 때를 위해 원래 봉은 chartQ 가 들고 있다. */
@@ -372,9 +471,10 @@ function build() {
   app.nav = new Nav({
     onShow: (id) => {
       if (id === 'chart') app.market.refresh();
-      if (id === 'analysis') { loadAnalysis(); app.macro?.load(); }
+      if (id === 'analysis') { loadAnalysis(); app.macro?.load(); loadBookRates(); }
       if (id === 'backtest') app.backtest?.refresh();
-      if (id === 'journal') { app.journal?.paint(); app.score?.paint(); }
+      if (id === 'book') { app.book?.paint(); loadBookQuotes(); loadBookRates(); }
+      if (id === 'journal') { app.journal?.paint(); app.score?.paint(); app.rules?.paint(); }
     },
   });
 
@@ -463,6 +563,7 @@ function wireButtons() {
   $('#btnRatio').addEventListener('click', () => app.market.toggleRatio());
   $('#btnFin').addEventListener('click', () => app.fin.toggle(app.market.symbol));
   $('#btnFx').addEventListener('click', () => app.fx.toggle());
+  $('#btnDiv').addEventListener('click', () => app.divs.toggle(app.market.symbol));
 
   /* 관심종목에 더하기 — 머리띠의 고르개를 그대로 쓴다.
      찾는 자리를 두 곳에 두면 둘 다 반쯤만 좋아진다. */
@@ -724,6 +825,7 @@ async function enter() {
     app.quotesAt = Date.now();
     loadChart(app.market.symbol, app.market.range);
     loadNews({ quiet: true });
+    loadBookQuotes();
 
     setInterval(() => {
       if (document.hidden) return;

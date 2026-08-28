@@ -35,6 +35,17 @@ export const DEFAULTS = {
   /* ── 차트의 지표 ── 만든 것이 여기 남는다 (market/indicators.js) ── */
   indicators:   null,    // null 이면 기본값(MA20·MA60)
 
+  /* ── 장부 ──
+     거래 자체는 여기 두지 않는다 (portfolio/book.js 가 따로 들고 있다).
+     설정 파일은 웹호스팅에 올려도 된다고 적어 두었는데, 남의 매매
+     내역이 거기 있으면 안 되기 때문이다. 여기 있는 것은 취향뿐이다. */
+  bookTab:      'hold',  // hold | perf | tax
+  bookBase:     'KRW',   // 섞인 돈을 무엇으로 모을 것인가
+  bookRange:    '5y',    // 성과를 얼마 동안 되짚을 것인가
+  tax:          null,    // 세율 (portfolio/tax.js 의 DEFAULTS 를 덮어쓴다)
+  rules:        null,    // 걸어 둔 규칙 (journal/rules.js)
+  stressEp:     'covid', // 마지막으로 본 스트레스 구간
+
   /* ── 분석 ──
      무위험 이자율은 샤프·소르티노를 셈할 때 쓴다. 이 숫자에 소수점
      아래까지 매달릴 일은 없어서, 바깥에 묻지 않고 손으로 둔다. */
