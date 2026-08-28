@@ -56,6 +56,16 @@
     </p>
   </section>
   <section>
+    <h2>2-2. 실시간 시세가 흐르나</h2>
+    <div id="live"></div>
+    <p class="detail" style="margin-top:10px">
+      실시간 시세만은 다리를 놓지 않고 곧바로 갑니다. WebSocket 은 CORS 를
+      묻지 않기 때문입니다. 대신 회사 방화벽은 이것을 자주 막습니다 —
+      위의 시세가 다 들어오는데 여기만 막히는 일이 흔합니다. 그때는 화면이
+      몇 분 늦은 값으로 돌 뿐, 나머지는 그대로 돕니다.
+    </p>
+  </section>
+  <section>
     <h2>3. 바깥 열쇠</h2>
     <div id="keys"></div>
     <p class="detail" style="margin-top:10px">
@@ -88,10 +98,10 @@
 /* 검사들이 저마다 다른 속도로 끝나므로, 끝난 순서대로 적으면
    결과가 엉뚱한 제목 아래로 들어간다. 항목별로 담아 두었다가
    마지막에 순서대로 펴 낸다. */
-const GROUPS = { env: '환경', net: '바깥 연결', keys: '바깥 열쇠', files: '영상 파일', video: '영상 재생' };
-const bucket = { env: [], net: [], keys: [], files: [], video: [] };
+const GROUPS = { env: '환경', net: '바깥 연결', live: '실시간', keys: '바깥 열쇠', files: '영상 파일', video: '영상 재생' };
+const bucket = { env: [], net: [], live: [], keys: [], files: [], video: [] };
 let done = 0;
-const TOTAL = 5;
+const TOTAL = 6;
 
 function step() { document.getElementById('bar').style.width = (++done / TOTAL * 100) + '%'; }
 
@@ -402,6 +412,74 @@ function render() {
     }
   }
   step();
+})();
+
+/* ── 6. 실시간 ──
+   WebSocket 은 CORS 를 묻지 않으므로 다리를 놓지 않고 곧바로 간다.
+   그래서 여기가 막히는 이유는 위와 다르다 — 프록시가 아니라 방화벽이다.
+
+   장이 닫혀 있으면 국내 주식은 한 줄도 오지 않는다. 그러면 '막힘' 과
+   '조용함' 을 가릴 수 없다. 그래서 밤낮없이 뛰는 비트코인을 같이
+   신청해 둔다. 문이 열려 있다면 이것만은 반드시 온다. */
+(async function () {
+  const put1 = (state, label, detail) => { put('live', state, label, detail); step(); };
+
+  if (!('WebSocket' in window)) {
+    return put1('bad', '이 브라우저는 WebSocket 을 모릅니다',
+                '실시간은 못 씁니다. 시세는 몇 분 늦은 값으로 들어옵니다.');
+  }
+
+  let ws, timer, settled = false;
+  const done = (state, label, detail) => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(timer);
+    try { ws && ws.close(); } catch (e) { /* 이미 닫혔다 */ }
+    put1(state, label, detail);
+  };
+
+  const t0 = Date.now();
+  let opened = 0;
+
+  try {
+    ws = new WebSocket('wss://streamer.finance.yahoo.com/?version=2');
+  } catch (e) {
+    return done('bad', '실시간 통로를 열지 못했습니다', String(e && e.message || e));
+  }
+
+  ws.addEventListener('open', () => {
+    opened = Date.now() - t0;
+    // 비트코인은 늘 뛴다. 코스피는 장중에만 온다.
+    ws.send(JSON.stringify({ subscribe: ['BTC-USD', '^KS11', '005930.KS'] }));
+  });
+
+  ws.addEventListener('message', (ev) => {
+    const n = (ev.data || '').length;
+    done('ok', '실시간 시세가 흐릅니다 (' + opened + 'ms 만에 연결, 첫 줄 ' + n + '바이트)',
+         '차트 위 초록 점이 켜지고 값이 저절로 바뀝니다.');
+  });
+
+  ws.addEventListener('error', () => {
+    done('warn', '실시간 통로가 막혔습니다 — 나머지는 그대로 돕니다',
+         '회사 방화벽·백신·사내 프록시가 WebSocket 을 막는 일이 흔합니다. '
+         + '이때 시세는 몇 분 늦은 값으로 들어오고, 차트와 분석은 모두 정상입니다.');
+  });
+
+  ws.addEventListener('close', (ev) => {
+    done('warn', '실시간 통로가 곧 닫혔습니다 (코드 ' + ev.code + ')',
+         '방화벽이 중간에서 끊는 모양입니다. 실시간만 못 쓰고 나머지는 그대로 돕니다.');
+  });
+
+  timer = setTimeout(() => {
+    if (opened) {
+      done('warn', '연결은 되었는데 한 줄도 오지 않습니다',
+           '야후 쪽이 잠시 조용하거나 종목 이름이 바뀐 것일 수 있습니다. '
+           + '잠시 뒤 다시 열어 보십시오.');
+    } else {
+      done('bad', '실시간 통로가 응답하지 않습니다',
+           '12초를 기다렸습니다. 방화벽이 조용히 삼키는 모양입니다.');
+    }
+  }, 12000);
 })();
 
 /* ── 복사 ── */
