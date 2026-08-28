@@ -161,6 +161,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .ico[data-ico="search"]  { -webkit-mask-image: var(--i-search);  mask-image: var(--i-search); }
 .ico[data-ico="wallet"]  { -webkit-mask-image: var(--i-wallet);  mask-image: var(--i-wallet); }
 .ico[data-ico="table"]   { -webkit-mask-image: var(--i-table);   mask-image: var(--i-table); }
+.ico[data-ico="globe"]   { -webkit-mask-image: var(--i-globe);   mask-image: var(--i-globe); }
 .ico[data-ico="quote"]   { -webkit-mask-image: var(--i-quote);   mask-image: var(--i-quote); }
 
 :root {
@@ -179,6 +180,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
   --i-chart:   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M4 20V4h2v14h14v2zm4-3V9h3v8zm5 0V5h3v12zm5 0v-6h3v6z'/></svg>");
   --i-send:    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M3 20.5 21 12 3 3.5 3 10l12 2-12 2z'/></svg>");
   --i-candle:  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M6 2h2v3h1v10H8v3H6v-3H5V5h1zm9 2h2v5h1v9h-1v3h-2v-3h-1V9h1z'/></svg>");
+  /* 지구 — 세로줄 하나와 가로줄 둘. 잘아도 지구로 읽힌다. */
+  --i-globe:   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8'><circle cx='12' cy='12' r='9'/><ellipse cx='12' cy='12' rx='4' ry='9'/><path d='M3.3 9h17.4M3.3 15h17.4'/></svg>");
   /* 표 — 머리줄이 있다. 격자(--i-grid)와 한눈에 갈려야 한다. */
   --i-table:   url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M3 4h18v4H3zm0 6h6v4H3zm8 0h10v4H11zM3 16h6v4H3zm8 0h10v4H11z'/></svg>");
   /* 격언 — 여는 따옴표 둘 */

@@ -2468,3 +2468,285 @@
 .say__papers a { color: var(--tx-200); text-decoration: none; }
 .say__papers a:hover { color: var(--key-500); text-decoration: underline; }
 .say__papermeta { display: block; color: var(--tx-500); }
+
+/* ═══════════════════════════════════════════════════════════════
+   세계 열지도 (Κόσμος)
+
+   칸 넓이는 시가총액, 색은 등락, 묶음은 업종이다. 자리는 자바스크립트가
+   재어 넣으므로 여기서는 모양만 정한다.
+   ═══════════════════════════════════════════════════════════════ */
+
+.wm__tools {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--s-3);
+  margin: var(--s-3) 0;
+}
+.wm__pills { display: flex; gap: var(--s-2); }
+
+.wm__board {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-050);
+  overflow: hidden;
+}
+
+/* 업종 덩어리. 테두리만 그린다 — 칠하면 그 위의 종목 색을 흐린다. */
+.wm__group {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, .10);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.wm__gname {
+  position: absolute;
+  top: 1px; left: 5px;
+  font-size: 10px;
+  letter-spacing: .06em;
+  color: var(--tx-400);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.wm__cell {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 2px;
+  border: 0;
+  border-radius: 2px;
+  font: inherit;
+  line-height: 1.15;
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow var(--dur-fast) var(--ease), background .5s var(--ease);
+}
+.wm__cell:hover { box-shadow: inset 0 0 0 2px var(--tx-100); z-index: 2; }
+
+.wm__name {
+  font-size: 12px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wm__pct { font-family: var(--f-num); font-size: 11px; opacity: .92; }
+
+/* 칸이 좁으면 이름을 지운다. 넘쳐 나온 글자는 이웃 칸을 덮는다. */
+.wm__cell.is-small .wm__name { font-size: 10px; }
+.wm__cell.is-small .wm__pct { font-size: 9px; }
+.wm__cell.is-tiny .wm__name,
+.wm__cell.is-tiny .wm__pct { display: none; }
+
+/* 방금 값이 들어온 칸 — 어디가 움직였는지 곁눈에 걸리게 */
+@keyframes wmHit { from { box-shadow: inset 0 0 0 2px rgba(255,255,255,.85); } }
+.wm__cell.is-hit { animation: wmHit 1s var(--ease); }
+
+.wm__note {
+  margin: var(--s-3) 0 0;
+  max-width: 78ch;
+  font-size: var(--t-xs);
+  line-height: 1.7;
+  color: var(--tx-400);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm__cell { transition: none; }
+  .wm__cell.is-hit { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   발산 — 조건에 맞는 것을 찾는다 (Ἀπόκρισις)
+   ═══════════════════════════════════════════════════════════════ */
+
+.scr__bar {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--s-3);
+  margin: var(--s-3) 0;
+}
+.scr__search {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 7px 11px;
+  border: 1px solid var(--line-hard);
+  border-radius: var(--r-md);
+  background: var(--bg-100);
+  color: var(--tx-100);
+  font: inherit;
+  font-size: var(--t-sm);
+}
+.scr__search:focus { border-color: var(--key-500); outline: none; }
+
+.scr__ranges, .scr__chips { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.scr__pick { display: inline-flex; align-items: center; gap: var(--s-2); font-size: var(--t-xs); color: var(--tx-400); }
+
+.scr__stage {
+  position: relative;
+  height: clamp(260px, 42vh, 460px);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-100);
+  overflow: hidden;
+}
+.scr__stage canvas { display: block; width: 100%; height: 100%; }
+
+.scr__inds {
+  display: grid; gap: var(--s-2);
+  margin: var(--s-3) 0 var(--s-4);
+}
+.scr__indsh { font-size: var(--t-xs); color: var(--tx-400); }
+
+.scr__h {
+  margin: var(--s-5) 0 var(--s-2);
+  font-size: var(--t-sm); font-weight: 600; color: var(--tx-200);
+}
+
+.scr__stats {
+  display: grid; gap: var(--s-2);
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+}
+.scr__stat {
+  display: grid; gap: 2px;
+  padding: var(--s-3);
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--bg-100);
+}
+.scr__statl { font-size: var(--t-xs); color: var(--tx-400); }
+.scr__statv { font-family: var(--f-num); font-size: 1.1rem; color: var(--tx-100); }
+.scr__statw { font-size: var(--t-xs); color: var(--tx-500); }
+.scr__stat.is-up .scr__statv { color: var(--up); }
+.scr__stat.is-down .scr__statv { color: var(--down); }
+
+/* 알람. 조건이 걸렸을 때만 뜬다 — 늘 떠 있으면 아무도 안 본다. */
+.scr__alarm {
+  margin-top: var(--s-3);
+  padding: var(--s-3);
+  border-left: 2px solid var(--warn);
+  background: var(--bg-100);
+  font-size: var(--t-xs); line-height: 1.7; color: var(--tx-300);
+}
+.scr__alarm b { color: var(--tx-100); }
+.scr__alarm.is-up { border-left-color: var(--up); }
+.scr__alarm.is-down { border-left-color: var(--down); }
+
+.scr__flows {
+  display: grid; gap: var(--s-2);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.scr__flow {
+  display: grid; gap: 2px;
+  padding: var(--s-3);
+  border: 1px solid var(--line); border-left-width: 2px; border-radius: var(--r-md);
+  background: var(--bg-100);
+}
+.scr__flow.is-up { border-left-color: var(--up); }
+.scr__flow.is-down { border-left-color: var(--down); }
+.scr__flowko { font-size: var(--t-xs); color: var(--tx-400); }
+.scr__flowv { font-family: var(--f-num); font-size: 1.05rem; color: var(--tx-100); }
+.scr__flow.is-up .scr__flowv { color: var(--up); }
+.scr__flow.is-down .scr__flowv { color: var(--down); }
+.scr__flowu { font-size: var(--t-xs); color: var(--tx-500); }
+
+/* ── 조건 ──
+   켠 것만 또렷하게. 안 켠 것은 있되 물러나 있어야 무엇을 켰는지 한눈에
+   보인다. */
+.scr__rules {
+  display: grid; gap: var(--s-2);
+  grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
+}
+.scr__rule {
+  padding: var(--s-3);
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--bg-100);
+  opacity: .62;
+  transition: opacity var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.scr__rule.is-on { opacity: 1; border-color: var(--key-500); }
+
+.scr__ruleh {
+  display: flex; align-items: baseline; gap: var(--s-2);
+  width: 100%;
+  padding: 0;
+  border: 0; background: none;
+  color: inherit; font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.scr__mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px;
+  border: 1px solid var(--line-hard); border-radius: 4px;
+  color: var(--key-500); font-size: 11px;
+}
+.scr__rule.is-on .scr__mark { border-color: var(--key-500); }
+.scr__rulegr { font-family: var(--f-greek); font-size: var(--t-xs); color: var(--key-500); }
+.scr__ruleko { font-size: var(--t-sm); color: var(--tx-100); }
+.scr__kr {
+  padding: 0 5px;
+  border: 1px solid var(--line); border-radius: 99px;
+  font-size: 10px; color: var(--tx-500);
+}
+
+.scr__why { margin: 6px 0 0; font-size: var(--t-xs); line-height: 1.6; color: var(--tx-400); }
+.scr__belief {
+  margin: var(--s-2) 0 0;
+  padding-top: var(--s-2);
+  border-top: 1px dashed var(--line);
+  font-size: var(--t-xs); line-height: 1.7; color: var(--tx-500);
+}
+.scr__belief b { color: var(--tx-300); }
+
+.scr__fields { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-2); }
+.scr__field { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-xs); color: var(--tx-400); }
+.scr__field input {
+  width: 78px;
+  padding: 4px 7px;
+  border: 1px solid var(--line-hard); border-radius: var(--r-sm);
+  background: var(--bg-200); color: var(--tx-100);
+  font: inherit; font-family: var(--f-num); font-size: var(--t-xs);
+}
+
+/* ── 걸린 것 ── */
+.scr__hits { display: grid; gap: var(--s-2); }
+.scr__hit {
+  display: grid; gap: 6px;
+  padding: var(--s-3);
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--bg-100);
+  color: inherit; font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.scr__hit:hover { border-color: var(--key-500); background: var(--bg-200); }
+.scr__hithead { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2); }
+.scr__hitko { color: var(--tx-100); font-size: var(--t-sm); }
+.scr__hitsym { font-family: var(--f-num); font-size: var(--t-xs); color: var(--tx-500); }
+.scr__hitpx { margin-left: auto; font-family: var(--f-num); color: var(--tx-200); }
+.scr__hitchg { font-family: var(--f-num); font-size: var(--t-xs); }
+.scr__hitchg.up { color: var(--up); }
+.scr__hitchg.down { color: var(--down); }
+
+.scr__tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.scr__tag {
+  padding: 2px 8px;
+  border: 1px solid var(--key-500); border-radius: 99px;
+  font-size: var(--t-xs); color: var(--key-300, var(--key-500));
+}
+
+.scr__empty {
+  padding: var(--s-5);
+  border: 1px dashed var(--line-hard); border-radius: var(--r-md);
+  text-align: center;
+}
+.scr__empty b { display: block; margin-bottom: var(--s-2); color: var(--tx-200); }
+.scr__empty p { margin: 0 auto; max-width: 56ch; font-size: var(--t-xs); line-height: 1.7; color: var(--tx-500); }
+
+.scr__note {
+  margin: var(--s-2) 0 0;
+  max-width: 78ch;
+  font-size: var(--t-xs); line-height: 1.7; color: var(--tx-400);
+}

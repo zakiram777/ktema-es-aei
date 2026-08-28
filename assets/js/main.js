@@ -50,6 +50,9 @@ import * as filings from './market/filings.js';
 
 import { JournalView } from './journal/view.js';
 import { DataView } from './data/view.js';
+import { WorldView } from './market/worldview.js';
+import { ScreenView } from './screen/view.js';
+import { marketById, itemsOf } from './market/world.js';
 import { SayingsView } from './sayings/view.js';
 import { BacktestView } from './backtest/view.js';
 import { MixView, MapView } from './backtest/labview.js';
@@ -329,7 +332,16 @@ function liveSymbols() {
   const watch = (store.get('watch') || DEFAULT_WATCH).map((w) => w.symbol);
   const held = book.heldSymbols();
   const now = app.market?.symbol;
-  return [...new Set([...watch, ...held, now].filter(Boolean))].slice(0, 40);
+
+  /* 세계 열지도를 열어 두었으면 그 칸들도 함께 신청한다. 안 그러면
+     열지도만 멈춰 있고 나머지는 흐른다 — 같은 화면에서 어떤 숫자는
+     살아 있고 어떤 숫자는 죽어 있으면 어느 쪽도 못 믿는다.
+
+     야후 통로에 한 번에 너무 많이 신청하면 아무것도 안 온다. 늘 보는
+     것을 먼저 채우고 남는 자리에 열지도를 넣는다. */
+  const mine = [...new Set([...watch, ...held, now].filter(Boolean))];
+  const world = app.nav?.current === 'world' ? (app.worldSyms || []) : [];
+  return [...new Set([...mine, ...world])].slice(0, 120);
 }
 
 function onTick(rows) {
@@ -684,12 +696,41 @@ function build() {
       if (id === 'book') { app.book?.paint(); loadBookQuotes(); loadBookRates(); }
       if (id === 'journal') { app.journal?.paint(); app.score?.paint(); app.rules?.paint(); }
       if (id === 'data') app.data?.redraw();
+      if (id === 'world') app.world?.open();
+      if (id === 'screen') app.screen?.open();
       if (id === 'sayings') app.sayings?.open();
     },
   });
 
   /* ── 자료 — 올린 표 ──
      이 화면은 바깥에 아무것도 묻지 않는다. 그래서 여기 넘겨줄 것도 없다. */
+  /* ── 세계 열지도 ──
+     열지도에 걸린 종목을 흐르는 시세에도 함께 신청한다. 그래야 칸이
+     저절로 바뀐다. 다만 시장을 옮길 때마다 신청을 갈아 끼우면 통로가
+     쉴 새 없이 흔들리므로, 지금 보고 있는 시장 것만 더해 둔다. */
+  app.world = new WorldView({
+    // 쉰 개를 한 줄에 물으면 야후가 문을 닫는다. 열둘씩 나눠 묻는다.
+    fetchQuotes: (syms, opts) => quotes.fetchMany(syms, opts),
+    watch: (syms) => { app.worldSyms = syms; startLive(); },
+    onSymbol: (sym) => { app.pick.pick(sym); app.nav.show('chart'); },
+  });
+
+  /* ── 발산 ──
+     훑을 곳을 여기서 정해 준다. 화면 쪽은 '무엇이 국내 대형주인가' 를
+     알 필요가 없고, 알면 세계 열지도와 목록이 두 벌로 갈린다. */
+  app.screen = new ScreenView({
+    fetchBars: (symbol, range, interval) =>
+      quotes.fetchOne(symbol, { range, interval }).then((q) => q?.bars || []),
+    poolOf: (id) => {
+      if (id === 'watch') {
+        return (store.get('watch') || DEFAULT_WATCH).map((w) => w.symbol);
+      }
+      const m = marketById(id);
+      return itemsOf(m).slice(0, 30).map((i) => i.symbol);
+    },
+    onSymbol: (sym) => { app.pick.pick(sym); app.nav.show('chart'); },
+  });
+
   app.data = new DataView();
 
   /* ── 격언 ──
@@ -836,7 +877,7 @@ function wireButtons() {
 
     const jump = {
       c: 'chart', m: 'market', a: 'analysis', n: 'news', j: 'journal', b: 'backtest',
-      d: 'data', g: 'sayings',
+      d: 'data', g: 'sayings', w: 'world', s: 'screen',
     };
     if (jump[e.key]) app.nav.show(jump[e.key]);
   });

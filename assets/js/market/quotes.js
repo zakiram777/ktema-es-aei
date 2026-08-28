@@ -375,6 +375,42 @@ export async function fetchWatch(watch, opts = {}) {
   return { quotes, at };
 }
 
+/* ═══════════════════ 여럿을 나눠서 ═══════════════════
+
+   ── 왜 따로 두나 ──
+   fetchWatch 는 못 받은 것을 하나씩 다시 묻는다. 열몇 개일 때는 그것이
+   맞다 — 한둘 빠진 것을 채우는 값싼 일이다.
+
+   그런데 세계 열지도는 쉰 개를 한꺼번에 묻는다. 쉰 개를 한 줄에 넣으면
+   야후가 429(너무 잦다)로 문을 닫고, 그러면 쉰 번을 하나씩 다시 묻게
+   되어 문이 더 굳게 닫힌다. 실제로 그렇게 되어 열지도가 통째로 비었다.
+
+   여기서는 열둘씩 나눠 묻고, 못 받은 것은 그냥 못 받은 채로 둔다.
+   칸 하나가 회색인 것이 판 전체가 비는 것보다 낫다.
+
+   ── 왜 순서대로 묻나 ──
+   동시에 던지면 나눈 뜻이 없다. 한 줄씩 기다렸다 다음 줄을 묻는다. */
+export async function fetchMany(symbols, opts = {}) {
+  const CHUNK = 12;
+  const out = [];
+
+  for (let i = 0; i < symbols.length; i += CHUNK) {
+    const part = symbols.slice(i, i + CHUNK);
+    try {
+      const got = await fetchSpark(part, opts);
+      for (const sym of part) {
+        const body = got.get(sym);
+        const q = body ? shapeSpark(body, { symbol: sym }) : null;
+        out.push(q ? { symbol: sym, ...q, ok: true } : { symbol: sym, ok: false });
+      }
+    } catch {
+      // 이 묶음은 못 받았다. 다음 묶음은 계속 간다.
+      for (const sym of part) out.push({ symbol: sym, ok: false });
+    }
+  }
+  return out;
+}
+
 /* ─────────────── 봉에서 뽑는 것들 ─────────────── */
 
 /** 이동평균 — 마지막 값 하나만 */

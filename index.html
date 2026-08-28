@@ -374,6 +374,43 @@
         <div class="bookwrap" id="bookwrap"></div>
       </section>
 
+      <!-- ═══ 세계 열지도 ═══ -->
+      <section class="view" id="world" data-view="world" aria-label="세계" hidden>
+        <div class="panel__head">
+          <h2 class="panel__title">
+            <span class="panel__gr">Κόσμος</span><span class="panel__ko">세계</span>
+          </h2>
+          <div class="panel__tools">
+            <span class="stamp" id="worldStamp"></span>
+            <button class="btn btn--ghost btn--tiny" id="btnWorld" type="button">
+              <span class="ico" data-ico="refresh"></span>
+              <span class="btn__label">다시 부른다</span>
+            </button>
+          </div>
+        </div>
+
+        <nav class="tabs" id="worldTabs" role="tablist"></nav>
+        <div class="wm__tools" id="worldTools"></div>
+        <div id="worldBody"></div>
+      </section>
+
+      <!-- ═══ 발산 — 조건에 맞는 것을 찾는다 ═══ -->
+      <section class="view" id="screen" data-view="screen" aria-label="발산" hidden>
+        <div class="panel__head">
+          <h2 class="panel__title">
+            <span class="panel__gr">Ἀπόκρισις</span><span class="panel__ko">발산</span>
+          </h2>
+          <div class="panel__tools">
+            <span class="stamp" id="scrStamp"></span>
+            <button class="btn btn--key btn--tiny" id="btnScr" type="button">
+              <span class="ico" data-ico="search"></span>
+              <span class="btn__label">찾는다</span>
+            </button>
+          </div>
+        </div>
+        <div id="scrBody"></div>
+      </section>
+
       <!-- ═══ 자료 — 올린 표 ═══ -->
       <section class="view" id="data" data-view="data" aria-label="자료" hidden>
         <div class="panel__head">

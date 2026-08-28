@@ -24,6 +24,8 @@ export const VIEWS = [
   { id: 'chart',    gr: 'Γραφή',        ko: '차트', ico: 'candle' },
   { id: 'market',   gr: 'Ἀγορά',        ko: '시세', ico: 'grid' },
   { id: 'analysis', gr: 'Ἀνάλυσις',     ko: '분석', ico: 'sigma' },
+  { id: 'world',    gr: 'Κόσμος',       ko: '세계', ico: 'globe' },
+  { id: 'screen',   gr: 'Ἀπόκρισις',    ko: '발산', ico: 'search' },
   { id: 'book',     gr: 'Κτῆσις',       ko: '장부', ico: 'wallet' },
   { id: 'data',     gr: 'Πίναξ',        ko: '자료', ico: 'table' },
   { id: 'news',     gr: 'Ἀγγελίαι',     ko: '소식', ico: 'bolt' },
