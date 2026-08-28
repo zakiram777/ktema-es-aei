@@ -82,7 +82,15 @@
       넣은 열쇠는 이 브라우저에만 남습니다.
     </p>
   </section>
-  <section><h2>4. 배경 영상 파일</h2><div id="files"></div></section>
+  <section>
+    <h2>4. 배경 영상과 인물 그림</h2>
+    <div id="files"></div>
+    <p class="detail" style="margin-top:10px">
+      관문은 영상 둘을 좌우로 나눠 틀고, 부를 일이 있을 때 나오는 사람은
+      배경을 지운 그림 열 장 중에서 무작위로 하나가 나옵니다. 이 파일들이
+      없으면 관문은 검은 화면이 되고 사람은 빈 자리로 뜹니다.
+    </p>
+  </section>
   <section>
     <h2>5. 영상이 실제로 그려지나</h2>
     <div id="video"></div>
@@ -278,6 +286,41 @@ function render() {
     else put('files', 'warn', '서버가 형식을 이상하게 알려 줍니다 — ' + type,
             '웹호스팅이라면 .htaccess 가 올라갔는지 보십시오.');
   } catch (e) { /* 위에서 이미 잡았다 */ }
+
+  /* ── 관문의 영상 둘 ──
+     화면을 좌우로 나눠 트는 것들이다. 하나만 없어도 반쪽이 검게 남는다. */
+  const gate = ['g1.mp4', 'g2.mp4', 'g1.jpg', 'g2.jpg'];
+  const gateBad = [];
+  for (const name of gate) {
+    try {
+      const r = await fetch('assets/media/gate/' + name, { method: 'HEAD' });
+      if (!r.ok) gateBad.push(name + ' (' + r.status + ')');
+    } catch (e) { gateBad.push(name + ' (못 받음)'); }
+  }
+  if (!gateBad.length) {
+    put('files', 'ok', '관문 영상 둘이 다 있습니다', '왼쪽 g1, 오른쪽 g2, 그리고 각각의 첫 장.');
+  } else {
+    put('files', 'bad', '관문 영상이 모자랍니다', '없는 것: ' + gateBad.join(', '));
+  }
+
+  /* ── 부를 때 나오는 사람 ──
+     배경을 지운 그림 열 장. 없으면 말풍선만 뜨고 사람 자리가 빈다. */
+  const cast = ['neko', 'warau', 'inori', 'ningyou', 'kimono',
+                'gakusha', 'futatsu', 'sailor', 'hibi', 'bara'];
+  const castBad = [];
+  for (const name of cast) {
+    try {
+      const r = await fetch('assets/media/cast/' + name + '.webp', { method: 'HEAD' });
+      if (!r.ok) castBad.push(name);
+    } catch (e) { castBad.push(name); }
+  }
+  if (!castBad.length) {
+    put('files', 'ok', '사람 그림 열 장이 다 있습니다',
+        '부를 일이 있을 때 그중 하나가 무작위로 나옵니다.');
+  } else {
+    put('files', 'warn', '사람 그림 ' + (cast.length - castBad.length) + '장만 있습니다',
+        '없는 것: ' + castBad.join(', ') + '. 나머지로 돌아갑니다.');
+  }
   step();
 })();
 
