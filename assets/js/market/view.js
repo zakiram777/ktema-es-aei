@@ -12,7 +12,8 @@
      서랍 둘     지표 만들기 (#inds) · 견주어 보기 (#cmp)
    ═══════════════════════════════════════════════════════════════ */
 
-import { $, el, clear, ico } from '../core/dom.js';
+import { $, el, clear, ico, throttle } from '../core/dom.js';
+import { on } from '../core/bus.js';
 import { px, num, pct, big, dir, arrow, stamp, clock } from '../core/fmt.js';
 import { DEFAULT_WATCH, RANGES, INTRADAY, nameOf, MARKETS, isOpen, isIntraday } from './symbols.js';
 import { Chart, LowerChart, sparkline } from './chart.js';
@@ -60,9 +61,14 @@ export class MarketView {
     this.chart = new Chart($('#chartCanvas'), { tip: $('#chartTip') });
     this.chart.onView = () => { this.#paintZoom(); this.#paintLower(); };
 
+    this.sparks = [];                        // 잔줄 — 보일 때 다시 그린다
+
     this.#buildRanges();
     this.#buildClocks();
     setInterval(() => this.#tickClocks(), 20_000);
+
+    on('view:shown', ({ view }) => { if (view === 'market') this.paintSparks(); });
+    window.addEventListener('resize', throttle(() => this.paintSparks(), 200));
   }
 
   /* ─────────────── 시계 ─────────────── */
@@ -101,6 +107,7 @@ export class MarketView {
 
   #renderBoard() {
     clear(this.board);
+    this.sparks = [];
     for (const q of this.quotes) {
       const d = dir(q.changePct);
       const card = el('div.card', {
@@ -128,13 +135,27 @@ export class MarketView {
 
       const spark = card.querySelector('.card__spark');
       if (spark) {
-        requestAnimationFrame(() => {
-          const col = getComputedStyle(document.documentElement)
-            .getPropertyValue(q.changePct >= 0 ? '--up' : '--down').trim();
-          sparkline(spark, q.bars, col);
-        });
+        const col = getComputedStyle(document.documentElement)
+          .getPropertyValue(q.changePct >= 0 ? '--up' : '--down').trim();
+        this.sparks.push({ cv: spark, bars: q.bars, col });
       }
     }
+
+    this.paintSparks();
+  }
+
+  /* 잔줄을 그린다.
+
+     ── 왜 따로 빼 두나 ──
+     시세는 대개 이 화면이 숨어 있는 동안 들어온다(첫 화면은 차트다).
+     숨어 있는 칸은 제 크기가 0이고, sparkline 은 크기를 못 재면 그냥
+     물러난다. 그래서 예전에는 열세 줄이 통째로 비어 있었다 — 칸은
+     있는데 선이 없으니 '시세를 못 받았나' 로 보였다.
+
+     그릴 것을 들고 있다가, 화면이 보일 때와 창 크기가 바뀔 때 다시
+     그린다. 이미 그려져 있어도 다시 그리는 편이 싸다. */
+  paintSparks() {
+    for (const s of this.sparks) sparkline(s.cv, s.bars, s.col);
   }
 
   #renderTape() {

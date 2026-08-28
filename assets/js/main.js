@@ -49,6 +49,8 @@ import * as fx from './market/fx.js';
 import * as filings from './market/filings.js';
 
 import { JournalView } from './journal/view.js';
+import { DataView } from './data/view.js';
+import { SayingsView } from './sayings/view.js';
 import { BacktestView } from './backtest/view.js';
 import { MixView, MapView } from './backtest/labview.js';
 
@@ -672,7 +674,7 @@ function build() {
   });
 
   /* ── 화면 나누기 ──
-     여섯 화면이 가운데 칸 하나를 나누어 쓴다. 숨어 있던 화면은 제
+     여덟 화면이 가운데 칸 하나를 나누어 쓴다. 숨어 있던 화면은 제
      크기를 몰랐으므로, 보일 때 다시 그리라고 알린다. */
   app.nav = new Nav({
     onShow: (id) => {
@@ -681,8 +683,19 @@ function build() {
       if (id === 'backtest') app.backtest?.refresh();
       if (id === 'book') { app.book?.paint(); loadBookQuotes(); loadBookRates(); }
       if (id === 'journal') { app.journal?.paint(); app.score?.paint(); app.rules?.paint(); }
+      if (id === 'data') app.data?.redraw();
+      if (id === 'sayings') app.sayings?.open();
     },
   });
+
+  /* ── 자료 — 올린 표 ──
+     이 화면은 바깥에 아무것도 묻지 않는다. 그래서 여기 넘겨줄 것도 없다. */
+  app.data = new DataView();
+
+  /* ── 격언 ──
+     스물몇 곳을 두드리는 일이라 화면을 열 때까지 미룬다. 안 볼 화면
+     때문에 시작이 느려지면 안 된다. */
+  app.sayings = new SayingsView();
 
   /* ── 투자일지 ── */
   app.journal = new JournalView({
@@ -821,7 +834,10 @@ function wireButtons() {
     if (e.key === '/') { e.preventDefault(); app.pick.open(); return; }
     if (e.key === 'r') loadNews();
 
-    const jump = { c: 'chart', m: 'market', a: 'analysis', n: 'news', j: 'journal', b: 'backtest' };
+    const jump = {
+      c: 'chart', m: 'market', a: 'analysis', n: 'news', j: 'journal', b: 'backtest',
+      d: 'data', g: 'sayings',
+    };
     if (jump[e.key]) app.nav.show(jump[e.key]);
   });
 }

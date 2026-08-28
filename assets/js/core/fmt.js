@@ -328,3 +328,45 @@ function runsBy(src, re, inner, outer, min, joinRun = false) {
     .map((r) => ({ lang: r.lang, text: r.text.trim() }))
     .filter((r) => r.text);
 }
+
+/* ═══════════════════ 조사 ═══════════════════
+
+   앞말의 받침에 따라 조사가 갈린다. 이 사이트는 열 이름을 사람이
+   올린 표에서 그대로 받아 쓰므로, 무엇이 올지 미리 알 수 없다.
+
+     기준가 + 이/가  →  기준가가
+     설정액 + 이/가  →  설정액이
+
+   "기준가 이 1 오를 때" 는 그 자리에서 바로 눈에 걸린다. 숫자를 아무리
+   맞게 내도 이런 데서 어설프면 나머지도 대충 만든 것으로 읽힌다.
+
+   ── 무엇을 받침으로 보나 ──
+   한글은 유니코드에서 (글자 − 0xAC00) % 28 이 0이면 받침이 없다.
+   숫자로 끝나면 그 숫자를 읽는 소리의 받침을 따른다 (1·7·8·0 은 받침).
+   그 밖(영문·기호)은 받침이 없는 것으로 둔다 — 틀리더라도 덜 어색하다. */
+
+const DIGIT_JONG = { 0: true, 1: true, 3: true, 6: true, 7: true, 8: true };
+
+export function hasJong(word) {
+  // 끝에 붙은 괄호·따옴표는 소리가 없다. 올라오는 열 이름에는
+  // '설정액(억)' 처럼 단위를 괄호로 단 것이 흔한데, 그 ')' 를 보고
+  // 조사를 고르면 언제나 틀린다.
+  const s = String(word ?? '').trim().replace(/[)\]}>」』"'·.\s]+$/, '');
+  if (!s) return false;
+  const ch = s[s.length - 1];
+  const code = ch.charCodeAt(0);
+
+  if (code >= 0xac00 && code <= 0xd7a3) return (code - 0xac00) % 28 !== 0;
+  if (ch >= '0' && ch <= '9') return !!DIGIT_JONG[+ch];
+  return false;
+}
+
+/**
+ * 앞말에 맞는 조사를 붙인다.
+ *   josa('기준가', '이/가')  →  '기준가가'
+ *   josa('설정액', '은/는')  →  '설정액은'
+ */
+export function josa(word, pair) {
+  const [withJong, without] = String(pair).split('/');
+  return String(word) + (hasJong(word) ? withJong : without);
+}

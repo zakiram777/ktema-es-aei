@@ -2204,3 +2204,273 @@
   .odd__row { grid-template-columns: minmax(70px, 1fr) 66px 52px; }
   .odd__bar { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   자료 — 올린 표 (Πίναξ)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 들이는 자리. 판이 크고 조용해야 '여기다' 로 읽힌다 — 작은 단추로
+   두면 아무도 못 찾는다. */
+.dv__drop {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-2);
+  padding: var(--s-6) var(--s-5);
+  margin-bottom: var(--s-4);
+  border: 1px dashed var(--line-hard);
+  border-radius: var(--r-lg);
+  background: var(--bg-100);
+  color: var(--tx-300);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.dv__drop:hover, .dv__drop:focus-visible { border-color: var(--key-500); background: var(--bg-200); }
+.dv__drop.is-over { border-color: var(--key-500); background: var(--bg-300); border-style: solid; }
+.dv__drop .ico { width: 26px; height: 26px; background: var(--tx-400); }
+.dv__drop b { color: var(--tx-100); font-weight: 600; }
+.dv__formats { font-family: var(--f-num); font-size: var(--t-xs); color: var(--tx-500); letter-spacing: .08em; }
+
+/* 안 보내는 것이 이 화면의 값이다. 흐리게 두되 읽을 수 있게 둔다. */
+.dv__safe { max-width: 52ch; font-size: var(--t-xs); line-height: 1.6; color: var(--tx-500); }
+
+.dv__sheets, .dv__chips, .dv__pills { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.dv__bar {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--s-3); margin: var(--s-4) 0 var(--s-3);
+}
+.dv__hint { font-size: var(--t-xs); color: var(--tx-500); }
+.dv__pick { display: inline-flex; align-items: center; gap: var(--s-2); font-size: var(--t-xs); color: var(--tx-400); }
+.dv__ypick { display: grid; gap: var(--s-2); margin-bottom: var(--s-3); }
+.dv__pickh { font-size: var(--t-xs); color: var(--tx-400); }
+
+.dv__select {
+  max-width: 240px;
+  padding: 5px 8px;
+  border: 1px solid var(--line-hard);
+  border-radius: var(--r-md);
+  background: var(--bg-200);
+  color: var(--tx-100);
+  font: inherit;
+  font-size: var(--t-xs);
+}
+
+/* 무엇으로 읽혔나 — 여기가 틀리면 아래가 전부 틀린다.
+   그래서 표보다 위에, 표보다 또렷하게 둔다. */
+.dv__cols {
+  display: flex; flex-wrap: wrap; gap: var(--s-2);
+  margin-bottom: var(--s-3);
+}
+.dv__col {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--bg-100);
+  font-size: var(--t-xs);
+}
+.dv__colname { color: var(--tx-200); }
+.dv__type { font-family: var(--f-num); letter-spacing: .04em; }
+.dv__type.is-date { color: var(--key-500); }
+.dv__type.is-number { color: var(--ok); }
+.dv__type.is-text { color: var(--tx-500); }
+.dv__type.is-empty { color: var(--tx-600); }
+.dv__fill { color: var(--warn); font-family: var(--f-num); }
+
+/* 넓은 표는 제 안에서만 옆으로 흐른다 — 화면 전체가 흔들리면 안 된다 */
+.dv__scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-lg); }
+.dv__table { width: 100%; border-collapse: collapse; font-size: var(--t-xs); }
+.dv__table th, .dv__table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  white-space: nowrap;
+  text-align: left;
+}
+.dv__table th {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--bg-200);
+  color: var(--tx-300);
+  font-weight: 600;
+}
+.dv__table td { color: var(--tx-200); }
+.dv__table td.is-num { font-family: var(--f-num); text-align: right; }
+.dv__table td.is-empty { color: var(--tx-600); }
+.dv__table tbody tr:hover td { background: var(--bg-100); }
+.dv__table--stat td:first-child { color: var(--tx-100); }
+
+.dv__plot {
+  height: 320px; margin-bottom: var(--s-3);
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--bg-100);
+}
+.dv__plot--short { height: 190px; }
+.dv__cv { display: block; width: 100%; height: 100%; }
+
+.dv__legend { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-bottom: var(--s-3); }
+.dv__key { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-xs); color: var(--tx-300); }
+.dv__key i { width: 14px; height: 3px; border-radius: 2px; }
+
+.dv__h {
+  margin: var(--s-5) 0 var(--s-2);
+  font-size: var(--t-sm); color: var(--tx-200); font-weight: 600;
+  letter-spacing: .02em;
+}
+
+.dv__stats {
+  display: grid; gap: var(--s-3);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-bottom: var(--s-3);
+}
+.dv__stat {
+  display: grid; gap: 2px;
+  padding: var(--s-3);
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--bg-100);
+}
+.dv__statl { font-size: var(--t-xs); color: var(--tx-400); }
+.dv__statv { font-family: var(--f-num); font-size: 1.15rem; color: var(--tx-100); }
+.dv__statw { font-size: var(--t-xs); color: var(--tx-500); }
+
+/* 곁말. 숫자보다 흐리되, 읽히기는 해야 한다 — 여기 적는 것은 대개
+   "이 숫자를 어디까지 믿을 것인가" 이고 그것이 숫자보다 중요하다. */
+.dv__note {
+  margin: 0 0 var(--s-4);
+  font-size: var(--t-xs); line-height: 1.7; color: var(--tx-400);
+  max-width: 78ch;
+}
+.dv__verdict {
+  padding: var(--s-3);
+  margin-bottom: var(--s-3);
+  border-left: 2px solid var(--key-500);
+  background: var(--bg-100);
+  font-size: var(--t-xs); line-height: 1.7; color: var(--tx-300);
+}
+.dv__verdict b { color: var(--tx-100); }
+
+.dv__list { margin: 0 0 var(--s-3); padding-left: var(--s-4); }
+.dv__list li { font-size: var(--t-xs); line-height: 1.9; color: var(--tx-300); }
+.dv__list b { color: var(--tx-100); }
+
+.dv__reg { margin-bottom: var(--s-3); }
+
+.dv__fail {
+  padding: var(--s-5);
+  border: 1px solid var(--up-line); border-radius: var(--r-lg);
+  background: var(--up-soft);
+}
+.dv__failh { color: var(--up); font-weight: 600; margin-bottom: var(--s-2); }
+.dv__fail p { margin: 0 0 var(--s-2); font-size: var(--t-sm); color: var(--tx-200); line-height: 1.7; }
+.dv__failwhy { color: var(--tx-400) !important; font-size: var(--t-xs) !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   격언 — 남들이 한 말 (Γνῶμαι)
+   ═══════════════════════════════════════════════════════════════ */
+
+.say__lead, .say__foot, .say__wait {
+  max-width: 74ch;
+  margin: 0 0 var(--s-4);
+  font-size: var(--t-xs);
+  line-height: 1.8;
+  color: var(--tx-400);
+}
+.say__foot { margin-top: var(--s-5); padding-top: var(--s-4); border-top: 1px solid var(--line); }
+
+/* 말 하나. 왼쪽의 굵은 줄이 인용임을 말한다 — 따옴표 그림을 크게
+   그려 넣는 방식도 있지만, 그러면 말보다 장식이 먼저 읽힌다. */
+.say {
+  padding: var(--s-4) var(--s-4) var(--s-3);
+  margin-bottom: var(--s-3);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--key-500);
+  border-radius: var(--r-md);
+  background: var(--bg-100);
+}
+.say.is-unsure { border-left-color: var(--warn); }
+
+.say__text {
+  margin: 0 0 var(--s-3);
+  font-size: 1.02rem;
+  line-height: 1.75;
+  color: var(--tx-100);
+  /* 인용부호를 글자로 넣지 않고 여기서 붙인다 — 원문에 이미 있는
+     따옴표와 겹쳐 두 겹이 되는 것을 막는다 */
+  quotes: "“" "”";
+}
+.say__text::before { content: open-quote; color: var(--tx-500); }
+.say__text::after { content: close-quote; color: var(--tx-500); }
+
+.say__by { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2); margin-bottom: 6px; }
+.say__who { color: var(--tx-200); font-size: var(--t-sm); }
+.say__role { color: var(--tx-500); font-size: var(--t-xs); }
+.say__tag {
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  color: var(--tx-400);
+  font-size: var(--t-xs);
+}
+
+.say__meta {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--s-3);
+  font-size: var(--t-xs);
+  color: var(--tx-500);
+}
+.say__outlet { color: var(--tx-300); }
+.say__kind { color: var(--ok); }
+.say__link { color: var(--key-500); text-decoration: none; }
+.say__link:hover { text-decoration: underline; }
+
+.say__keep {
+  margin-left: auto;
+  padding: 3px 10px;
+  border: 1px solid var(--line-hard);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--tx-400);
+  font: inherit;
+  font-size: var(--t-xs);
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.say__keep:hover { color: var(--tx-100); border-color: var(--tx-400); }
+.say__keep.is-on { color: var(--key-500); border-color: var(--key-500); }
+
+/* 확인 못 한 것. 숨기지 않고 적되, 말보다 흐리게 둔다. */
+.say__doubt {
+  margin: var(--s-3) 0 0;
+  padding-top: var(--s-2);
+  border-top: 1px dashed var(--line);
+  font-size: var(--t-xs);
+  line-height: 1.7;
+  color: var(--warn);
+}
+.say__head {
+  margin: var(--s-2) 0 0;
+  font-size: var(--t-xs);
+  line-height: 1.6;
+  color: var(--tx-500);
+}
+
+.say__empty {
+  padding: var(--s-6) var(--s-5);
+  border: 1px dashed var(--line-hard);
+  border-radius: var(--r-lg);
+  text-align: center;
+}
+.say__empty b { display: block; margin-bottom: var(--s-2); color: var(--tx-200); }
+.say__empty p { margin: 0 auto; max-width: 52ch; font-size: var(--t-xs); line-height: 1.7; color: var(--tx-500); }
+
+.say__group { display: flex; align-items: baseline; gap: var(--s-2); margin: var(--s-5) 0 var(--s-2); }
+.say__groupgr { font-family: var(--f-greek); font-size: var(--t-sm); color: var(--key-500); }
+.say__groupko { font-size: var(--t-sm); color: var(--tx-200); }
+
+.say__who-list { display: grid; gap: var(--s-2); grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.say__person {
+  display: grid; gap: 2px;
+  padding: var(--s-3);
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--bg-100);
+}
+.say__person b { color: var(--tx-100); font-size: var(--t-sm); }
+.say__en { font-size: var(--t-xs); color: var(--tx-400); }

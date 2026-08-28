@@ -74,6 +74,21 @@ const server = http.createServer((req, res) => {
     const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
     const range = req.headers.range;
 
+    /* ── 캐시를 아예 끈다 ──
+       고친 파일이 브라우저에 안 닿는 일이 여러 번 있었다. 특히 나쁜 것은
+       ES 모듈이다 — 열 개 중 하나만 낡은 채로 오면 "그런 이름을 내보내지
+       않습니다" 같은 엉뚱한 오류가 뜨고, 사람은 방금 고친 코드를 의심하게
+       된다. 없는 병을 몇십 분씩 고치게 된다.
+
+       캐시 머리를 안 붙이면 브라우저가 제 나름대로 어림해서 붙들어 둔다.
+       미리보기 서버에서 그 어림은 도움이 아니라 방해다. 실제 웹호스팅은
+       제 설정을 쓰므로 여기서 끄는 것은 여기서만 끄는 것이다. */
+    const noStore = {
+      'cache-control': 'no-store, must-revalidate',
+      pragma: 'no-cache',
+      expires: '0',
+    };
+
     // 영상 구간을 건너뛰려면 이어받기가 되어야 한다
     if (range && /^bytes=/.test(range)) {
       const [, a, b] = /bytes=(\d*)-(\d*)/.exec(range);
@@ -88,6 +103,7 @@ const server = http.createServer((req, res) => {
         'content-length': end - start + 1,
         'content-range': `bytes ${start}-${end}/${st.size}`,
         'accept-ranges': 'bytes',
+        ...noStore,
       });
       fs.createReadStream(file, { start, end }).pipe(res);
       return;
@@ -97,6 +113,7 @@ const server = http.createServer((req, res) => {
       'content-type': type,
       'content-length': st.size,
       'accept-ranges': 'bytes',
+      ...noStore,
     });
     fs.createReadStream(file).pipe(res);
   });

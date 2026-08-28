@@ -363,6 +363,53 @@
         <div class="bookwrap" id="bookwrap"></div>
       </section>
 
+      <!-- ═══ 자료 — 올린 표 ═══ -->
+      <section class="view" id="data" data-view="data" aria-label="자료" hidden>
+        <div class="panel__head">
+          <h2 class="panel__title">
+            <span class="panel__gr">Πίναξ</span><span class="panel__ko">자료</span>
+          </h2>
+          <div class="panel__tools">
+            <span class="stamp" id="dataStamp"></span>
+          </div>
+        </div>
+
+        <div class="dv__drop" id="dataDrop" tabindex="0" role="button"
+             aria-label="파일을 올립니다">
+          <span class="ico" data-ico="grid" aria-hidden="true"></span>
+          <b>여기에 파일을 끌어다 놓거나 눌러서 고릅니다</b>
+          <span class="dv__formats">.xlsx · .csv · .tsv · .json</span>
+          <span class="dv__safe">
+            올린 파일은 이 브라우저 안에서만 열립니다. 서버가 없으므로
+            어디로도 보내지 않습니다 — 명세서를 올려도 그 숫자는 이 컴퓨터를
+            떠나지 않습니다.
+          </span>
+          <input type="file" id="dataFile" accept=".xlsx,.csv,.tsv,.txt,.json" hidden>
+        </div>
+
+        <nav class="tabs" id="dataTabs" role="tablist"></nav>
+        <div id="dataBody"></div>
+      </section>
+
+      <!-- ═══ 격언 — 남들이 한 말 ═══ -->
+      <section class="view" id="sayings" data-view="sayings" aria-label="격언" hidden>
+        <div class="panel__head">
+          <h2 class="panel__title">
+            <span class="panel__gr">Γνῶμαι</span><span class="panel__ko">격언</span>
+          </h2>
+          <div class="panel__tools">
+            <span class="stamp" id="sayStamp"></span>
+            <button class="btn btn--ghost btn--tiny" id="btnSay" type="button">
+              <span class="ico" data-ico="refresh"></span>
+              <span class="btn__label">오늘 것을 찾는다</span>
+            </button>
+          </div>
+        </div>
+
+        <nav class="tabs" id="sayTabs" role="tablist"></nav>
+        <div id="sayBody"></div>
+      </section>
+
       <!-- ═══ 소식 ═══ -->
       <section class="view" id="news" data-view="news" aria-label="소식" hidden>
         <div class="panel__head">

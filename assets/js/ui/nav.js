@@ -25,6 +25,8 @@ export const VIEWS = [
   { id: 'market',   gr: 'Ἀγορά',        ko: '시세', ico: 'grid' },
   { id: 'analysis', gr: 'Ἀνάλυσις',     ko: '분석', ico: 'sigma' },
   { id: 'book',     gr: 'Κτῆσις',       ko: '장부', ico: 'wallet' },
+  { id: 'data',     gr: 'Πίναξ',        ko: '자료', ico: 'table' },
+  { id: 'sayings',  gr: 'Γνῶμαι',       ko: '격언', ico: 'quote' },
   { id: 'news',     gr: 'Ἀγγελίαι',     ko: '소식', ico: 'bolt' },
   { id: 'journal',  gr: 'Ἡμερολόγιον',  ko: '일지', ico: 'book' },
   { id: 'backtest', gr: 'Δοκιμή',       ko: '시험', ico: 'flask' },
