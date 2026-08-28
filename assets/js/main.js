@@ -38,6 +38,9 @@ import { Picker } from './ui/picker.js';
 import { WatchList } from './ui/watch.js';
 import { MacroPanel, FinPanel, FxSwitch, ScoreCard } from './ui/extras.js';
 import { StressPanel, DivPanel, RulePanel } from './ui/extras2.js';
+import { FlowPanel, PlayPicker } from './ui/extras3.js';
+import { Yuria, Watchdog } from './ui/yuria.js';
+import { Live } from './net/live.js';
 import { BookView } from './portfolio/view.js';
 import * as book from './portfolio/book.js';
 import * as fx from './market/fx.js';
@@ -169,6 +172,8 @@ async function loadQuotes({ quiet = false } = {}) {
     app.market.setQuotes(qs, at);
     app.watch.set(qs, at);
     paintBreadth(qs);
+    // 파수꾼에게 평소 흔들림을 가르친다. 기준 없이 "크다" 고 말할 수 없다.
+    app.dog?.learn(qs);
   } catch (err) {
     console.warn('[quotes]', err);
     if (!app.quotes.length) {
@@ -209,11 +214,14 @@ const CHART_RETRY_MS = [1200, 3500];
 
 async function loadChart(symbol, rangeId) {
   const r = RANGES.find((x) => x.id === rangeId) || RANGES[3];
+  // 분봉 갈래에서는 사람이 고른 눈금이 있다. 그것을 뷰가 들고 있다.
+  const interval = app.market.intervalOf(r.id);
   app.market.chartLoading(true);
 
   for (let attempt = 0; attempt <= CHART_RETRY_MS.length; attempt++) {
     try {
-      const q = await quotes.fetchOne(symbol, { range: r.id, interval: r.interval });
+      const q = await quotes.fetchOne(symbol, { range: r.id, interval });
+      q.interval = interval;
       app.chartQ = q;
       app.market.setChart(q, r.id);
       app.pick.show(q.symbol, q.ko || q.name);
@@ -230,6 +238,77 @@ async function loadChart(symbol, rangeId) {
   }
 }
 
+/* ═══════════════════ 흐르는 시세 ═══════════════════
+
+   90초마다 다시 묻던 것을 웹소켓으로 바꾼다. 지켜보는 것은 관심종목과
+   장부에 든 것, 그리고 지금 보고 있는 차트다.
+
+   들어온 값은 세 곳으로 간다 — 오른쪽 목록, 흐르는 띠, 그리고 차트
+   머리의 값. 그리고 파수꾼이 그 값이 알릴 만한지 본다. */
+
+function startLive() {
+  if (!store.get('live')) { paintLive({ state: 'off' }); return; }
+
+  app.live.start(liveSymbols());
+  on('live:state', (e) => paintLive(e));
+  on('live:tick', ({ rows }) => onTick(rows));
+  setInterval(() => paintLive({ state: app.live.state }), 5000);
+}
+
+function liveSymbols() {
+  const watch = (store.get('watch') || DEFAULT_WATCH).map((w) => w.symbol);
+  const held = book.heldSymbols();
+  const now = app.market?.symbol;
+  return [...new Set([...watch, ...held, now].filter(Boolean))].slice(0, 40);
+}
+
+function onTick(rows) {
+  for (const q of rows) {
+    // 목록과 띠에 든 것은 값을 갈아 끼운다
+    const i = app.quotes.findIndex((x) => x.symbol === q.symbol);
+    if (i >= 0) {
+      app.quotes[i] = {
+        ...app.quotes[i],
+        price: q.price ?? app.quotes[i].price,
+        change: q.change ?? app.quotes[i].change,
+        changePct: q.changePct ?? app.quotes[i].changePct,
+        live: true,
+      };
+      app.watch.live(app.quotes[i]);
+    }
+
+    // 지금 보고 있는 차트의 머리
+    if (q.symbol === app.market?.symbol && Number.isFinite(q.price)) {
+      app.market.setLive(q);
+    }
+
+    // 알릴 만한가
+    const ko = app.quotes[i]?.ko || nameOf(q.symbol);
+    const ev = app.dog.check(q, ko);
+    if (ev) {
+      app.yuria.show(ev);
+      app.breaking.notice(`${ev.ko} ${pctOf(ev.changePct)} — ${ev.why}`, { kind: '급변', ms: 14_000 });
+    }
+  }
+  app.market.setQuotes(app.quotes);
+}
+
+const pctOf = (v) => (v > 0 ? '+' : '') + v.toFixed(2) + '%';
+
+function paintLive(e) {
+  const dot = $('#livedot');
+  if (!dot) return;
+  const st = e.state || app.live.state;
+  dot.dataset.state = st;
+  dot.title = {
+    live: '실시간으로 들어오고 있습니다 — 눌러서 끄기',
+    quiet: '이어져 있지만 조용합니다 (장이 닫혔을 수 있습니다)',
+    connecting: '잇는 중…',
+    retry: '끊겼습니다. 다시 잇는 중…',
+    off: '실시간이 꺼져 있습니다 — 눌러서 켜기',
+  }[st] || st;
+}
+
 /** 무엇을 볼 것인가가 바뀌었다 — 한 곳으로 모아 둔다 */
 function goSymbol(sym, meta) {
   store.set('symbol', sym);
@@ -238,6 +317,9 @@ function goSymbol(sym, meta) {
   // 원화 환산과 재무는 그 종목의 것이다. 종목이 갈리면 같이 갈린다.
   if (app.fx?.on) { app.fx.on = false; $('#btnFx')?.classList.remove('is-on'); }
   if (app.fin && !$('#fin').hidden) app.fin.load(sym);
+  app.flows?.mark(sym);
+  if (app.flows && !$('#flows').hidden) app.flows.load(sym);
+  app.live?.watch(liveSymbols());
   app.watch.mark(sym);
   app.pick.show(sym, meta?.ko || nameOf(sym));
   loadChart(sym, app.market.range);
@@ -364,6 +446,29 @@ function build() {
   app.macro = new MacroPanel({ openSettings: (g) => app.settings.open(g) });
   app.fin = new FinPanel();
   app.divs = new DivPanel();
+  app.flows = new FlowPanel({
+    /* 반드시 일봉이다. 분석이 받아 둔 두 해치가 있으면 그것을 쓰고,
+       없으면 그 종목만 따로 부른다 — 투자주체는 하루에 한 줄이라
+       분봉과 날짜로 짝지으면 하나도 안 맞는다. */
+    dailyOf: async (sym) => {
+      const have = app.ana?.series?.find((x) => x.symbol === sym)?.bars;
+      if (have?.length) return have;
+      try {
+        const q = await quotes.fetchOne(sym, { range: '1y', interval: '1d' });
+        return q.bars || [];
+      } catch { return []; }
+    },
+  });
+
+  /* ── 급변할 때만 나타나는 것 ──
+     하는 일이 하나뿐이다. 시장이 갑자기 크게 움직이면 알린다.
+     숫자로 띄우면 안 본다 — 이 화면은 이미 숫자로 가득하다. */
+  app.yuria = new Yuria({ onOpen: (sym) => goSymbol(sym) });
+  app.dog = new Watchdog({ sigma: Number(store.get('yuriaSigma')) || 3 });
+
+  /* ── 흐르는 시세 ──
+     웹소켓은 CORS 를 타지 않는다. 서버도 열쇠도 없이 야후가 밀어 준다. */
+  app.live = new Live();
   app.score = new ScoreCard({ series: () => app.ana?.series || [] });
 
   /* ── 나쁠 때만 드러나는 것 ──
@@ -452,6 +557,8 @@ function build() {
     onTint: () => { app.market.chart.draw(); app.market.setQuotes(app.quotes); },
     onRange: (r) => { app.market.range = r; },
     onWatchReset: () => app.watch.reset(),
+    onLive: (v) => { if (v) startLive(); else { app.live.stop(); paintLive({ state: 'off' }); } },
+    onSigma: (v) => { app.dog.sigmaAt = Number(v) || 3; },
     // 다른 PC 에서 가져온 설정을 화면에 반영한다
     onImported: () => {
       document.documentElement.dataset.tint = store.get('tint') || 'kr';
@@ -564,6 +671,22 @@ function wireButtons() {
   $('#btnFin').addEventListener('click', () => app.fin.toggle(app.market.symbol));
   $('#btnFx').addEventListener('click', () => app.fx.toggle());
   $('#btnDiv').addEventListener('click', () => app.divs.toggle(app.market.symbol));
+  $('#btnFlows').addEventListener('click', () => app.flows.toggle(app.market.symbol));
+
+  app.plays = new PlayPicker({
+    onPick: (strategy, play) => {
+      app.backtest.load(strategy, play.ko);
+      app.breaking.notice(`“${play.ko}” 를 걸었습니다. ${play.breaks}`, { kind: '전략', ms: 12_000 });
+    },
+  });
+  $('#btPlays').addEventListener('click', () => app.plays.toggle());
+
+  // 흐르는 시세 불빛 — 누르면 켜고 끈다
+  $('#livedot').addEventListener('click', () => {
+    const next = !store.get('live');
+    store.set('live', next);
+    if (next) startLive(); else { app.live.stop(); paintLive({ state: 'off' }); }
+  });
 
   /* 관심종목에 더하기 — 머리띠의 고르개를 그대로 쓴다.
      찾는 자리를 두 곳에 두면 둘 다 반쯤만 좋아진다. */
@@ -827,8 +950,13 @@ async function enter() {
     loadNews({ quiet: true });
     loadBookQuotes();
 
+    /* 흐르는 시세가 살아 있으면 다시 묻는 일은 드물게 해도 된다.
+       그래도 아주 안 묻지는 않는다 — 웹소켓은 장이 닫히면 조용하고,
+       그동안 바뀐 것(전일 종가 같은 것)이 있기 때문이다. */
+    startLive();
     setInterval(() => {
       if (document.hidden) return;
+      if (app.live?.state === 'live') return;
       app.quotesAt = Date.now();
       loadQuotes({ quiet: true });
     }, 90_000);

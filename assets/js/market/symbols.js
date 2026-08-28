@@ -108,12 +108,42 @@ export function unitFor(q) {
   }
 }
 
-/** 차트에서 고를 수 있는 기간 */
+/* 차트에서 고를 수 있는 기간.
+
+   ── 분봉이 되는 데는 한계가 있다 ──
+   야후는 눈금이 촘촘할수록 짧은 구간만 준다. 1분봉은 이레, 5분봉은
+   두 달쯤이 끝이다. 그보다 넓게 달라고 하면 빈 것이 오거나 눈금을
+   제 마음대로 굵혀 보낸다. 그래서 짝을 미리 정해 두었다.
+
+   intraday 가 참인 것은 하루 안을 들여다보는 것이다. 차트가 봉 대신
+   선으로 그리고, 아래 날짜에 시각까지 적는다. */
 export const RANGES = [
-  { id: '5d',  label: '5일',  interval: '30m' },
+  { id: '1d',  label: '1일',  interval: '1m',  intraday: true, note: '1분봉 · 오늘 하루' },
+  { id: '5d',  label: '5일',  interval: '5m',  intraday: true, note: '5분봉' },
   { id: '1mo', label: '1개월', interval: '1d' },
   { id: '3mo', label: '3개월', interval: '1d' },
   { id: '6mo', label: '6개월', interval: '1d' },
   { id: '1y',  label: '1년',  interval: '1d' },
   { id: '5y',  label: '5년',  interval: '1wk' },
 ];
+
+/* 분봉을 더 잘게 보고 싶을 때. 기간 단추 옆의 작은 고르개가 이것을 쓴다.
+
+   기간마다 야후가 실제로 주는 눈금만 적어 두었다 — 재어 보고 넣은
+   것이다. 안 주는 것을 고르게 두면 화면이 빈 채로 남고, 사람은 그것을
+   고장으로 읽는다. */
+export const INTRADAY = {
+  '1d': [
+    { id: '1m',  label: '1분' },
+    { id: '2m',  label: '2분' },
+    { id: '5m',  label: '5분' },
+  ],
+  '5d': [
+    { id: '5m',  label: '5분' },
+    { id: '15m', label: '15분' },
+    { id: '30m', label: '30분' },
+    { id: '60m', label: '60분' },
+  ],
+};
+
+export const isIntraday = (interval) => /m$|h$/.test(String(interval || ''));

@@ -108,11 +108,16 @@
     </div>
 
     <div class="top__ranges" id="topRanges"></div>
+    <!-- 분봉 눈금 — 분봉 기간일 때만 뜬다 -->
+    <div class="top__ticks" id="topTicks" hidden></div>
 
     <div class="top__spacer"></div>
 
     <!-- 시장 폭 — 지수는 큰 것 몇에 끌려가지만 이 숫자는 안 끌려간다 -->
     <button class="breadth" id="breadth" type="button" hidden></button>
+
+    <!-- 흐르는 시세가 살아 있나 -->
+    <button class="livedot" id="livedot" type="button" title="실시간 시세"></button>
 
     <div class="top__clocks" id="clocks"></div>
 
@@ -174,6 +179,10 @@
                       title="배당 이력과 취득가 대비 배당률">
                 <span class="btn__label">배당</span>
               </button>
+              <button class="btn btn--ghost btn--tiny" id="btnFlows" type="button" hidden
+                      title="개인·기관·외국인 순매수 (국내 종목·지수)">
+                <span class="btn__label">주체</span>
+              </button>
             </div>
           </div>
 
@@ -234,6 +243,19 @@
             </p>
           </div>
           <div class="fin__body" id="finBody"></div>
+        </div>
+
+        <!-- 투자주체 — 국내에만 있는 자료다 -->
+        <div class="fin" id="flows" hidden>
+          <div class="inds__head">
+            <h3><span class="panel__gr">Πράκτορες</span><span class="panel__ko">투자주체</span></h3>
+            <p class="inds__note">
+              한국 시장에는 다른 나라에 없는 숫자가 있습니다 — 날마다
+              <b>개인·기관·외국인</b>이 각각 얼마를 순매수했는지가 공개됩니다.
+              같은 3% 상승이라도 누가 사서 올랐는지는 다른 이야기입니다.
+            </p>
+          </div>
+          <div class="flows__body" id="flowsBody"></div>
         </div>
 
         <!-- 배당 — 오래 든 사람에게는 이 숫자가 본 숫자다 -->
@@ -380,8 +402,8 @@
             <span class="panel__gr">Δοκιμή</span><span class="panel__ko">전략 시험</span>
           </h2>
           <div class="panel__tools" id="btTools">
-            <button class="btn btn--ghost btn--tiny" id="btSample" type="button">
-              <span class="btn__label">보기 전략</span>
+            <button class="btn btn--ghost btn--tiny" id="btPlays" type="button">
+              <span class="btn__label">짜 놓은 전략</span>
             </button>
             <button class="btn btn--key btn--tiny" id="btRun" type="button">
               <span class="ico" data-ico="flask"></span><span class="btn__label">시험한다</span>
@@ -393,6 +415,8 @@
 
         <!-- ═══ 규칙 — 언제 사고 언제 파나 ═══ -->
         <div class="btpane" id="btPaneRules">
+
+        <div class="plays" id="plays" hidden></div>
 
         <p class="hint hint--warn">
           지난 시세에서 잘 들었다는 것은 앞으로도 그러리라는 뜻이 아닙니다.
@@ -512,6 +536,9 @@
     <div class="sheet__scroll" id="settingsBody"></div>
   </div>
 </div>
+
+<!-- 급변할 때만 나타나는 것 (assets/js/ui/yuria.js) -->
+<div class="yuria-layer" id="yuria" aria-live="assertive"></div>
 
 <div class="alerts" id="alerts" aria-live="polite"></div>
 

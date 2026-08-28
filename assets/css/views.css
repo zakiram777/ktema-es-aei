@@ -1747,3 +1747,273 @@
    지우지 않고 옅게 둔다. 없으면 "왜 빠졌지" 를 묻게 된다. */
 .dv__row.is-partial { opacity: .42; }
 .dv__row.is-partial .dv__bar i { background: var(--tx-500); }
+
+/* ═══════════════════ 흐르는 시세 ═══════════════════ */
+
+.livedot {
+  width: 22px; height: 22px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.livedot::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--tx-600);
+  transition: background var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+/* 살아 있으면 숨을 쉰다. 켜져 있다는 것만 알리면 되므로 아주 옅게. */
+.livedot[data-state="live"]::before {
+  background: var(--ok);
+  box-shadow: 0 0 0 0 rgba(38, 166, 154, .6);
+  animation: livePulse 2.4s ease-out infinite;
+}
+.livedot[data-state="quiet"]::before { background: var(--tx-400); }
+.livedot[data-state="connecting"]::before,
+.livedot[data-state="retry"]::before { background: var(--warn); }
+.livedot[data-state="off"]::before { background: var(--tx-600); }
+
+@keyframes livePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(38, 166, 154, .5); }
+  70%  { box-shadow: 0 0 0 7px rgba(38, 166, 154, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(38, 166, 154, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .livedot[data-state="live"]::before { animation: none; }
+}
+
+/* 흐르는 값이 들어온 자리 — 잠깐만 밝다 */
+.chart__price .px.is-live { animation: livePx 1.2s var(--ease); }
+@keyframes livePx { from { color: var(--key-300); } }
+
+/* ═══════════════════ 유리아 ═══════════════════
+
+   화면 오른쪽 아래, 차트 위에 나타난다. 알림(.alerts)보다 위에 서되
+   설정 서랍이나 읽기 판은 가리지 않는다.
+
+   ── 왜 이렇게 크나 ──
+   숫자로 띄우면 안 보기 때문에 사람 모양으로 두는 것이다. 작으면 그
+   까닭이 사라진다. 대신 여섯 초 뒤에 사라지고 누르면 곧바로 사라진다. */
+
+.yuria-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  pointer-events: none;
+}
+
+.yuria {
+  position: absolute;
+  right: clamp(12px, 3vw, 40px);
+  bottom: clamp(64px, 12vh, 120px);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  width: min(420px, calc(100vw - 32px));
+  padding: var(--s-3);
+  border: 1px solid var(--line-hard);
+  border-left: 3px solid var(--tx-500);
+  border-radius: var(--r-lg);
+  background: var(--bg-100);
+  box-shadow: var(--lift-hi);
+  cursor: pointer;
+  pointer-events: auto;
+
+  opacity: 0;
+  transform: translateY(18px) scale(.96);
+  transition: opacity .5s var(--ease), transform .5s var(--ease);
+}
+.yuria.is-in { opacity: 1; transform: none; }
+.yuria.is-out { opacity: 0; transform: translateY(10px) scale(.98); }
+
+.yuria.is-up { border-left-color: var(--up); }
+.yuria.is-down { border-left-color: var(--down); }
+/* 정말 드물 때만 — 늘 격하면 격한 것이 예사가 된다 */
+.yuria.is-wild { border-color: var(--warn); box-shadow: var(--lift-hi), 0 0 34px -12px var(--warn); }
+
+.yuria__art {
+  width: 66px;
+  height: 88px;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--bg-000);
+  flex: 0 0 auto;
+}
+.yuria__film {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(.35) contrast(1.15) brightness(.85);
+}
+
+.yuria__say { display: grid; gap: 2px; min-width: 0; }
+.yuria__kind {
+  font-size: 10px;
+  letter-spacing: .14em;
+  color: var(--tx-500);
+}
+.yuria.is-wild .yuria__kind { color: var(--warn); }
+.yuria__what {
+  font-family: var(--f-num);
+  font-size: var(--t-md);
+  font-weight: 600;
+  color: var(--tx-100);
+  font-variant-numeric: tabular-nums;
+}
+.yuria.is-up .yuria__what { color: var(--up); }
+.yuria.is-down .yuria__what { color: var(--down); }
+.yuria__why {
+  font-size: var(--t-xs);
+  line-height: 1.5;
+  color: var(--tx-300);
+}
+.yuria__hint { font-size: 10px; color: var(--tx-500); margin-top: 2px; }
+
+.yuria__x {
+  align-self: start;
+  border: 0;
+  background: none;
+  color: var(--tx-500);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.yuria__x:hover { color: var(--tx-100); }
+
+@media (prefers-reduced-motion: reduce) {
+  .yuria { transition: none; }
+}
+
+/* ═══════════════════ 투자주체 ═══════════════════ */
+
+.flows__body { display: grid; gap: var(--s-4); }
+.flow__cv { width: 100%; display: block; }
+
+.flow__legend {
+  display: flex;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  font-size: var(--t-xxs);
+  color: var(--tx-400);
+}
+.flow__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.flow__legend i { width: 11px; height: 2px; border-radius: 2px; }
+
+.flow__tbl { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+
+.flow__head, .flow__row {
+  display: grid;
+  grid-template-columns: minmax(70px, 1.2fr) repeat(4, minmax(58px, 1fr));
+  align-items: center;
+  gap: var(--s-2);
+  padding: 7px var(--s-3);
+  background: var(--bg-100);
+}
+.flow__head {
+  background: var(--bg-200);
+  font-size: var(--t-xxs);
+  color: var(--tx-400);
+}
+.flow__head span:not(:first-child) { text-align: right; }
+
+.flow__ko {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--t-sm);
+  color: var(--tx-100);
+}
+.flow__ko i { width: 10px; height: 2px; border-radius: 2px; flex: 0 0 auto; }
+
+.flow__n {
+  text-align: right;
+  font-family: var(--f-num);
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-100);
+}
+.flow__n.up { color: var(--up); }
+.flow__n.down { color: var(--down); }
+.flow__n.is-thin { color: var(--tx-500); font-size: var(--t-xxs); }
+
+/* ═══════════════════ 짜 놓은 전략 ═══════════════════ */
+
+.plays {
+  display: grid;
+  gap: var(--s-5);
+  margin-bottom: var(--s-5);
+  padding: var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-100);
+}
+.plays[hidden] { display: none; }
+
+.plays__group { display: grid; gap: var(--s-3); }
+.plays__tag {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  margin: 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t-sm);
+  font-weight: 500;
+  color: var(--tx-100);
+}
+.plays__tag small { font-size: var(--t-xxs); font-weight: 400; color: var(--tx-500); }
+
+.plays__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--s-3);
+}
+
+.play {
+  display: grid;
+  gap: 6px;
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-200);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.play:hover { border-color: var(--key-500); background: var(--bg-300); }
+
+.play__head { display: flex; align-items: baseline; gap: var(--s-2); }
+.play__gr { font-family: var(--f-greek); font-size: var(--t-sm); color: var(--tx-400); }
+.play__ko { font-size: var(--t-md); font-weight: 500; color: var(--tx-100); }
+
+.play__belief { font-size: var(--t-xs); line-height: 1.65; color: var(--tx-300); }
+/* 무너지는 자리를 같은 크기로 적는다. 작게 적으면 안 읽고, 안 읽으면
+   안 되는 구간에서 "전략이 틀렸다" 며 고치기 시작한다. */
+.play__breaks {
+  font-size: var(--t-xs);
+  line-height: 1.65;
+  color: var(--tx-400);
+  padding-left: var(--s-3);
+  border-left: 2px solid var(--warn);
+}
+.play__breaks span {
+  display: block;
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: var(--warn);
+  margin-bottom: 1px;
+}
+
+@media (max-width: 720px) {
+  .flow__head, .flow__row { grid-template-columns: minmax(56px, 1fr) repeat(3, minmax(48px, 1fr)); }
+  .flow__head > :last-child, .flow__row > :last-child { display: none; }
+  .yuria { right: 8px; left: 8px; width: auto; }
+}

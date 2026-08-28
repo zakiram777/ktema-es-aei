@@ -14,7 +14,7 @@
 
 import { $, el, clear, ico } from '../core/dom.js';
 import { px, num, pct, big, dir, arrow, stamp, clock } from '../core/fmt.js';
-import { DEFAULT_WATCH, RANGES, nameOf, MARKETS, isOpen } from './symbols.js';
+import { DEFAULT_WATCH, RANGES, INTRADAY, nameOf, MARKETS, isOpen, isIntraday } from './symbols.js';
 import { Chart, LowerChart, sparkline } from './chart.js';
 import {
   KINDS, kindById, blank, sane, nameOf as indName, COLORS, colorVar,
@@ -161,19 +161,68 @@ export class MarketView {
 
   /* ─────────────── 기간 ─────────────── */
 
+  /* 이 기간을 어떤 눈금으로 볼 것인가.
+
+     기간 단추가 짝을 정하지만, 분봉 갈래에서는 사람이 더 잘게 고를 수
+     있다. 고른 것은 그 기간에 물려 남는다 — 1분봉으로 보다가 1년으로
+     갔다 돌아오면 다시 1분봉이어야 한다. */
+  intervalOf(rangeId) {
+    const r = RANGES.find((x) => x.id === rangeId) || RANGES[3];
+    if (!r.intraday) return r.interval;
+    const want = (store.get('intraday') || {})[rangeId];
+    const ok = (INTRADAY[rangeId] || []).some((x) => x.id === want);
+    return ok ? want : r.interval;
+  }
+
   #buildRanges() {
     clear(this.rangeEl);
     for (const r of RANGES) {
       this.rangeEl.appendChild(el('button', {
         type: 'button',
         class: r.id === this.range ? 'is-on' : '',
+        title: r.note || '',
         text: r.label,
         data: { range: r.id },
         onclick: () => {
           this.range = r.id;
           store.set('range', r.id);
           for (const b of this.rangeEl.children) b.classList.toggle('is-on', b.dataset.range === r.id);
+          this.#buildTicks();
           this.hooks.onRange?.(r.id);
+        },
+      }));
+    }
+    this.#buildTicks();
+  }
+
+  /* 분봉 눈금 고르개 — 분봉 기간일 때만 뜬다.
+
+     늘 띄워 두면 일봉일 때 "1분" 을 눌러 보게 되고, 그러면 야후가 빈
+     것을 돌려주어 화면이 빈다. 쓸 수 없는 단추는 두지 않는다. */
+  #buildTicks() {
+    const host = $('#topTicks');
+    if (!host) return;
+    clear(host);
+
+    const r = RANGES.find((x) => x.id === this.range);
+    host.hidden = !r?.intraday;
+    if (!r?.intraday) return;
+
+    const mine = INTRADAY[this.range] || [];
+    const cur = this.intervalOf(this.range);
+
+    for (const t of mine) {
+      host.appendChild(el('button', {
+        type: 'button',
+        class: t.id === cur ? 'is-on' : '',
+        text: t.label,
+        data: { tick: t.id },
+        onclick: () => {
+          const saved = { ...(store.get('intraday') || {}) };
+          saved[this.range] = t.id;
+          store.set('intraday', saved);
+          for (const b of host.children) b.classList.toggle('is-on', b.dataset.tick === t.id);
+          this.hooks.onRange?.(this.range);
         },
       }));
     }
@@ -218,7 +267,7 @@ export class MarketView {
     );
 
     this.won = false;                  // 새 종목은 늘 제 돈으로 시작한다
-    const intraday = range === '5d';
+    const intraday = isIntraday(q.interval || this.intervalOf(range));
     this.chart.set(q.bars, {
       intraday,
       indicators: this.indicators,
@@ -265,7 +314,7 @@ export class MarketView {
 
     const use = bars || q.bars;
     this.chart.set(use, {
-      intraday: this.range === '5d',
+      intraday: isIntraday(this.intervalOf(this.range)),
       indicators: this.indicators,
       name: (q.ko || q.symbol) + suffix,
     });
@@ -275,6 +324,44 @@ export class MarketView {
     // 요약 숫자도 갈아 끼운 봉으로 다시 낸다. 52주 고저처럼 봉이 아니라
     // 야후가 준 값은 환산이 안 되므로 이때는 뺀다.
     this.#renderStats(bars ? { ...q, bars, yearHigh: null, yearLow: null, volume: null } : q);
+  }
+
+  /* 흐르는 값이 들어왔다.
+
+     차트를 다시 그리지 않는다. 봉을 새로 받은 것이 아니라 마지막 값만
+     바뀐 것이므로, 머리의 숫자와 마지막 봉의 종가만 고친다. 초에 한 번
+     차트를 통째로 다시 그리면 화면이 떨리고, 떨리는 차트는 읽히지 않는다. */
+  setLive(q) {
+    if (!this.q || !Number.isFinite(q.price)) return;
+
+    this.q = { ...this.q, price: q.price, change: q.change ?? this.q.change,
+      changePct: q.changePct ?? this.q.changePct };
+
+    clear(this.priceEl);
+    this.priceEl.append(
+      el('span.px.is-live', { text: px(q.price) }),
+      el('span.ch', { class: dir(this.q.changePct) }, [
+        el('span', { text: arrow(this.q.changePct) }),
+        el('span', { text: this.q.change != null ? px(Math.abs(this.q.change)) : '—' }),
+        el('span', { text: `(${pct(this.q.changePct)})` }),
+      ]),
+    );
+
+    // 마지막 봉의 종가도 따라간다. 그래야 십자선과 머리가 같은 말을 한다.
+    const bars = this.chart.bars;
+    const last = bars?.[bars.length - 1];
+    if (last) {
+      last.c = q.price;
+      if (q.price > last.h) last.h = q.price;
+      if (q.price < last.l) last.l = q.price;
+      // 다시 그리는 것은 아껴 둔다 — 값이 봉 하나를 넘어서 움직였을 때만
+      const now = Date.now();
+      if (now - (this.lastDraw || 0) > 3000) {
+        this.lastDraw = now;
+        this.chart.recompute();
+        this.chart.draw();
+      }
+    }
   }
 
   /** 지금 며칠치를 보고 있는지 — 전부를 보고 있으면 아무 말도 하지 않는다 */

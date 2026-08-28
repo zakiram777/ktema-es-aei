@@ -39,6 +39,12 @@ export const DEFAULTS = {
      거래 자체는 여기 두지 않는다 (portfolio/book.js 가 따로 들고 있다).
      설정 파일은 웹호스팅에 올려도 된다고 적어 두었는데, 남의 매매
      내역이 거기 있으면 안 되기 때문이다. 여기 있는 것은 취향뿐이다. */
+  intraday:     null,    // 기간마다 고른 분봉 눈금 { '1d': '1m', … }
+
+  /* ── 흐르는 시세와 경보 ── */
+  live:         true,    // 웹소켓으로 실시간을 받을지
+  yuria:        true,    // 급변할 때 유리아가 나타날지
+  yuriaSigma:   3,       // 평소 흔들림의 몇 배부터 알릴지
   bookTab:      'hold',  // hold | perf | tax
   bookBase:     'KRW',   // 섞인 돈을 무엇으로 모을 것인가
   bookRange:    '5y',    // 성과를 얼마 동안 되짚을 것인가

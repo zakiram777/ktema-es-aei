@@ -569,21 +569,34 @@ export class Chart {
     }
   }
 
-  /** 아래 날짜 — 두 눈금이 함께 쓴다 */
+  /* 아래 날짜 — 두 눈금이 함께 쓴다.
+
+     분봉이면 시각을 적는다. 하루 안을 들여다보는데 날짜만 적으면 눈금
+     여섯이 전부 같은 글자가 되어 아무 말도 안 한다. 여러 날에 걸친
+     분봉이면 날이 바뀌는 자리에만 날짜를 얹는다. */
   #dates(g, x0, step, cText) {
     g.textAlign = 'center';
     g.textBaseline = 'top';
+
+    const span = this.shown.length > 1
+      ? this.shown[this.shown.length - 1].t - this.shown[0].t
+      : 0;
+    const oneDay = this.intraday && span <= 26 * 3600e3;
+
+    const fmt = oneDay
+      ? new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
+      : this.intraday
+        ? new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', hour12: false })
+        : new Intl.DateTimeFormat('ko-KR', { year: '2-digit', month: 'numeric' });
+
     const marks = Math.min(6, this.shown.length);
     for (let i = 0; i < marks; i++) {
       const idx = Math.round((this.shown.length - 1) * (i / (marks - 1 || 1)));
       const b = this.shown[idx];
       if (!b) continue;
       const x = x0 + idx * step;
-      const label = this.intraday
-        ? new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric' }).format(new Date(b.t))
-        : new Intl.DateTimeFormat('ko-KR', { year: '2-digit', month: 'numeric' }).format(new Date(b.t));
       g.fillStyle = cText;
-      g.fillText(label, Math.max(20, Math.min(this.w - PAD.right - 20, x)), this.h - PAD.bottom + 8);
+      g.fillText(fmt.format(new Date(b.t)), Math.max(20, Math.min(this.w - PAD.right - 20, x)), this.h - PAD.bottom + 8);
     }
   }
 

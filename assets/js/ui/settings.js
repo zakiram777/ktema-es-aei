@@ -47,6 +47,7 @@ export class Settings {
   async build() {
     clear(this.body);
     this.body.appendChild(this.#marketGroup());
+    this.body.appendChild(this.#liveGroup());
     this.body.appendChild(this.#keyGroup());
     this.body.appendChild(this.#lookGroup());
     this.body.appendChild(this.#newsGroup());
@@ -155,6 +156,41 @@ export class Settings {
         el('p.row__note', {
           text: '오른쪽 목록에서 ×를 눌러 빼고, + 를 눌러 더할 수 있습니다. '
               + '하나도 남지 않으면 다음에 켜질 때 처음 목록이 되살아납니다.',
+        }),
+      ]);
+  }
+
+  /* ─────────────── 흐름과 경보 ───────────────
+
+     흐르는 시세와 급변 경보. 둘 다 끌 수 있게 두는 까닭은, 켜 두면
+     화면이 계속 움직이고 그것을 싫어하는 사람이 있기 때문이다. */
+
+  #liveGroup() {
+    return this.#group('Ῥοή', '흐름과 경보',
+      '웹소켓으로 시세가 흘러 들어옵니다. 서버도 열쇠도 없이 되는 일이라 '
+      + '값이 들지 않습니다. 다만 장이 닫혀 있으면 아무것도 오지 않습니다 — '
+      + '그것은 고장이 아닙니다.',
+      [
+        this.#toggle({
+          key: 'live', label: '실시간으로 받는다',
+          note: '끄면 90초마다 다시 묻습니다. 머리띠의 점을 눌러도 켜고 끌 수 있습니다.',
+          onChange: (v) => this.hooks.onLive?.(v),
+        }),
+        this.#toggle({
+          key: 'yuria', label: '급변하면 알린다',
+          note: '시장이 갑자기 크게 움직이면 차트 위에 나타나 알립니다. '
+              + '같은 종목으로는 한 시간에 한 번까지, 여섯 초 동안만 머뭅니다.',
+        }),
+        this.#slider({
+          key: 'yuriaSigma', label: '얼마나 드물어야 알리나', min: 2, max: 6, step: 0.5,
+          fmt: (v) => `평소의 ${v}배`,
+          onInput: (v) => this.hooks.onSigma?.(v),
+        }),
+        el('p.row__note', {
+          text: '그냥 몇 퍼센트로 자르지 않습니다. 코스피가 3% 움직이는 것과 '
+              + '비트코인이 3% 움직이는 것은 전혀 다른 일이라, 그 종목이 평소 '
+              + '하루에 얼마나 흔들렸는지로 나눕니다. 낮출수록 자주 나타나고, '
+              + '자주 나타나면 그때부터 안 보게 됩니다.',
         }),
       ]);
   }

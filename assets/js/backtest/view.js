@@ -40,14 +40,8 @@ export class BacktestView {
     this.#buildRules();
     this.#buildGuards();
     $('#btRun').addEventListener('click', () => this.execute());
-    $('#btSample').addEventListener('click', () => {
-      this.strategy = JSON.parse(JSON.stringify(SAMPLE));
-      save(this.strategy);
-      this.#buildIndicators();
-      this.#buildRules();
-      this.#buildGuards();
-      this.execute();
-    });
+    // '보기 전략' 단추는 '짜 놓은 전략' 고르개로 바뀌었다 (ui/extras3.js).
+    // 거기서 고른 것이 load() 로 들어온다.
   }
 
   /** 무엇을, 얼마나 긴 기간에 대고 볼 것인가 */
@@ -291,6 +285,16 @@ export class BacktestView {
   }
 
   /* ─────────────── 시험 ─────────────── */
+
+  /** 짜 놓은 전략 하나를 그대로 건다 (backtest/playbook.js) */
+  load(strategy, name) {
+    this.strategy = JSON.parse(JSON.stringify(strategy));
+    if (name) this.strategy.name = name;
+    save(this.strategy);
+    this.#buildIndicators();
+    this.#buildRules();
+    this.#buildGuards();
+  }
 
   async execute() {
     if (this.busy) return;
