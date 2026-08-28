@@ -1793,12 +1793,16 @@
 
 /* ═══════════════════ 유리아 ═══════════════════
 
-   화면 오른쪽 아래, 차트 위에 나타난다. 알림(.alerts)보다 위에 서되
-   설정 서랍이나 읽기 판은 가리지 않는다.
+   ── 네모가 없어야 한다 ──
+   원본은 흰 종이에 그린 먹이다. 판에 얹으면 흰 종이가 네모로 떠서
+   '사람이 나타난 것' 이 아니라 '그림이 뜬 것' 이 된다. 그러면 이
+   장치가 하려던 일이 통째로 무너진다.
 
-   ── 왜 이렇게 크나 ──
-   숫자로 띄우면 안 보기 때문에 사람 모양으로 두는 것이다. 작으면 그
-   까닭이 사라진다. 대신 여섯 초 뒤에 사라지고 누르면 곧바로 사라진다. */
+   그래서 SVG 필터(#yuriaCut)로 진짜로 오려 낸다. 판도 테두리도 배경도
+   없다. 오려 낸 형태 하나가 화면 위에 떠 있을 뿐이다.
+
+   글자는 그 곁에 뜨되 상자에 담지 않는다. 읽히게 하려고 뒤에 아주 옅은
+   빛만 깐다 — 상자를 두면 그 상자가 다시 네모가 된다. */
 
 .yuria-layer {
   position: fixed;
@@ -1809,86 +1813,138 @@
 
 .yuria {
   position: absolute;
-  right: clamp(12px, 3vw, 40px);
-  bottom: clamp(64px, 12vh, 120px);
+  right: clamp(10px, 3vw, 48px);
+  bottom: clamp(52px, 10vh, 96px);
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
   gap: var(--s-3);
-  width: min(420px, calc(100vw - 32px));
-  padding: var(--s-3);
-  border: 1px solid var(--line-hard);
-  border-left: 3px solid var(--tx-500);
-  border-radius: var(--r-lg);
-  background: var(--bg-100);
-  box-shadow: var(--lift-hi);
-  cursor: pointer;
+  width: min(430px, calc(100vw - 24px));
   pointer-events: auto;
+  cursor: pointer;
+
+  /* 판이 아니다. 배경도 테두리도 그늘도 없다. */
+  background: none;
+  border: 0;
 
   opacity: 0;
-  transform: translateY(18px) scale(.96);
-  transition: opacity .5s var(--ease), transform .5s var(--ease);
+  transform: translateY(22px);
+  transition: opacity .9s var(--ease-in-out), transform .9s var(--ease-in-out);
 }
 .yuria.is-in { opacity: 1; transform: none; }
-.yuria.is-out { opacity: 0; transform: translateY(10px) scale(.98); }
+.yuria.is-out { opacity: 0; transform: translateY(8px); }
 
-.yuria.is-up { border-left-color: var(--up); }
-.yuria.is-down { border-left-color: var(--down); }
-/* 정말 드물 때만 — 늘 격하면 격한 것이 예사가 된다 */
-.yuria.is-wild { border-color: var(--warn); box-shadow: var(--lift-hi), 0 0 34px -12px var(--warn); }
+/* ── 오려 낸 형태 ── */
 
 .yuria__art {
-  width: 66px;
-  height: 88px;
-  border-radius: var(--r-md);
-  overflow: hidden;
-  background: var(--bg-000);
+  position: relative;
+  width: clamp(96px, 15vw, 148px);
+  aspect-ratio: 236 / 314;
   flex: 0 0 auto;
 }
+/* 격한 쪽은 격자를 자를 때 행과 열이 달라 가로로 나왔다.
+   한 틀에 우겨 넣으면 cover 가 옆을 잘라 사람이 반쪽이 된다. */
+.yuria__art.is-wide {
+  width: clamp(132px, 20vw, 196px);
+  aspect-ratio: 314 / 236;
+}
+
+/* 뒤에 아주 옅은 빛 하나. 어두운 바탕에서 형태가 뜨게만 하고,
+   가장자리가 어디인지는 알 수 없을 만큼만. */
+.yuria__art::before {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side,
+    rgba(120, 150, 200, .13), rgba(120, 150, 200, 0) 72%);
+  pointer-events: none;
+}
+
 .yuria__film {
+  position: relative;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: grayscale(.35) contrast(1.15) brightness(.85);
+  /* 여기가 요점이다 — 흰 종이를 알파로 지우고 먹만 밝게 남긴다 */
+  filter: url(#yuriaCut);
+  /* 필터를 못 쓰는 브라우저에서도 네모가 뜨지 않게 한 겹 더 */
+  mix-blend-mode: screen;
 }
 
-.yuria__say { display: grid; gap: 2px; min-width: 0; }
+/* ── 말 ── */
+
+.yuria__say {
+  display: grid;
+  gap: 2px;
+  padding: 0 0 var(--s-2);
+  min-width: 0;
+  /* 상자 대신 왼쪽 아래로 스미는 빛. 글자가 배경과 겹쳐도 읽힌다. */
+  text-shadow: 0 1px 10px rgba(11, 14, 20, .95), 0 0 26px rgba(11, 14, 20, .8);
+}
+
 .yuria__kind {
   font-size: 10px;
-  letter-spacing: .14em;
-  color: var(--tx-500);
+  letter-spacing: .16em;
+  color: var(--tx-400);
 }
 .yuria.is-wild .yuria__kind { color: var(--warn); }
-.yuria__what {
+
+.yuria__head {
   font-family: var(--f-num);
-  font-size: var(--t-md);
+  font-size: 1.05rem;
   font-weight: 600;
-  color: var(--tx-100);
+  color: var(--tx-000);
   font-variant-numeric: tabular-nums;
+  line-height: 1.3;
 }
-.yuria.is-up .yuria__what { color: var(--up); }
-.yuria.is-down .yuria__what { color: var(--down); }
+.yuria.is-up .yuria__head { color: var(--up); }
+.yuria.is-down .yuria__head { color: var(--down); }
+
+/* 규칙과 아침 인사는 값이 아니라 말이다. 숫자 글꼴이 어울리지 않는다. */
+.yuria.is-rule .yuria__head,
+.yuria.is-open .yuria__head,
+.yuria.is-filing .yuria__head { font-family: var(--f-ui); font-size: .98rem; }
+
 .yuria__why {
   font-size: var(--t-xs);
-  line-height: 1.5;
-  color: var(--tx-300);
+  line-height: 1.6;
+  color: var(--tx-200);
 }
-.yuria__hint { font-size: 10px; color: var(--tx-500); margin-top: 2px; }
+.yuria__hint { font-size: 10px; color: var(--tx-400); margin-top: 3px; }
 
 .yuria__x {
-  align-self: start;
+  position: absolute;
+  top: 0; right: 0;
   border: 0;
   background: none;
   color: var(--tx-500);
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
-  padding: 0 2px;
+  padding: 2px 4px;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
 }
+.yuria:hover .yuria__x { opacity: 1; }
 .yuria__x:hover { color: var(--tx-100); }
 
+/* 왼쪽에서 나타나야 할 때 — 오른쪽 곁칸이 넓은 화면에서 */
+.yuria.is-left {
+  right: auto;
+  left: clamp(64px, 8vw, 120px);
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.yuria.is-left .yuria__art { order: 2; }
+.yuria.is-left .yuria__say { text-align: right; }
+
 @media (prefers-reduced-motion: reduce) {
-  .yuria { transition: none; }
+  .yuria { transition: opacity .01ms; transform: none; }
+}
+
+@media (max-width: 620px) {
+  .yuria { right: 8px; left: 8px; width: auto; bottom: 68px; }
+  .yuria__art { width: 84px; }
 }
 
 /* ═══════════════════ 투자주체 ═══════════════════ */
@@ -2016,4 +2072,135 @@
   .flow__head, .flow__row { grid-template-columns: minmax(56px, 1fr) repeat(3, minmax(48px, 1fr)); }
   .flow__head > :last-child, .flow__row > :last-child { display: none; }
   .yuria { right: 8px; left: 8px; width: auto; }
+}
+
+/* ═══════════════════ 하루 안 ═══════════════════ */
+
+.intra__body { display: grid; gap: var(--s-4); }
+.hour__cv { width: 100%; display: block; }
+
+.gap__two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.gap__side {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  background: var(--bg-100);
+  border-top: 2px solid var(--tx-600);
+}
+.gap__side.is-up { border-top-color: var(--up); }
+.gap__side.is-down { border-top-color: var(--down); }
+.gap__k { font-size: var(--t-xs); color: var(--tx-300); }
+
+.gap__rows { display: grid; gap: 3px; }
+.gap__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+  font-size: var(--t-xs);
+  color: var(--tx-500);
+}
+.gap__row b {
+  font-family: var(--f-num);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-100);
+}
+.gap__row b.up { color: var(--up); }
+.gap__row b.down { color: var(--down); }
+
+/* ═══════════════════ 열지도 ═══════════════════
+
+   칸 크기는 같게 두고 색만 등락으로 칠한다. 시가총액으로 크기를
+   나누는 방식도 흔하지만, 여기 목록에는 지수와 원자재가 섞여 있어
+   그 방식은 뜻이 없다. */
+
+.hm {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 2px;
+}
+.hm__cell {
+  display: grid;
+  gap: 1px;
+  padding: 9px 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--bg-100);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: background .6s var(--ease), border-color var(--dur) var(--ease);
+}
+.hm__cell:hover { border-color: var(--line-hard); }
+.hm__cell.is-strong { border-color: var(--line-hard); }
+.hm__ko {
+  font-size: var(--t-xs);
+  color: var(--tx-200);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hm__pct {
+  font-family: var(--f-num);
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-100);
+}
+
+/* ═══════════════════ 오늘 이상한 것 ═══════════════════ */
+
+.odd { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+
+.odd__row {
+  display: grid;
+  grid-template-columns: minmax(80px, 1.2fr) minmax(60px, 2fr) 74px 58px;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 7px var(--s-3);
+  border: 0;
+  background: var(--bg-100);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.odd__row:hover { background: var(--bg-200); }
+.odd__ko {
+  font-size: var(--t-sm);
+  color: var(--tx-100);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.odd__bar { display: block; height: 6px; border-radius: 3px; background: var(--bg-300); overflow: hidden; }
+.odd__bar i { display: block; height: 100%; border-radius: 3px; min-width: 2px; }
+.odd__bar i.up { background: var(--up); }
+.odd__bar i.down { background: var(--down); }
+.odd__n, .odd__s {
+  text-align: right;
+  font-family: var(--f-num);
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-200);
+}
+.odd__s { color: var(--tx-500); font-size: var(--t-xs); }
+.odd__s.is-odd { color: var(--warn); font-weight: 600; }
+
+/* 주체 표에 칸이 셋·넷인 것 */
+.flow__row--3 { grid-template-columns: minmax(70px, 1.2fr) repeat(2, minmax(58px, 1fr)); }
+.flow__row--4 { grid-template-columns: minmax(70px, 1.2fr) repeat(3, minmax(58px, 1fr)); }
+.flow__ko.up { color: var(--up); }
+.flow__ko.down { color: var(--down); }
+
+@media (max-width: 620px) {
+  .odd__row { grid-template-columns: minmax(70px, 1fr) 66px 52px; }
+  .odd__bar { display: none; }
 }

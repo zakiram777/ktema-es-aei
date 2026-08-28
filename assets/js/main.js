@@ -39,7 +39,9 @@ import { WatchList } from './ui/watch.js';
 import { MacroPanel, FinPanel, FxSwitch, ScoreCard } from './ui/extras.js';
 import { StressPanel, DivPanel, RulePanel } from './ui/extras2.js';
 import { FlowPanel, PlayPicker } from './ui/extras3.js';
-import { Yuria, Watchdog } from './ui/yuria.js';
+import { IntraPanel, Heatmap, Odd, notify } from './ui/extras4.js';
+import { Yuria, Watchdog, firstToday, markToday, overnight } from './ui/yuria.js';
+import * as rules from './journal/rules.js';
 import { Live } from './net/live.js';
 import { BookView } from './portfolio/view.js';
 import * as book from './portfolio/book.js';
@@ -125,9 +127,10 @@ async function mixFilings(items) {
     app.filingsAt = Date.now();
     if (!list.length) return items;
 
-    // 급한 것은 속보로도 외친다
+    // 급한 것은 속보로도 외치고, 정말 급한 것은 유리아가 부른다
     for (const f of list) {
       if (f.score >= 7 && f.isNew) app.breaking.push(f);
+      if (f.score >= 9 && f.isNew) yuriaFiling(f);
     }
 
     return [...list, ...items].sort((a, b) => (b.time || 0) - (a.time || 0));
@@ -174,6 +177,8 @@ async function loadQuotes({ quiet = false } = {}) {
     paintBreadth(qs);
     // 파수꾼에게 평소 흔들림을 가르친다. 기준 없이 "크다" 고 말할 수 없다.
     app.dog?.learn(qs);
+    app.heat?.set(qs);
+    app.odd?.set(qs, app.dog.sd);
   } catch (err) {
     console.warn('[quotes]', err);
     if (!app.quotes.length) {
@@ -238,6 +243,69 @@ async function loadChart(symbol, rangeId) {
   }
 }
 
+/* ═══════════════════ 유리아를 부를 일 셋 ═══════════════════
+
+   급변(surge) 말고 셋이 더 있다. 셋 다 "내가 미리 정해 두었거나 정말로
+   드문 일" 이다 — 그 밖의 것으로는 나타나지 않는다. */
+
+/* ── ① 걸어 둔 규칙이 오늘 걸렸다 ──
+
+   어제 걸린 것은 알리지 않는다. 지난 일을 알리는 것은 알림이 아니라
+   회고이고, 그것은 일지 화면이 할 일이다. 오늘 걸린 것만. */
+function checkRulesToday() {
+  const barsOf = (sym) => app.ana?.series?.find((x) => x.symbol === sym)?.bars
+                       || app.quotes.find((x) => x.symbol === sym)?.bars
+                       || [];
+
+  for (const r of rules.all()) {
+    if (r.done) continue;
+    const got = rules.check(r, barsOf(r.symbol));
+    if (got.state !== 'hit') continue;
+
+    // 오늘 걸린 것만
+    const today = new Date().toDateString();
+    if (new Date(got.firstAt).toDateString() !== today) continue;
+
+    app.yuria.show({
+      kind: 'rule',
+      symbol: r.symbol,
+      head: rules.text(r),
+      why: `오늘 걸렸습니다 (${Math.round(got.firstPx).toLocaleString('ko-KR')}). `
+         + (r.note ? `적어 두신 까닭: ${r.note}` : '규칙은 그때그때 정하지 않으려고 세우는 것입니다.'),
+      hint: '눌러서 일지로',
+      tone: r.action === 'sell' ? 'down' : r.action === 'buy' ? 'up' : '',
+    });
+    return;                 // 한 번에 하나만. 둘이 겹치면 둘 다 안 읽힌다.
+  }
+}
+
+/* ── ② 급한 공시 ──
+   감사의견 거절·상장폐지 같은 것은 기사보다 공시가 먼저다. 점수 9 이상,
+   즉 정말 급한 것만 부른다. */
+function yuriaFiling(item) {
+  if (!item || (item.score || 0) < 9) return;
+  app.yuria.show({
+    kind: 'filing',
+    symbol: item.stock ? item.stock + '.KS' : null,
+    head: item.title,
+    why: '공시는 기사보다 먼저 뜹니다. 기사를 기다리면 이미 값이 움직인 뒤입니다.',
+    hint: '눌러서 원문으로',
+    tone: 'down',
+    sigma: 5,
+    item,
+  });
+}
+
+/* ── ③ 하루의 첫 방문 ──
+   이 '하루 한 번' 이 지켜져야 성립하는 장치다. 두 번째부터는 안내가
+   아니라 잔소리다. */
+function greetOnce() {
+  if (!firstToday()) return;
+  const ev = overnight(app.quotes);
+  if (!ev) return;
+  if (app.yuria.show(ev)) markToday();
+}
+
 /* ═══════════════════ 흐르는 시세 ═══════════════════
 
    90초마다 다시 묻던 것을 웹소켓으로 바꾼다. 지켜보는 것은 관심종목과
@@ -291,6 +359,7 @@ function onTick(rows) {
     }
   }
   app.market.setQuotes(app.quotes);
+  app.heat?.set(app.quotes);
 }
 
 const pctOf = (v) => (v > 0 ? '+' : '') + v.toFixed(2) + '%';
@@ -317,6 +386,7 @@ function goSymbol(sym, meta) {
   // 원화 환산과 재무는 그 종목의 것이다. 종목이 갈리면 같이 갈린다.
   if (app.fx?.on) { app.fx.on = false; $('#btnFx')?.classList.remove('is-on'); }
   if (app.fin && !$('#fin').hidden) app.fin.load(sym);
+  if (app.intra && !$('#intra').hidden) app.intra.load(sym);
   app.flows?.mark(sym);
   if (app.flows && !$('#flows').hidden) app.flows.load(sym);
   app.live?.watch(liveSymbols());
@@ -446,6 +516,12 @@ function build() {
   app.macro = new MacroPanel({ openSettings: (g) => app.settings.open(g) });
   app.fin = new FinPanel();
   app.divs = new DivPanel();
+  app.intra = new IntraPanel({
+    fetchBars: (sym, range, interval) => quotes.fetchOne(sym, { range, interval }),
+  });
+  app.heat = new Heatmap({ onSymbol: (sym) => goSymbol(sym) });
+  app.odd = new Odd({ onSymbol: (sym) => goSymbol(sym) });
+
   app.flows = new FlowPanel({
     /* 반드시 일봉이다. 분석이 받아 둔 두 해치가 있으면 그것을 쓰고,
        없으면 그 종목만 따로 부른다 — 투자주체는 하루에 한 줄이라
@@ -463,7 +539,18 @@ function build() {
   /* ── 급변할 때만 나타나는 것 ──
      하는 일이 하나뿐이다. 시장이 갑자기 크게 움직이면 알린다.
      숫자로 띄우면 안 본다 — 이 화면은 이미 숫자로 가득하다. */
-  app.yuria = new Yuria({ onOpen: (sym) => goSymbol(sym) });
+  app.yuria = new Yuria({
+    onOpen: (ev) => {
+      if (ev.kind === 'open') { app.nav.show('market'); return; }
+      if (ev.kind === 'rule') { app.nav.show('journal'); return; }
+      if (ev.kind === 'filing') {
+        app.nav.show('news');
+        if (ev.item) app.reader.open(ev.item);
+        return;
+      }
+      if (ev.symbol) goSymbol(ev.symbol);
+    },
+  });
   app.dog = new Watchdog({ sigma: Number(store.get('yuriaSigma')) || 3 });
 
   /* ── 흐르는 시세 ──
@@ -559,6 +646,18 @@ function build() {
     onWatchReset: () => app.watch.reset(),
     onLive: (v) => { if (v) startLive(); else { app.live.stop(); paintLive({ state: 'off' }); } },
     onSigma: (v) => { app.dog.sigmaAt = Number(v) || 3; },
+    onNotify: async () => {
+      const ok = await notify.ask();
+      if (!ok) {
+        store.set('notify', false);
+        app.breaking.notice(
+          notify.denied
+            ? '브라우저가 알림을 막아 두었습니다. 주소창 옆 자물쇠에서 풀 수 있습니다.'
+            : '알림을 켜지 못했습니다.',
+          { kind: '알림', ms: 8000 },
+        );
+      }
+    },
     // 다른 PC 에서 가져온 설정을 화면에 반영한다
     onImported: () => {
       document.documentElement.dataset.tint = store.get('tint') || 'kr';
@@ -672,6 +771,7 @@ function wireButtons() {
   $('#btnFx').addEventListener('click', () => app.fx.toggle());
   $('#btnDiv').addEventListener('click', () => app.divs.toggle(app.market.symbol));
   $('#btnFlows').addEventListener('click', () => app.flows.toggle(app.market.symbol));
+  $('#btnIntra').addEventListener('click', () => app.intra.toggle(app.market.symbol));
 
   app.plays = new PlayPicker({
     onPick: (strategy, play) => {
@@ -773,6 +873,10 @@ function buildBtTabs() {
 }
 
 function wireBus() {
+  /* 유리아가 나타나면 창이 뒤에 있을 때만 브라우저 알림도 띄운다.
+     보고 있으면 이미 화면에서 봤을 것이므로 두 번 알릴 까닭이 없다. */
+  on('yuria:shown', (ev) => notify.send(ev));
+
   // 펼쳐 본 것은 목록에서도 읽은 것으로 흐려진다
   on('news:open', ({ item }) => app.news?.markRead(item.id));
 
@@ -949,6 +1053,10 @@ async function enter() {
     loadChart(app.market.symbol, app.market.range);
     loadNews({ quiet: true });
     loadBookQuotes();
+
+    // 하루의 첫 방문이면 간밤에 무슨 일이 있었는지 한 번. 시세가 온
+    // 다음이라야 할 말이 생긴다.
+    setTimeout(() => { greetOnce(); checkRulesToday(); }, 2500);
 
     /* 흐르는 시세가 살아 있으면 다시 묻는 일은 드물게 해도 된다.
        그래도 아주 안 묻지는 않는다 — 웹소켓은 장이 닫히면 조용하고,

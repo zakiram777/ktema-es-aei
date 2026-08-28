@@ -183,6 +183,10 @@
                       title="개인·기관·외국인 순매수 (국내 종목·지수)">
                 <span class="btn__label">주체</span>
               </button>
+              <button class="btn btn--ghost btn--tiny" id="btnIntra" type="button"
+                      title="갭·시간대·VWAP·체결 강도">
+                <span class="btn__label">하루 안</span>
+              </button>
             </div>
           </div>
 
@@ -245,6 +249,20 @@
           <div class="fin__body" id="finBody"></div>
         </div>
 
+        <!-- 하루 안 — 분봉이 아니면 셈할 수 없는 것들 -->
+        <div class="fin" id="intra" hidden>
+          <div class="inds__head">
+            <h3><span class="panel__gr">Ἡμέρα</span><span class="panel__ko">하루 안</span></h3>
+            <p class="inds__note">
+              일봉은 하루를 네 숫자로 줄입니다(시·고·저·종). 그 넷으로는
+              답할 수 없는 물음이 있습니다 — <b>갭으로 열린 날은 메웠나</b>,
+              <b>하루 변동의 몇 할이 장 초반에 나나</b>, 그리고 오늘 사람들이
+              실제로 사고판 평균값은 얼마인가.
+            </p>
+          </div>
+          <div class="intra__body" id="intraBody"></div>
+        </div>
+
         <!-- 투자주체 — 국내에만 있는 자료다 -->
         <div class="fin" id="flows" hidden>
           <div class="inds__head">
@@ -286,6 +304,22 @@
           </div>
         </div>
         <div class="board" id="board"></div>
+
+        <section class="ana__block" style="margin-top:var(--s-6)">
+          <div class="ana__h">
+            <span>한 판에</span>
+            <small>흐르는 값이 들어오면 그 자리에서 색이 바뀝니다</small>
+          </div>
+          <div class="hm" id="heat"></div>
+        </section>
+
+        <section class="ana__block" style="margin-top:var(--s-6)">
+          <div class="ana__h">
+            <span>오늘 이상한 것</span>
+            <small>등락률이 아니라 그 종목의 평소 흔들림으로 나눠 세운 것</small>
+          </div>
+          <div class="odd" id="odd"></div>
+        </section>
       </section>
 
       <!-- ═══ 분석 ═══ -->
@@ -537,7 +571,43 @@
   </div>
 </div>
 
-<!-- 급변할 때만 나타나는 것 (assets/js/ui/yuria.js) -->
+<!-- ═══════════════════ 오려 내기 ═══════════════════
+
+     유리아의 원본은 흰 종이에 그린 검은 먹이다. 그대로 얹으면 흰
+     종이가 네모난 판으로 떠 보인다 — 그림이 뜬 것이지 사람이 나타난
+     것이 아니게 된다.
+
+     mix-blend-mode 로는 안 된다. 유리아가 사는 층은 position:fixed 에
+     z-index 가 있어 쌓임 맥락을 만드는데, 섞임은 같은 맥락 안의 바탕과만
+     일어난다. 그 안에는 아무것도 없으니 흰 바탕이 그대로 남는다.
+
+     그래서 진짜로 오려 낸다. 밝기를 뒤집어 알파로 삼으면 먹만 남고
+     종이는 비어 버린다.
+
+     ── 예전과 다른 점 ──
+     종이 판이었을 때는 색을 먹으로 고정했다. 지금은 화면이 어두우므로
+     먹빛으로 두면 어둠에 묻힌다. 알파는 먹에서 뽑되 색은 밝은 쪽으로
+     칠한다 — 어두운 바탕에 흰 선으로 그린 그림이 되는 셈이다. -->
+<svg class="sr-only" aria-hidden="true" focusable="false" width="0" height="0">
+  <defs>
+    <filter id="yuriaCut" x="-8%" y="-8%" width="116%" height="116%"
+            color-interpolation-filters="sRGB">
+      <!-- 색은 옅은 청백으로 고정하고, 알파는 1 − 밝기 -->
+      <feColorMatrix type="matrix" values="
+        0 0 0 0 0.725
+        0 0 0 0 0.776
+        0 0 0 0 0.855
+        -0.299 -0.587 -0.114 0 1"/>
+      <!-- 압축이 남긴 옅은 안개를 지운다. 너무 세게 깎으면 가는
+           선(머리카락)까지 사라지므로 살짝만. -->
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="1.22" intercept="-0.07"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+</svg>
+
+<!-- 나타날 때만 있는 것 (assets/js/ui/yuria.js) -->
 <div class="yuria-layer" id="yuria" aria-live="assertive"></div>
 
 <div class="alerts" id="alerts" aria-live="polite"></div>

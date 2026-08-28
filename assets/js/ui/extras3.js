@@ -5,6 +5,7 @@
 import { $, el, clear, ico } from '../core/dom.js';
 import { px, pct, num, dir, big, dayStamp } from '../core/fmt.js';
 import * as flows from '../market/flows.js';
+import { avgCost, together, holdLead } from '../market/flows.js';
 import { PLAYS, TAGS, playById } from '../backtest/playbook.js';
 
 /* ═══════════════════ 투자주체 ═══════════════════ */
@@ -101,6 +102,15 @@ export class FlowPanel {
 
       // 다음 날은 어땠나 — 이 판의 알맹이
       fwd ? this.#forward(fwd, align, f) : null,
+
+      // 주체별 평단 — 국내에서 많이 쓰이는데 무료로 내주는 곳이 드물다
+      this.avgCostBlock(f),
+
+      // 셋이 함께 산 날
+      bars.length ? this.togetherBlock(f, bars) : null,
+
+      // 보유율이 먼저 움직이나
+      bars.length ? this.holdLeadBlock(f, bars) : null,
     );
 
     for (const fn of later) fn();
@@ -180,6 +190,153 @@ export class FlowPanel {
 }
 
 /* ═══════════════════ 짜 놓은 전략 ═══════════════════ */
+
+/* (FlowPanel 의 나머지 판 셋은 아래 프로토타입에 붙인다 — 한 클래스가
+   너무 길어지면 어디를 고치는지 알 수 없게 된다.) */
+
+Object.assign(FlowPanel.prototype, {
+
+  /* ── 주체별 평균 단가 ──
+
+     "외국인 평단 위냐 아래냐" 는 국내에서 많이 쓰이는 말인데 무료로
+     제대로 내주는 곳이 거의 없다. 다만 이것은 '이 구간에서 새로 사 모은
+     몫' 의 평균이지 진짜 평단이 아니다 — 외국인은 삼성전자를 수십 년
+     들고 있고 그 취득가는 아무도 모른다. 화면에도 그렇게 적는다. */
+  avgCostBlock(f) {
+    const got = avgCost(f);
+    if (!got) return null;
+
+    const rows = flows.ACTORS
+      .map((a) => ({ a, r: got.rows[a.id] }))
+      .filter((x) => x.r && !x.r.thin);
+
+    if (!rows.length) return null;
+
+    return el('div.ana__sub', [
+      el('h4', [el('span', { text: '주체별 평균 단가' }),
+        el('small', { text: `최근 ${got.days}거래일에 사 모은 몫만 · 지금 ${px(got.price)}` })]),
+
+      el('div.flow__tbl', [
+        el('div.flow__head', [
+          el('span', { text: '주체' }),
+          el('span', { text: '평단' }),
+          el('span', { text: '지금 대비' }),
+          el('span', { text: '남은 수량' }),
+        ]),
+        ...rows.map(({ a, r }) => el('div.flow__row.flow__row--4', [
+          el('span.flow__ko', [
+            el('i', { style: { background: `var(${a.color})` } }),
+            a.ko,
+          ]),
+          el('span.flow__n', { text: px(r.avg) }),
+          el('span.flow__n', { class: dir(r.vs), text: pct(r.vs, 1) }),
+          el('span.flow__n', { text: big(r.qty) + f.unit }),
+        ])),
+      ]),
+
+      el('p.ana__why', {
+        text: '이것은 그들이 예전부터 들고 있던 것까지 포함한 진짜 평단이 '
+            + '아닙니다. 최근 ' + got.days + '거래일 동안 사 모은 몫의 평균일 '
+            + '뿐입니다 — 외국인은 삼성전자를 수십 년 들고 있고 그 취득가는 '
+            + '아무도 모릅니다. "외국인 평단 7만" 이라고 말하면 거짓말이고, '
+            + '"최근에 사 모은 몫의 평균이 7만" 이라고 해야 맞습니다.',
+      }),
+    ]);
+  },
+
+  /* ── 셋이 함께 산 날 ──
+     누가 산 만큼 누가 팔았어야 하므로, 셋이 다 샀다면 그날 판 것은
+     나머지(기타법인·국가)뿐이라는 뜻이다. 드문 만큼 그 뒤가 궁금해진다. */
+  togetherBlock(f, bars) {
+    const got = together(f, bars);
+    if (!got || (!got.buy.n && !got.sell.n)) return null;
+
+    const line = (label, s, tone) => {
+      if (!s.n) return null;
+      const cells = [1, 5, 20].map((h) => {
+        const g = s[h];
+        return el('span.flow__n', {
+          class: g.thin ? 'is-thin' : dir(g.avg),
+          text: g.thin ? `표본 ${g.n}` : pct(g.avg, 2),
+          title: g.thin ? '' : `${g.n}번 중 ${g.win.toFixed(0)}%가 올랐습니다`,
+        });
+      });
+      return el('div.flow__row', [
+        el('span.flow__ko', { class: tone, text: `${label} ${s.n}일` }),
+        ...cells,
+        el('span.flow__n', { text: ((s.n / got.total) * 100).toFixed(0) + '%' }),
+      ]);
+    };
+
+    return el('div.ana__sub', [
+      el('h4', [el('span', { text: '셋이 함께 움직인 날' }),
+        el('small', { text: `${got.total}거래일 중 함께 산 날 ${got.buy.n}일 · 함께 판 날 ${got.sell.n}일` })]),
+      el('div.flow__tbl', [
+        el('div.flow__head', [
+          el('span', { text: '' }),
+          el('span', { text: '1일 뒤' }),
+          el('span', { text: '5일 뒤' }),
+          el('span', { text: '20일 뒤' }),
+          el('span', { text: '빈도' }),
+        ]),
+        line('함께 샀다', got.buy, 'up'),
+        line('함께 팔았다', got.sell, 'down'),
+      ]),
+      el('p.ana__why', {
+        text: '셋이 같은 쪽인 날은 드뭅니다 — 누가 산 만큼 누가 팔았어야 하므로, '
+            + '셋이 다 샀다면 그날 판 것은 기타법인이나 국가뿐이라는 뜻입니다. '
+            + '드문 일이라 표본이 적고, 표본이 적으면 숫자를 믿기 어렵습니다.',
+      }),
+    ]);
+  },
+
+  /* ── 보유율이 먼저 움직이나 ──
+     하루치 순매수는 오늘 사고 내일 팔면 지워지지만, 보유율이 오르면
+     실제로 지분이 늘어난 것이다. 그래서 되돌림이 적고, 앞을 말할 때가 있다. */
+  holdLeadBlock(f, bars) {
+    const got = holdLead(f, bars);
+    if (!got) return null;
+
+    const cells = [5, 20].map((h) => {
+      const g = got.gaps[h];
+      return el('span.flow__n', {
+        class: g == null ? 'is-thin' : dir(g),
+        text: g == null ? '표본 부족' : pct(g, 2),
+      });
+    });
+
+    const lead = got.gaps[20];
+
+    return el('div.ana__sub', [
+      el('h4', [el('span', { text: '외국인 보유율이 먼저 움직이나' }),
+        el('small', { text: `${got.window}일 동안 보유율이 오른 구간과 내린 구간의 차이` })]),
+      el('div.flow__tbl', [
+        el('div.flow__head', [
+          el('span', { text: '' }),
+          el('span', { text: '5일 뒤' }),
+          el('span', { text: '20일 뒤' }),
+        ]),
+        el('div.flow__row.flow__row--3', [
+          el('span.flow__ko', { text: '오를 때 − 내릴 때' }),
+          ...cells,
+        ]),
+      ]),
+      lead != null ? el('div.mix__verdict', { class: Math.abs(lead) > 1.5 ? 'is-good' : '' }, [
+        el('b', {
+          text: Math.abs(lead) > 1.5
+            ? `보유율이 오르던 구간의 스무 날 뒤가 ${pct(lead, 1)} 좋았습니다`
+            : '보유율의 방향과 다음 스무 날 사이에 뚜렷한 관계가 없습니다',
+        }),
+        el('span', {
+          text: Math.abs(lead) > 1.5
+            ? '하루치 순매수는 오늘 사고 내일 팔면 지워지지만, 보유율이 오르면 '
+              + '실제로 지분이 늘어난 것입니다. 되돌림이 적어 앞을 말할 때가 있습니다.'
+            : '흔한 결과입니다. 지난 예순 날의 이야기이고 표본이 그만큼 적습니다.',
+        }),
+      ]) : null,
+    ]);
+  },
+});
 
 export class PlayPicker {
   /** @param {{onPick:(strategy, play)=>void}} hooks */

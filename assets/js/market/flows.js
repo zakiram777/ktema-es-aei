@@ -285,3 +285,164 @@ function corr(xs, ys) {
   }
   return dx > 0 && dy > 0 ? num2 / Math.sqrt(dx * dy) : null;
 }
+
+/* ═══════════════════ 주체별 평균 단가 ═══════════════════
+
+   "외국인 평단 위냐 아래냐" 는 국내에서 많이 쓰이는 말인데, 무료로
+   제대로 내주는 곳이 거의 없다. 사실 셈은 간단하다 — 날마다의 순매수
+   수량과 그날 종가를 곱해 쌓고, 쌓인 수량으로 나누면 된다.
+
+   ── 정확한 값이 아니다 ──
+   이것은 '이 구간에서 새로 사 모은 몫' 의 평균이지, 그들이 예전부터
+   들고 있던 것까지 포함한 진짜 평단이 아니다. 외국인은 삼성전자를
+   수십 년 들고 있고 그 취득가는 아무도 모른다.
+
+   그러니 "외국인 평단 7만" 이라고 말하면 거짓말이다. "최근 예순 날
+   동안 그들이 사 모은 몫의 평균이 7만" 이라고 말해야 맞다. 화면에도
+   그렇게 적는다.
+
+   ── 순매도로 돌아선 주체는 셈하지 않는다 ──
+   쌓인 수량이 음수가 되면 나눗셈의 뜻이 사라진다. 판 사람에게 평단은
+   없다.
+*/
+export function avgCost(flow) {
+  if (!flow?.ok || flow.kind !== 'stock') return null;
+
+  const out = {};
+  for (const a of ACTORS) {
+    let qty = 0, cost = 0;
+    let maxQty = 0;
+    const line = [];
+
+    for (const r of flow.rows) {
+      const q = r[a.id];
+      const p = r.close;
+      if (q == null || !(p > 0)) { line.push(null); continue; }
+
+      /* 살 때는 쌓고, 팔 때는 그때의 평단으로 덜어 낸다. 파는 값으로
+         덜면 평단이 판 값 쪽으로 끌려가 뜻이 흐려진다 — 장부에서
+         쓰는 이동평균법과 같은 규칙이다. */
+      if (q > 0) { qty += q; cost += q * p; }
+      else if (qty > 0) {
+        const avg = cost / qty;
+        const sold = Math.min(-q, qty);
+        qty -= sold;
+        cost -= sold * avg;
+      }
+      if (qty > maxQty) maxQty = qty;
+      line.push(qty > 0 ? cost / qty : null);
+    }
+
+    const now = flow.rows[flow.rows.length - 1]?.close;
+    const avg = qty > 0 ? cost / qty : null;
+
+    out[a.id] = {
+      ko: a.ko,
+      avg,
+      qty,
+      line,
+      // 지금 값이 그 평단보다 위인가
+      vs: avg != null && now > 0 ? (now / avg - 1) * 100 : null,
+      // 얼마나 쌓았다 얼마가 남았나 — 다 팔았으면 평단은 뜻이 없다
+      maxQty,
+      thin: qty <= 0,
+    };
+  }
+
+  return { rows: out, price: flow.rows[flow.rows.length - 1]?.close ?? null, days: flow.days };
+}
+
+/* ═══════════════════ 셋이 함께 산 날 ═══════════════════
+
+   개인·기관·외국인이 같은 날 모두 순매수인 것은 드물다. 누가 산 만큼
+   누가 팔았어야 하므로, 셋이 다 샀다면 그날 판 것은 나머지(기타법인·
+   국가)뿐이라는 뜻이다.
+
+   드문 만큼 그 뒤가 궁금해진다. 실제로 그랬는지를 세어 준다.
+*/
+export function together(flow, bars, { horizons = [1, 5, 20] } = {}) {
+  if (!flow?.ok) return null;
+
+  const idx = new Map((bars || []).map((b, i) => [dayKey(b.t), i]));
+
+  const pick = (sign) => flow.rows.filter((r) =>
+    ACTORS.every((a) => r[a.id] != null && Math.sign(r[a.id]) === sign));
+
+  const scoreOf = (days) => {
+    const out = { n: days.length };
+    for (const h of horizons) {
+      const rs = [];
+      for (const r of days) {
+        const i = idx.get(dayKey(r.t));
+        if (i == null || i + h >= bars.length) continue;
+        rs.push((bars[i + h].c / bars[i].c - 1) * 100);
+      }
+      out[h] = rs.length >= 3
+        ? { avg: rs.reduce((a, b) => a + b, 0) / rs.length, n: rs.length,
+            win: (rs.filter((x) => x > 0).length / rs.length) * 100 }
+        : { thin: true, n: rs.length };
+    }
+    return out;
+  };
+
+  const allBuy = pick(1);
+  const allSell = pick(-1);
+
+  return {
+    buy: scoreOf(allBuy),
+    sell: scoreOf(allSell),
+    buyDays: allBuy.map((r) => r.t),
+    sellDays: allSell.map((r) => r.t),
+    total: flow.rows.length,
+  };
+}
+
+/* ═══════════════════ 보유율이 먼저 움직이나 ═══════════════════
+
+   외국인 보유율은 순매수보다 느리게 바뀌는 대신 되돌림이 적다. 하루치
+   순매수는 오늘 사고 내일 팔면 지워지지만, 보유율이 오르면 실제로
+   지분이 늘어난 것이다.
+
+   그래서 "보유율이 며칠째 오르고 있나" 가 "어제 얼마 샀나" 보다 앞을
+   말할 때가 있다. 실제로 그런지를 센다 — 보유율이 오른 구간과 내린
+   구간 뒤의 수익률을 갈라 견준다.
+*/
+export function holdLead(flow, bars, { window: w = 5, horizons = [5, 20] } = {}) {
+  if (!flow?.ok) return null;
+  const rows = flow.rows.filter((r) => r.holdPct != null);
+  if (rows.length < w + 25) return null;
+
+  const idx = new Map((bars || []).map((b, i) => [dayKey(b.t), i]));
+
+  const rising = [], falling = [];
+  for (let i = w; i < rows.length; i++) {
+    const d = rows[i].holdPct - rows[i - w].holdPct;
+    (d > 0 ? rising : falling).push(rows[i]);
+  }
+
+  const scoreOf = (days) => {
+    const out = { n: days.length };
+    for (const h of horizons) {
+      const rs = [];
+      for (const r of days) {
+        const i = idx.get(dayKey(r.t));
+        if (i == null || i + h >= bars.length) continue;
+        rs.push((bars[i + h].c / bars[i].c - 1) * 100);
+      }
+      out[h] = rs.length >= 10
+        ? { avg: rs.reduce((a, b) => a + b, 0) / rs.length, n: rs.length }
+        : { thin: true, n: rs.length };
+    }
+    return out;
+  };
+
+  const up = scoreOf(rising);
+  const dn = scoreOf(falling);
+
+  const gaps = {};
+  for (const h of horizons) {
+    gaps[h] = (!up[h].thin && !dn[h].thin) ? up[h].avg - dn[h].avg : null;
+  }
+
+  return { window: w, rising: up, falling: dn, gaps };
+}

@@ -45,6 +45,7 @@ export const DEFAULTS = {
   live:         true,    // 웹소켓으로 실시간을 받을지
   yuria:        true,    // 급변할 때 유리아가 나타날지
   yuriaSigma:   3,       // 평소 흔들림의 몇 배부터 알릴지
+  notify:       false,   // 창이 뒤에 있을 때 브라우저 알림도 띄울지
   bookTab:      'hold',  // hold | perf | tax
   bookBase:     'KRW',   // 섞인 돈을 무엇으로 모을 것인가
   bookRange:    '5y',    // 성과를 얼마 동안 되짚을 것인가
