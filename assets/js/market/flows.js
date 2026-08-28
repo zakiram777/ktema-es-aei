@@ -85,7 +85,8 @@ export async function history(symbol, { days = 60, fresh = false } = {}) {
 
 /* ─────────────── 받은 것을 펴기 ───────────────
 
-   숫자가 "+1,381,786" 같은 글로 온다. 부호와 쉼표를 떼어 낸다.
+   숫자가 "+1,381,786" 같은 글로 온다. 쉼표와 '+' 를 떼어 내되 '-' 는
+   그대로 둔다 — 그것이 값의 일부다.
    종목은 주식 수, 지수는 금액(억 원)이라 단위가 다르다 — 섞으면 안 되므로
    무엇인지 함께 적어 둔다. */
 
@@ -99,7 +100,17 @@ function shapeStock(r) {
     foreign: n(r.foreignerPureBuyQuant),
     holdPct: n(String(r.foreignerHoldRatio || '').replace('%', '')),
     close: n(r.closePrice),
-    change: n(r.compareToPreviousClosePrice) * (r.compareToPreviousPrice?.code === '5' || r.compareToPreviousPrice?.code === '4' ? -1 : 1),
+    /* 부호를 두 번 뒤집고 있었다.
+
+       네이버는 방향 코드(2 상승 · 3 보합 · 5 하락)를 따로 주는데,
+       금액에도 이미 부호가 붙어 온다 — '-9,000' 처럼. 코드를 보고 한 번
+       더 뒤집었더니 내린 날이 오른 날로 기록되었다.
+
+         20260828  close 257,000  diff '-9,000'  code 5 하락  →  +9,000 (틀림)
+
+       투자주체 분석은 '그날 산 주체와 그날 등락' 을 견주는 일이라, 이
+       부호가 뒤집히면 상관의 방향이 통째로 반대가 된다. 온 값을 그대로 쓴다. */
+    change: n(r.compareToPreviousClosePrice),
     volume: n(r.accumulatedTradingVolume),
   };
 }

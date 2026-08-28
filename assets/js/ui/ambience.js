@@ -251,45 +251,17 @@ export function gateFilm(videos) {
   const films = [].concat(videos).filter(Boolean);
   if (!films.length) return () => {};
 
-  const next = deck(WILD);
-  let at = -1;
+  /* ── 전에는 한 편을 갈아 끼웠다 ──
+     이제는 둘이 나란히 계속 돈다. 왼쪽과 오른쪽이 각각 제 영상을
+     맡으므로 갈아 끼울 것도, 차례표도 없다. 여기서 할 일은 켜는 것과,
+     자동 재생을 막는 브라우저에서 물러나는 것뿐이다. */
+  for (const v of films) {
+    v.play().catch(() => { /* 포스터만 남아도 된다 */ });
+    // 숨어 있는 문서에서는 전이가 나아가지 않는다. 뒤쪽 탭으로 열어
+    // 두었다가 나중에 보면 관문이 텅 빈 채로 뜨므로 곧바로 켠다.
+    v.classList.add('is-instant', 'is-lit');
+    setTimeout(() => v.classList.remove('is-instant'), 60);
+  }
 
-  const show = () => {
-    const id = next();
-    const to = films[(at + 1) % films.length];
-    const from = at >= 0 ? films[at] : null;
-    at = (at + 1) % films.length;
-
-    to.poster = poster(id);
-    to.src = clip(id);
-    to.load();
-    to.play().catch(() => { /* 포스터만 남아도 된다 */ });
-
-    setTimeout(() => {
-      /* ── 첫 장은 전이 없이 켠다 ──
-         숨어 있는 문서에서는 전이가 나아가지 않는다. 뒤쪽 탭으로 열어
-         두었다가 나중에 보면, 그 사이 시작된 전이가 0에 멈춰 있어
-         관문이 텅 빈 채로 뜬다. 첫 장만은 곧바로 켜서 그 자리를 막는다.
-         두 번째부터는 사람이 보고 있는 중이므로 전이가 돈다. */
-      if (from) {
-        to.classList.add('is-lit');
-        from.classList.remove('is-lit');
-      } else {
-        to.classList.add('is-instant', 'is-lit');
-        setTimeout(() => to.classList.remove('is-instant'), 60);
-      }
-    }, 0);
-  };
-
-  show();
-
-  /* ── 왜 여기서는 자주 바꾸나 ──
-     바탕은 40초에 한 번 갈린다. 알아채면 안 되기 때문이다.
-     관문은 반대다. 알아채라고 두는 자리이고, 넉 자를 넣는 동안만
-     머무르므로 그 사이에 두어 번은 바뀌어야 '표정이 변한다' 가 된다. */
-  const timer = setInterval(() => {
-    if (!document.hidden) show();
-  }, 5200);
-
-  return () => clearInterval(timer);
+  return () => { for (const v of films) v.pause(); };
 }

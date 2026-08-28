@@ -49,24 +49,27 @@
      자물쇠가 아니라 문턱이다 — 답이 달력에 적혀 있으니 막을 마음이
      있는 자를 막지 못한다. -->
 <section class="gate" id="gate">
-  <!-- 반투명한 판이 아니다. 종이를 오려 낸 형체가 그대로 서 있고,
-       그 표정이 몇 초에 한 번 바뀐다. -->
+  <!-- 화면을 반으로 나눈다. 왼쪽과 오른쪽이 각각 다른 영상을 돌린다.
+       가운데에서 만나는 자리는 서로 스며들게 두어 이음매가 안 보인다. -->
   <div class="gate__art" aria-hidden="true">
-    <video class="gate__film" id="gateFilmA" muted playsinline loop preload="auto"
-           disablepictureinpicture></video>
-    <video class="gate__film" id="gateFilmB" muted playsinline loop preload="auto"
-           disablepictureinpicture></video>
+    <video class="gate__film gate__film--l" id="gateFilmA" muted playsinline loop
+           autoplay preload="auto" disablepictureinpicture
+           poster="assets/media/gate/g1.jpg">
+      <source src="assets/media/gate/g1.mp4" type="video/mp4">
+    </video>
+    <video class="gate__film gate__film--r" id="gateFilmB" muted playsinline loop
+           autoplay preload="auto" disablepictureinpicture
+           poster="assets/media/gate/g2.jpg">
+      <source src="assets/media/gate/g2.mp4" type="video/mp4">
+    </video>
   </div>
 
   <div class="gate__inner">
     <h1 class="wordmark">
       <span class="wordmark__gr">Κτῆμα ἐς Ἀεί</span>
-      <span class="wordmark__lat">시세와 차트를 보고, 적어 두고, 시험한다</span>
     </h1>
 
     <form class="gate__form" id="gateForm" autocomplete="off">
-      <label class="gate__label" for="gateD0">오늘의 넉 자</label>
-
       <div class="gate__code" id="gateCode" role="group" aria-label="네 자리 숫자">
         <input class="gate__digit" id="gateD0" type="text" inputmode="numeric"
                maxlength="1" pattern="[0-9]" aria-label="첫째 자리" autocomplete="off">

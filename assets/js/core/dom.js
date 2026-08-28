@@ -29,7 +29,7 @@ export function el(spec, props, kids) {
     if (k === 'class') node.className += (node.className ? ' ' : '') + v;
     else if (k === 'html') node.innerHTML = v;
     else if (k === 'text') node.textContent = v;
-    else if (k === 'style' && typeof v === 'object') Object.assign(node.style, v);
+    else if (k === 'style' && typeof v === 'object') setStyle(node, v);
     else if (k === 'data' && typeof v === 'object') {
       for (const [dk, dv] of Object.entries(v)) if (dv != null) node.dataset[dk] = dv;
     }
@@ -40,6 +40,27 @@ export function el(spec, props, kids) {
 
   append(node, kids);
   return node;
+}
+
+/* 스타일을 얹는다.
+
+   ── Object.assign 으로는 안 되는 것이 있다 ──
+   CSS 커스텀 속성(--cols 같은 것)은 style 객체에 그냥 넣어도 먹지 않는다.
+   style['--cols'] = '...' 은 CSSStyleDeclaration 에 자바스크립트 속성
+   하나를 붙일 뿐이고, 화면을 그리는 쪽은 그것을 쳐다보지 않는다.
+   setProperty 로 넣어야 한다.
+
+   이걸 몰라서 분석 화면의 표가 통째로 무너져 있었다. --cols 가 안 먹으니
+   grid-template-columns 가 없는 셈이 되고, 그러면 한 줄의 칸 열넷이
+   가로로 서지 못하고 세로로 쌓인다. 줄 하나가 510px 이 되어 표가
+   6,600px 로 부풀었고, 그 아래에 있던 그림 둘이 8,000px 밑으로 밀려
+   아무도 못 찾게 되었다. */
+function setStyle(node, obj) {
+  for (const [k, v] of Object.entries(obj)) {
+    if (v == null) continue;
+    if (k.startsWith('--')) node.style.setProperty(k, String(v));
+    else node.style[k] = v;
+  }
 }
 
 export function append(node, kids) {

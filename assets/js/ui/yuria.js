@@ -23,17 +23,19 @@
    하나가 더 켜지는 것은 배경이 된다. 움직이는 사람 모양은 곁눈에도
    걸린다 — 그것이 이 그림이 여기서 하는 유일한 일이다.
 
-   ── 네모가 없어야 한다 ──
-   원본은 흰 종이에 그린 먹이라 그대로 얹으면 흰 판이 뜬다. 그러면
-   '사람이 나타난 것' 이 아니라 '그림이 뜬 것' 이 되고, 그 순간 이
-   장치가 하려던 일이 통째로 무너진다.
+   ── 한 사람에서 열 사람으로 ──
+   전에는 먹 영상 한 편을 오려 내어 썼다. 밝기를 뒤집어 알파로 삼는
+   방식이었는데, 영상이라 배경까지 함께 남아 배경과 겹칠 때 위화감이
+   컸다. 화면 뒤로 다른 것이 비쳐 보이는 일이 잦았다.
 
-   그래서 SVG 필터(#yuriaCut)로 진짜로 오려 낸다. 밝기를 뒤집어 알파로
-   삼으면 먹만 남고 종이는 비어 버린다. 색은 옅은 청백으로 고정한다 —
-   화면이 어두우므로 먹빛 그대로 두면 어둠에 묻힌다.
+   지금은 그림에서 사람만 오려 낸 것 열 장을 쓴다. 배경이 아예 없으므로
+   겹칠 것도 없다. 부를 때마다 그중 하나가 무작위로 나온다 — 같은 얼굴이
+   매번 나오면 그것은 곧 무늬가 되고, 무늬는 눈에 안 들어온다.
 
-   판도 테두리도 없다. 글자는 그림 곁에 떠 있고, 그 뒤에는 아주 옅은
-   빛만 깐다. 읽히되 상자가 되지 않을 만큼만.
+   ── 말풍선 ──
+   전에는 글자가 그림 곁에 그냥 떠 있었다. 사람이 열로 늘면서 '누가
+   말하는가' 가 흐려졌다. 말풍선은 그 하나를 위해 있다 — 이 말은 지금
+   여기 나온 이 사람이 하는 말이다.
    ═══════════════════════════════════════════════════════════════ */
 
 import { $, el, calmly } from '../core/dom.js';
@@ -41,9 +43,25 @@ import { emit } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { pct } from '../core/fmt.js';
 
-const MEDIA = 'assets/media/ink/';
-const CALM = Array.from({ length: 12 }, (_, i) => `calm-${String(i + 1).padStart(2, '0')}`);
-const WILD = Array.from({ length: 12 }, (_, i) => `wild-${String(i + 1).padStart(2, '0')}`);
+/* 그림에서 오려 낸 사람들. 배경은 없고 몸 형태만 남아 있다.
+
+   ── 왜 결을 나눠 두나 ──
+   급변을 알릴 때 웃는 얼굴이 나오면 뜻이 어긋난다. 격한 일에는 격한
+   쪽에서, 잔잔한 일에는 잔잔한 쪽에서 고른다. 그 안에서는 무작위다. */
+const CAST = [
+  { id: 'warau',   wild: true },
+  { id: 'hibi',    wild: true },
+  { id: 'ningyou', wild: true },
+  { id: 'kimono',  wild: true },
+  { id: 'neko',    wild: false },
+  { id: 'inori',   wild: false },
+  { id: 'gakusha', wild: false },
+  { id: 'futatsu', wild: false },
+  { id: 'sailor',  wild: false },
+  { id: 'bara',    wild: false },
+];
+
+const CAST_DIR = 'assets/media/cast/';
 
 /** 부를 일마다의 결 */
 export const KINDS = {
@@ -96,13 +114,18 @@ export class Yuria {
     /* 격한 쪽(wild)은 정말 드물 때만. 늘 격하면 격한 것이 예사가 되고,
        예사가 되면 알림이 아니라 무늬가 된다. */
     const wild = kind.wild && Math.abs(ev.sigma || 0) >= 4;
-    const clip = pick(wild ? WILD : CALM);
 
-    const film = el('video.yuria__film', {
-      muted: true, playsinline: true, loop: true,
-      preload: 'auto', disablepictureinpicture: true,
-      poster: `${MEDIA}poster/${clip}.jpg`,
-      src: `${MEDIA}${clip}.mp4`,
+    // 방금 나왔던 사람은 건너뛴다 — 잇달아 같은 얼굴이면 무작위로 안 보인다
+    const pool = CAST.filter((c) => c.wild === wild);
+    const room = pool.filter((c) => c.id !== this.lastFace);
+    const face = pick(room.length ? room : pool);
+    this.lastFace = face.id;
+
+    const art = el('img.yuria__img', {
+      src: CAST_DIR + face.id + '.webp',
+      alt: '',
+      decoding: 'async',
+      draggable: 'false',
     });
 
     const tone = ev.tone || '';
@@ -112,12 +135,8 @@ export class Yuria {
       role: 'alert',
       onclick: () => { this.hooks.onOpen?.(ev); this.hide(); },
     }, [
-      /* 판도 테두리도 없다. 오려 낸 그림 하나가 떠 있을 뿐이다.
-
-         잔잔한 쪽(calm)은 세로 236×314, 격한 쪽(wild)은 가로 314×236 이다.
-         격자를 자를 때 행과 열이 달랐기 때문인데, 한 틀에 우겨 넣으면
-         cover 가 옆을 잘라 사람이 반쪽이 된다. 틀을 그림에 맞춘다. */
-      el('div.yuria__art', { class: wild ? 'is-wide' : '' }, [film]),
+      /* 오려 낸 사람 하나와 그가 하는 말. 판도 테두리도 없다. */
+      el('div.yuria__art', [art]),
       el('div.yuria__say', [
         el('span.yuria__kind', { text: kind.ko }),
         el('b.yuria__head', { text: ev.head }),
@@ -136,7 +155,6 @@ export class Yuria {
     // 다음 그림 프레임이 아니라 시간으로 켠다 — 창이 뒤에 있으면
     // 그림 프레임이 오지 않아 스민 채로 멈춘다
     setTimeout(() => node.classList.add('is-in'), 20);
-    film.play?.().catch(() => { /* 자동 재생을 막는 브라우저 — 포스터만 */ });
 
     emit('yuria:shown', ev);
 
