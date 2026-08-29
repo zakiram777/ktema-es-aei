@@ -27,6 +27,46 @@ export const SOURCES = [
     url: 'https://www.yna.co.kr/rss/economy.xml',
     cats: ['econ', 'stock'],
   },
+  /* ── 연합인포맥스 ──
+     채권·외환·해외주식을 따로 떼어 다루는 데가 드물다. 다른 경제지는
+     그것을 '경제' 한 갈래에 뭉쳐 놓는데, 인포맥스는 그 셋이 각각
+     제 섹션을 갖는다. 여기서 값진 것은 그 갈래다.
+
+     ── 회원 자료가 아니다 ──
+     이것은 인포맥스가 스스로 열어 둔 공개 RSS 다(robots.txt 도 /admin/
+     만 막는다). 로그인 뒤의 단말 자료와는 다른 것이고, 그쪽은 이
+     사이트에 들이지 않는다 — §9 에 적어 두었다. */
+  {
+    id: 'imx-bond', name: '연합인포맥스', lang: 'ko', weight: 9,
+    url: 'https://news.einfomax.co.kr/rss/S1N16.xml',
+    cats: ['econ', 'invest'],
+  },
+  {
+    id: 'imx-stock', name: '연합인포맥스', lang: 'ko', weight: 9,
+    url: 'https://news.einfomax.co.kr/rss/S1N2.xml',
+    cats: ['stock', 'invest'],
+  },
+  {
+    id: 'imx-world', name: '연합인포맥스', lang: 'ko', weight: 9,
+    url: 'https://news.einfomax.co.kr/rss/S1N21.xml',
+    cats: ['world', 'stock'],
+  },
+  {
+    id: 'imx-policy', name: '연합인포맥스', lang: 'ko', weight: 8,
+    url: 'https://news.einfomax.co.kr/rss/S1N15.xml',
+    cats: ['econ'],
+  },
+  {
+    id: 'imx-column', name: '연합인포맥스', lang: 'ko', weight: 8,
+    url: 'https://news.einfomax.co.kr/rss/S1N9.xml',
+    cats: ['invest', 'world'],
+  },
+  {
+    id: 'imx-ib', name: '연합인포맥스', lang: 'ko', weight: 7,
+    url: 'https://news.einfomax.co.kr/rss/S1N7.xml',
+    cats: ['stock', 'invest'],
+  },
+
   {
     id: 'hk-fin', name: '한국경제', lang: 'ko', weight: 8,
     url: 'https://www.hankyung.com/feed/finance',
